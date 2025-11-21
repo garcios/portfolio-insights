@@ -4,13 +4,13 @@ WORKDIR /app
 
 COPY . .
 
-# Download dependencies for the user-service module
-WORKDIR /app/services/user-service
+# Download dependencies for the portfolio-service module
+WORKDIR /app/services/portfolio-service
 RUN go mod download
 
 # Build the server
 WORKDIR /app
-RUN go build -o /server ./services/user-service/cmd/server/main.go
+RUN go build -o /server ./services/portfolio-service/cmd/server/main.go
 
 FROM alpine:latest
 
@@ -18,6 +18,6 @@ WORKDIR /
 
 COPY --from=builder /server /server
 
-EXPOSE 50051
+EXPOSE 50052
 
 CMD ["/server"]

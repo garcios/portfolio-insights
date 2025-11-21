@@ -7,13 +7,13 @@ type Mutation {
   createUser(input: NewUser!): User!
 }
 
-type User @key(fields: "id") {
+type User {
   id: ID!
   username: String!
   email: String!
 }
 
-type Portfolio @key(fields: "id") {
+type Portfolio {
   id: ID!
   userId: ID!
   name: String!

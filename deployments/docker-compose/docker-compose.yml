@@ -4,8 +4,8 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: garcios
+      POSTGRES_PASSWORD: Password123
       POSTGRES_DB: portfolio
     ports:
       - "5432:5432"
@@ -35,8 +35,8 @@ services:
       dockerfile: services/user-service/Dockerfile
     environment:
       - DB_HOST=postgres
-      - DB_USER=user
-      - DB_PASSWORD=password
+      - DB_USER=garcios
+      - DB_PASSWORD=Password123
       - DB_NAME=portfolio
     depends_on:
       - postgres

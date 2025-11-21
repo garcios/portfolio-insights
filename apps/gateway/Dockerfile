@@ -1,11 +1,23 @@
 FROM golang:1.24-alpine AS builder
 
+# Install build dependencies
+RUN apk add --no-cache git
+
 WORKDIR /app
 
 COPY . .
 
+# Download dependencies for the gateway module
+WORKDIR /app/apps/gateway
 RUN go mod download
-RUN go build -o /server apps/gateway/cmd/server/main.go
+
+# Install gqlgen and generate GraphQL code
+RUN go install github.com/99designs/gqlgen@v0.17.45
+RUN go run github.com/99designs/gqlgen generate
+
+# Build the server
+WORKDIR /app
+RUN go build -o /server ./apps/gateway/cmd/server/main.go
 
 FROM alpine:latest
 

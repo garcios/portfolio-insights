@@ -9,8 +9,14 @@ run-user:
 run-portfolio:
 	cd services/portfolio-service && go run cmd/server/main.go
 
-docker-up:
-	docker-compose -f deployments/docker-compose/docker-compose.yml up --build
+podman-up:
+	podman-compose -f deployments/docker-compose/docker-compose.yml up --build
+
+podman-down:
+	podman-compose -f deployments/docker-compose/docker-compose.yml down
+
+podman-logs:
+	podman-compose -f deployments/docker-compose/docker-compose.yml logs -f
 
 proto-gen:
 	@mkdir -p services/user-service/proto/user
