@@ -1,5 +1,6 @@
 Here is a comprehensive, production-ready directory structure for your microservices-based stock portfolio application. This structure is designed for a monorepo setup, ensuring code sharing, unified tooling, and streamlined CI/CD.
 
+```
 portfolio-insights/
 ├── .github/
 │   └── workflows/
@@ -134,7 +135,7 @@ portfolio-insights/
 ├── Makefile                         # Root Makefile for monorepo commands
 ├── README.md
 └── go.work                          # Go Workspace file for multi-module dev
-
+```
 
 Why this structure is Production-Ready
 
