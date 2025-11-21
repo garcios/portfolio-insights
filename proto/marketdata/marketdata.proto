@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package marketdata;
+
+option go_package = "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata";
+
+import "google/protobuf/timestamp.proto";
+
+service MarketDataService {
+  rpc GetAsset(GetAssetRequest) returns (GetAssetResponse);
+  rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse);
+  rpc GetLatestPrice(GetLatestPriceRequest) returns (GetLatestPriceResponse);
+  rpc GetHistoricalPrices(GetHistoricalPricesRequest) returns (GetHistoricalPricesResponse);
+}
+
+message Asset {
+  string id = 1;
+  string symbol = 2;
+  string name = 3;
+  string type = 4;
+  string exchange = 5;
+  string currency = 6;
+}
+
+message AssetPrice {
+  string asset_id = 1;
+  double price = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message GetAssetRequest {
+  string symbol = 1;
+}
+
+message GetAssetResponse {
+  Asset asset = 1;
+}
+
+message ListAssetsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListAssetsResponse {
+  repeated Asset assets = 1;
+  string next_page_token = 2;
+}
+
+message GetLatestPriceRequest {
+  string symbol = 1;
+}
+
+message GetLatestPriceResponse {
+  AssetPrice price = 1;
+}
+
+message GetHistoricalPricesRequest {
+  string symbol = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  string interval = 4; // e.g., "1d", "1h"
+}
+
+message GetHistoricalPricesResponse {
+  repeated AssetPrice prices = 1;
+}

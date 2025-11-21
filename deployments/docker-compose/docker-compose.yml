@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: portfolio
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  nats:
+    image: nats:latest
+    command: "-js"
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  gateway:
+    build:
+      context: ../../
+      dockerfile: apps/gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - user-service
+      - portfolio-service
+
+  user-service:
+    build:
+      context: ../../
+      dockerfile: services/user-service/Dockerfile
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=portfolio
+    depends_on:
+      - postgres
+
+  portfolio-service:
+    build:
+      context: ../../
+      dockerfile: services/portfolio-service/Dockerfile
+
+volumes:
+  postgres_data:

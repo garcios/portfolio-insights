@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/garcios/portfolio-insights/services/user-service/proto/user";
+
+service UserService {
+  rpc GetUser (GetUserRequest) returns (GetUserResponse);
+  rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+}
+
+message CreateUserRequest {
+  string email = 1;
+  string name = 2;
+  string password = 3;
+}
+
+message CreateUserResponse {
+  string id = 1;
+}

@@ -1,0 +1,46 @@
+You are a senior software architect. Generate a complete, scalable, and production-ready directory structure for a full-stack stock-portfolio tracking application using a microservices architecture.
+
+Tech stack requirements:
+	•	Frontend: React.js with TypeScript, feature-based structure, hooks, context/state management, reusable UI components.
+	•	Middleware: GraphQL API gateway (Golang, gqlgel) acting as a federated entrypoint. Should contain schemas, resolvers, data loaders, federation configs, and proxy logic to backend microservices (via REST or gRPC).
+	•	Backend: Multiple Golang microservices, following clean architecture (domain, usecases/services, repository interfaces, infrastructure adapters).
+Examples of services:
+	•	user-service
+	•	portfolio-service
+	•	marketdata-service
+	•	transaction-service
+
+Deliverables:
+	•	Use monorepo.    
+	•	Use go version 1.24.
+	•	Use gRPC for microservices.
+	•	Use Federated GraphQL.
+	•	Go modules should use github.com/garcios/portfolio-insights as base.
+	•	Provide the full directory tree using indentation in a code block.
+	•	Include placeholder files (main.go, Dockerfile, schema.graphql, resolver.go, handler.go, migration.sql, etc.).
+	•	Include common microservice support folders:
+	•	/deployments (K8s manifests or docker-compose)
+	•	/configs (config templates)
+	•	/scripts (dev automation)
+	•	/infra (DB, message queue, API gateway)
+	•	/proto for gRPC
+	•	Include shared libraries folder for Go (e.g., logging, config loader, models, utils).
+	•	Include testing structure (unit tests + integration/e2e tests).
+	•	Include CI/CD directory (GitHub Actions or similar).
+	•	Ensure services are isolated but follow the same architecture pattern.
+
+Style requirements:
+	•	Follow best practices for microservices and clean architecture.
+	•	Use clear naming conventions.
+	•	Keep React, GraphQL gateway, and Go services in a single monorepo.
+
+Do NOT generate any implementation code. Only the directory structure.
+
+After the directory tree, provide a short explanation summarizing why the structure is scalable, maintainable, and production-ready.
+
+
+======================
+
+Help me generate the skeleton codes for the above.
+
+======================

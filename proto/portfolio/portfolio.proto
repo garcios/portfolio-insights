@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package portfolio;
+
+option go_package = "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio";
+
+import "google/protobuf/timestamp.proto";
+
+service PortfolioService {
+  rpc GetPortfolioSummary(GetPortfolioSummaryRequest) returns (GetPortfolioSummaryResponse);
+  rpc GetPortfolioPerformance(GetPortfolioPerformanceRequest) returns (GetPortfolioPerformanceResponse);
+  rpc GetHoldings(GetHoldingsRequest) returns (GetHoldingsResponse);
+}
+
+message PortfolioSummary {
+  string user_id = 1;
+  double total_value = 2;
+  double total_gain_loss = 3;
+  double total_gain_loss_percentage = 4;
+  google.protobuf.Timestamp last_updated = 5;
+}
+
+message Holding {
+  string symbol = 1;
+  double quantity = 2;
+  double average_price = 3;
+  double current_price = 4;
+  double current_value = 5;
+  double gain_loss = 6;
+  double gain_loss_percentage = 7;
+}
+
+message GetPortfolioSummaryRequest {
+  string user_id = 1;
+}
+
+message GetPortfolioSummaryResponse {
+  PortfolioSummary summary = 1;
+}
+
+message GetPortfolioPerformanceRequest {
+  string user_id = 1;
+  string period = 2; // e.g., "1d", "1w", "1m", "1y", "all"
+}
+
+message PortfolioPerformancePoint {
+  google.protobuf.Timestamp timestamp = 1;
+  double value = 2;
+}
+
+message GetPortfolioPerformanceResponse {
+  repeated PortfolioPerformancePoint data_points = 1;
+}
+
+message GetHoldingsRequest {
+  string user_id = 1;
+}
+
+message GetHoldingsResponse {
+  repeated Holding holdings = 1;
+}

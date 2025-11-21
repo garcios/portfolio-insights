@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS asset_prices;
+DROP TABLE IF EXISTS assets;
