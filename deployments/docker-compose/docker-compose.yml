@@ -81,6 +81,21 @@ services:
       - postgres
       - minio
 
+  transaction-service:
+    build:
+      context: ../../
+      dockerfile: services/transaction-service/Dockerfile
+    ports:
+      - "50053:50053"
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=garcios
+      - DB_PASSWORD=Password123
+      - DB_NAME=portfolio
+      - PORT=50053
+    depends_on:
+      - postgres
+
 volumes:
   postgres_data:
   minio_data:

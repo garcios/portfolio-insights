@@ -4,6 +4,9 @@ go 1.24.0
 
 require (
 	github.com/garcios/portfolio-insights/pkg v0.0.0
+	github.com/garcios/portfolio-insights/services/marketdata-service v0.0.0
+	github.com/garcios/portfolio-insights/services/user-service v0.0.0-00010101000000-000000000000
+	github.com/lib/pq v1.10.9
 	google.golang.org/grpc v1.77.0
 	google.golang.org/protobuf v1.36.10
 )
@@ -16,3 +19,7 @@ require (
 )
 
 replace github.com/garcios/portfolio-insights/pkg => ../../pkg
+
+replace github.com/garcios/portfolio-insights/services/user-service => ../user-service
+
+replace github.com/garcios/portfolio-insights/services/marketdata-service => ../marketdata-service
