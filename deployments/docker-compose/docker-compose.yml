@@ -49,6 +49,10 @@ services:
       dockerfile: services/portfolio-service/Dockerfile
     ports:
       - "50052:50052"
+    environment:
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - nats
 
   minio:
     image: minio/minio
@@ -93,8 +97,10 @@ services:
       - DB_PASSWORD=Password123
       - DB_NAME=portfolio
       - PORT=50053
+      - NATS_URL=nats://nats:4222
     depends_on:
       - postgres
+      - nats
 
 volumes:
   postgres_data:

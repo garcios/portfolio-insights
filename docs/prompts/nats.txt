@@ -1,0 +1,20 @@
+Modify CreateTransaction to publish a NATS message when a transaction is created.
+
+The message should contain the following information:
+- Transaction ID
+- User ID
+- Asset ID
+- Asset Type
+- Asset Name
+- Asset Symbol
+- Asset Price
+- Asset Quantity
+- Transaction Type
+- Transaction Date
+- Transaction Amount
+
+The message should be sent to the transaction-service.transaction.created topic.
+
+Modify the portfolio-service to subscribe to the transaction-service.transaction.created topic.
+    - When a transaction is received, update the portfolio.
+ 

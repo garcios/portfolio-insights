@@ -13,13 +13,15 @@ type transactionUsecase struct {
 	repo              domain.TransactionRepository
 	userGateway       domain.UserGateway
 	marketDataGateway domain.MarketDataGateway
+	eventPublisher    domain.EventPublisher
 }
 
-func NewTransactionUsecase(repo domain.TransactionRepository, userGateway domain.UserGateway, marketDataGateway domain.MarketDataGateway) domain.TransactionUsecase {
+func NewTransactionUsecase(repo domain.TransactionRepository, userGateway domain.UserGateway, marketDataGateway domain.MarketDataGateway, eventPublisher domain.EventPublisher) domain.TransactionUsecase {
 	return &transactionUsecase{
 		repo:              repo,
 		userGateway:       userGateway,
 		marketDataGateway: marketDataGateway,
+		eventPublisher:    eventPublisher,
 	}
 }
 
@@ -53,6 +55,14 @@ func (uc *transactionUsecase) CreateTransaction(ctx context.Context, userID, sym
 	if err := uc.repo.Create(ctx, tx); err != nil {
 		return nil, err
 	}
+
+	// Publish transaction created event
+	if err := uc.eventPublisher.PublishTransactionCreated(ctx, tx); err != nil {
+		// Log the error but don't fail the transaction creation
+		// In production, you might want to use a more sophisticated error handling strategy
+		fmt.Printf("failed to publish transaction created event: %v\n", err)
+	}
+
 	return tx, nil
 }
 

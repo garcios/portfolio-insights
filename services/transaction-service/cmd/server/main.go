@@ -44,8 +44,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize Event Publisher
+	eventPublisher, err := infrastructure.NewNATSEventPublisher()
+	if err != nil {
+		l.Error("failed to create event publisher", "error", err)
+		os.Exit(1)
+	}
+
 	// Initialize Usecase
-	uc := usecase.NewTransactionUsecase(repo, userGateway, marketDataGateway)
+	uc := usecase.NewTransactionUsecase(repo, userGateway, marketDataGateway, eventPublisher)
 
 	port := os.Getenv("PORT")
 	if port == "" {

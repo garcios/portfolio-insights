@@ -73,11 +73,19 @@ func (m *MockMarketDataGateway) Exists(ctx context.Context, symbol string) (bool
 	return m.exists, nil
 }
 
+// MockEventPublisher
+type MockEventPublisher struct{}
+
+func (m *MockEventPublisher) PublishTransactionCreated(ctx context.Context, transaction *domain.Transaction) error {
+	return nil
+}
+
 func TestCreateTransaction(t *testing.T) {
 	repo := NewMockRepo()
 	userGateway := &MockUserGateway{exists: true}
 	marketGateway := &MockMarketDataGateway{exists: true}
-	uc := NewTransactionUsecase(repo, userGateway, marketGateway)
+	eventPublisher := &MockEventPublisher{}
+	uc := NewTransactionUsecase(repo, userGateway, marketGateway, eventPublisher)
 
 	t.Run("Success", func(t *testing.T) {
 		tx, err := uc.CreateTransaction(context.Background(), "user-1", "AAPL", "BUY", 10, 150.0, time.Now())

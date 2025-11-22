@@ -33,6 +33,10 @@ type MarketDataGateway interface {
 	Exists(ctx context.Context, symbol string) (bool, error)
 }
 
+type EventPublisher interface {
+	PublishTransactionCreated(ctx context.Context, transaction *Transaction) error
+}
+
 type TransactionUsecase interface {
 	CreateTransaction(ctx context.Context, userID, symbol, txType string, quantity, price float64, executedAt time.Time) (*Transaction, error)
 	GetTransaction(ctx context.Context, id string) (*Transaction, error)

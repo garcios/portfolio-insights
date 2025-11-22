@@ -21,10 +21,10 @@
 - [x] **DB Integration**: Store data in `marketdata.assets` and `marketdata.asset_prices`.
 
 ### Week 3: Transaction Service (The Input)
-- [ ] **Core Logic**: Implement `Buy`, `Sell` logic.
-- [ ] **Validation**: Ensure transactions reference valid Assets (via gRPC call to MarketData) and Users.
-- [ ] **DB Integration**: Store in `txn.transactions`.
-- [ ] **API**: Expose `CreateTransaction`, `ListTransactions`, `GetTransaction`.
+- [x] **Core Logic**: Implement `Buy`, `Sell` logic.
+- [x] **Validation**: Ensure transactions reference valid Assets (via gRPC call to MarketData) and Users.
+- [x] **DB Integration**: Store in `txn.transactions`.
+- [x] **API**: Expose `CreateTransaction`, `ListTransactions`, `GetTransaction`.
 
 ### Week 4: Portfolio Service (The Aggregator)
 - [ ] **Calculation Engine**: Implement logic to calculate current holdings based on transaction history.
