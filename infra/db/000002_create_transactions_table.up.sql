@@ -1,4 +1,8 @@
-CREATE TABLE IF NOT EXISTS transactions (
+-- Create txn schema for transaction-related tables
+CREATE SCHEMA IF NOT EXISTS txn;
+
+-- Create transactions table in txn schema
+CREATE TABLE IF NOT EXISTS txn.transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     symbol VARCHAR(20) NOT NULL,
@@ -10,4 +14,4 @@ CREATE TABLE IF NOT EXISTS transactions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX idx_transactions_user_id ON txn.transactions(user_id);

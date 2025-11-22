@@ -1,1 +1,2 @@
-DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS txn.transactions;
+DROP SCHEMA IF EXISTS txn CASCADE;

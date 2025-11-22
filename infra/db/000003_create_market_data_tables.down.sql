@@ -1,2 +1,3 @@
-DROP TABLE IF EXISTS asset_prices;
-DROP TABLE IF EXISTS assets;
+DROP TABLE IF EXISTS marketdata.asset_prices;
+DROP TABLE IF EXISTS marketdata.assets;
+DROP SCHEMA IF EXISTS marketdata CASCADE;

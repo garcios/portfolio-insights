@@ -1,4 +1,8 @@
-CREATE TABLE IF NOT EXISTS assets (
+-- Create marketdata schema for market data-related tables
+CREATE SCHEMA IF NOT EXISTS marketdata;
+
+-- Create assets table in marketdata schema
+CREATE TABLE IF NOT EXISTS marketdata.assets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     symbol VARCHAR(20) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
@@ -9,13 +13,14 @@ CREATE TABLE IF NOT EXISTS assets (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS asset_prices (
+-- Create asset_prices table in marketdata schema
+CREATE TABLE IF NOT EXISTS marketdata.asset_prices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+    asset_id UUID NOT NULL REFERENCES marketdata.assets(id) ON DELETE CASCADE,
     price DECIMAL(20, 8) NOT NULL,
     timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_assets_symbol ON assets(symbol);
-CREATE INDEX idx_asset_prices_asset_id_timestamp ON asset_prices(asset_id, timestamp DESC);
+CREATE INDEX idx_assets_symbol ON marketdata.assets(symbol);
+CREATE INDEX idx_asset_prices_asset_id_timestamp ON marketdata.asset_prices(asset_id, timestamp DESC);
