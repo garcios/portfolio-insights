@@ -1,0 +1,64 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'portfolio-insights-dev'
+    environment: 'development'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Gateway Service
+  - job_name: 'gateway-service'
+    static_configs:
+      - targets: ['host.docker.internal:9095']
+        labels:
+          service: 'gateway'
+          tier: 'api'
+
+  # User Service
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['host.docker.internal:9096']
+        labels:
+          service: 'user'
+          tier: 'backend'
+
+  # Transaction Service
+  - job_name: 'transaction-service'
+    static_configs:
+      - targets: ['host.docker.internal:9097']
+        labels:
+          service: 'transaction'
+          tier: 'backend'
+
+  # Portfolio Service
+  - job_name: 'portfolio-service'
+    static_configs:
+      - targets: ['host.docker.internal:9098']
+        labels:
+          service: 'portfolio'
+          tier: 'backend'
+
+  # Market Data Service
+  - job_name: 'marketdata-service'
+    static_configs:
+      - targets: ['host.docker.internal:9099']
+        labels:
+          service: 'marketdata'
+          tier: 'backend'

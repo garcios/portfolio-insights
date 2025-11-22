@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/domain"
+	"github.com/garcios/portfolio-insights/services/transaction-service/internal/metrics"
 )
 
 type transactionUsecase struct {
@@ -26,8 +27,15 @@ func NewTransactionUsecase(repo domain.TransactionRepository, userGateway domain
 }
 
 func (uc *transactionUsecase) CreateTransaction(ctx context.Context, userID, symbol, txType string, quantity, price float64, executedAt time.Time) (*domain.Transaction, error) {
+	start := time.Now()
+	defer func() {
+		metrics.TransactionProcessingDuration.Observe(time.Since(start).Seconds())
+	}()
+
 	// Validate User
+	userValidationStart := time.Now()
 	exists, err := uc.userGateway.Exists(ctx, userID)
+	metrics.UserValidationDuration.Observe(time.Since(userValidationStart).Seconds())
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate user: %w", err)
 	}
@@ -36,7 +44,9 @@ func (uc *transactionUsecase) CreateTransaction(ctx context.Context, userID, sym
 	}
 
 	// Validate Asset
+	assetValidationStart := time.Now()
 	exists, err = uc.marketDataGateway.Exists(ctx, symbol)
+	metrics.AssetValidationDuration.Observe(time.Since(assetValidationStart).Seconds())
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate asset: %w", err)
 	}
@@ -55,6 +65,10 @@ func (uc *transactionUsecase) CreateTransaction(ctx context.Context, userID, sym
 	if err := uc.repo.Create(ctx, tx); err != nil {
 		return nil, err
 	}
+
+	// Record business metrics
+	metrics.TransactionsCreatedTotal.WithLabelValues(txType).Inc()
+	metrics.TransactionValueTotal.WithLabelValues(txType).Add(quantity * price)
 
 	// Publish transaction created event
 	if err := uc.eventPublisher.PublishTransactionCreated(ctx, tx); err != nil {
@@ -109,9 +123,15 @@ func (uc *transactionUsecase) UpdateTransaction(ctx context.Context, id, symbol,
 	if err := uc.repo.Update(ctx, tx); err != nil {
 		return nil, err
 	}
+
+	// TODO: Publish transaction updated event
+
 	return tx, nil
 }
 
 func (uc *transactionUsecase) DeleteTransaction(ctx context.Context, id string) error {
+
+	// TODO: Publish transaction deleted event
+
 	return uc.repo.Delete(ctx, id)
 }

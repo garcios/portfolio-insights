@@ -18,6 +18,16 @@ podman-down:
 podman-logs:
 	podman-compose -f deployments/docker-compose/docker-compose.yml logs -f
 
+monitoring-up:
+	./deployments/monitoring/start-monitoring.sh
+
+monitoring-down:
+	./deployments/monitoring/stop-monitoring.sh
+
+monitoring-logs:
+	podman logs -f prometheus
+
+
 proto-gen:
 	@mkdir -p services/user-service/proto/user
 	@mkdir -p services/transaction-service/proto/transaction

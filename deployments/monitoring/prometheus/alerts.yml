@@ -1,0 +1,125 @@
+groups:
+  - name: service_health
+    interval: 30s
+    rules:
+      # High Error Rate Alert
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status_code=~"5.."}[5m])) by (service)
+            /
+            sum(rate(http_requests_total[5m])) by (service)
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High error rate on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has error rate of {{ $value | humanizePercentage }} (threshold: 1%)"
+
+      # High Latency Alert (P95 > 1s)
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (service, le)
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High latency on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} P95 latency is {{ $value }}s (threshold: 1s)"
+
+      # Service Down Alert
+      - alert: ServiceDown
+        expr: up{job=~".*-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 2 minutes"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            go_memstats_heap_alloc_bytes
+            /
+            go_memstats_heap_sys_bytes
+          ) > 0.9
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High memory usage on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} is using {{ $value | humanizePercentage }} of heap (threshold: 90%)"
+
+      # Goroutine Leak Detection
+      - alert: GoroutineLeak
+        expr: |
+          (
+            go_goroutines > 1000
+            and
+            rate(go_goroutines[10m]) > 10
+          )
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Potential goroutine leak on {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has {{ $value }} goroutines and growing"
+
+  - name: business_metrics
+    interval: 1m
+    rules:
+      # Transaction Processing Failures
+      - alert: HighTransactionFailureRate
+        expr: |
+          (
+            sum(rate(grpc_requests_total{method=~".*CreateTransaction", status!="OK"}[5m]))
+            /
+            sum(rate(grpc_requests_total{method=~".*CreateTransaction"}[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High transaction failure rate"
+          description: "Transaction creation failure rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # NATS Event Processing Failures
+      - alert: HighNATSEventFailureRate
+        expr: |
+          (
+            sum(rate(nats_events_processed_total{status="failed"}[5m]))
+            /
+            sum(rate(nats_events_processed_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High NATS event processing failure rate"
+          description: "NATS event failure rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Slow gRPC Calls
+      - alert: SlowGRPCCalls
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(grpc_request_duration_seconds_bucket[5m])) by (service, method, le)
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Slow gRPC calls on {{ $labels.service }}"
+          description: "Method {{ $labels.method }} P95 latency is {{ $value }}s (threshold: 0.5s)"

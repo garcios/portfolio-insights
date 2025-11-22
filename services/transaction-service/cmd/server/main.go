@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,9 +10,11 @@ import (
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	transactionhandler "github.com/garcios/portfolio-insights/services/transaction-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/infrastructure"
+	"github.com/garcios/portfolio-insights/services/transaction-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/usecase"
 	pb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 )
 
@@ -54,6 +57,26 @@ func main() {
 	// Initialize Usecase
 	uc := usecase.NewTransactionUsecase(repo, userGateway, marketDataGateway, eventPublisher)
 
+	// Start metrics server
+	metricsPort := os.Getenv("METRICS_PORT")
+	if metricsPort == "" {
+		metricsPort = "9097"
+	}
+
+	go func() {
+		metricsMux := http.NewServeMux()
+		metricsMux.Handle("/metrics", promhttp.Handler())
+		metricsMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		})
+
+		l.Info("Metrics server listening on port " + metricsPort)
+		if err := http.ListenAndServe(":"+metricsPort, metricsMux); err != nil {
+			l.Error("Metrics server failed", "error", err)
+		}
+	}()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "50053"
@@ -65,7 +88,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := grpc.NewServer()
+	// Create gRPC server with metrics interceptor
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(middleware.UnaryServerInterceptor("transaction")),
+	)
 	handler := transactionhandler.NewTransactionHandler(uc)
 	pb.RegisterTransactionServiceServer(s, handler)
 
