@@ -1,0 +1,11 @@
+symbol,name,type,exchange,currency
+MSFT,Microsoft Corporation,Stock,NASDAQ,USD
+GOOGL,Alphabet Inc. Class A,Stock,NASDAQ,USD
+AMZN,Amazon.com Inc.,Stock,NASDAQ,USD
+META,Meta Platforms Inc.,Stock,NASDAQ,USD
+NVDA,NVIDIA Corporation,Stock,NASDAQ,USD
+AVGO,Broadcom Inc.,Stock,NASDAQ,USD
+TSM,Taiwan Semiconductor Manufacturing Co Ltd,ADR,NYSE,USD
+AMD,Advanced Micro Devices Inc.,Stock,NASDAQ,USD
+UBER,Uber Technologies Inc.,Stock,NYSE,USD
+MA,Mastercard Incorporated,Stock,NYSE,USD

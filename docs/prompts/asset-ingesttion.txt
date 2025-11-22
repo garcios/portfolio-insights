@@ -1,0 +1,4 @@
+In marketdata-service, implement an ingestion worker using Go routine that reads a CSV file named asset.csv located in MinIO bucket into a PostgreSQL database table named marketdata.assets.
+
+The CSV uses a comma delimiter and UTF-8 encoding. The loading strategy must be UPSERT based on the unique key "symbol". 
+The script should include a function to handle the database connection and use a batch insertion method for performance.

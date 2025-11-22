@@ -50,5 +50,37 @@ services:
     ports:
       - "50052:50052"
 
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data:/data
+
+  marketdata-service:
+    build:
+      context: ../../
+      dockerfile: services/marketdata-service/Dockerfile
+    ports:
+      - "50054:50054"
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=garcios
+      - DB_PASSWORD=Password123
+      - DB_NAME=portfolio
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET_NAME=market-data
+    depends_on:
+      - postgres
+      - minio
+
 volumes:
   postgres_data:
+  minio_data:
