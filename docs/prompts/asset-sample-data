@@ -1,4 +1,4 @@
-"Help me create sample data for an assets.csv file. The file must have the following columns: symbol, name, type, exchange, and currency.
+Help me create sample data for an assets.csv file. The file must have the following columns: symbol, name, type, exchange, and currency.
 
 The file should include data for the following companies, ensuring that the symbol and exchange are correct for US-listed stocks and the currency is USD:
 
@@ -13,4 +13,4 @@ The file should include data for the following companies, ensuring that the symb
 - UBER
 - Mastercard
 
-For the type column, please use appropriate values like 'Stock' or 'ADR'. Output the result as a complete, ready-to-use CSV text block."
+For the type column, please use appropriate values like 'Stock' or 'ADR'. Output the result as a complete, ready-to-use CSV text block.

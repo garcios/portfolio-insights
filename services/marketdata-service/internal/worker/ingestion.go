@@ -2,28 +2,26 @@ package worker
 
 import (
 	"context"
-	"database/sql"
 	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"strings"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/domain"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type IngestionWorker struct {
-	db          *sql.DB
+	repo        domain.MarketDataRepository
 	minioClient *minio.Client
 	bucketName  string
 	fileName    string
 }
 
-func NewIngestionWorker(db *sql.DB) (*IngestionWorker, error) {
+func NewIngestionWorker(repo domain.MarketDataRepository) (*IngestionWorker, error) {
 	endpoint := os.Getenv("MINIO_ENDPOINT")
 	accessKeyID := os.Getenv("MINIO_ACCESS_KEY")
 	secretAccessKey := os.Getenv("MINIO_SECRET_KEY")
@@ -47,7 +45,7 @@ func NewIngestionWorker(db *sql.DB) (*IngestionWorker, error) {
 	}
 
 	return &IngestionWorker{
-		db:          db,
+		repo:        repo,
 		minioClient: minioClient,
 		bucketName:  bucketName,
 		fileName:    fileName,
@@ -56,10 +54,9 @@ func NewIngestionWorker(db *sql.DB) (*IngestionWorker, error) {
 
 func (w *IngestionWorker) Start(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(1 * time.Hour) // Check every hour, or make configurable
+		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
 
-		// Run immediately on start
 		if err := w.processFile(ctx); err != nil {
 			log.Printf("Error processing file: %v", err)
 		}
@@ -80,24 +77,19 @@ func (w *IngestionWorker) Start(ctx context.Context) {
 func (w *IngestionWorker) processFile(ctx context.Context) error {
 	log.Println("Starting asset ingestion...")
 
-	// Check if object exists
 	_, err := w.minioClient.StatObject(ctx, w.bucketName, w.fileName, minio.StatObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to stat object %s/%s: %w", w.bucketName, w.fileName, err)
 	}
 
-	// Get object
 	object, err := w.minioClient.GetObject(ctx, w.bucketName, w.fileName, minio.GetObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get object: %w", err)
 	}
 	defer object.Close()
 
-	// Parse CSV
 	reader := csv.NewReader(object)
-
-	// Read header
-	_, err = reader.Read()
+	_, err = reader.Read() // Skip header
 	if err != nil {
 		return fmt.Errorf("failed to read header: %w", err)
 	}
@@ -123,111 +115,33 @@ func (w *IngestionWorker) processFile(ctx context.Context) error {
 }
 
 func (w *IngestionWorker) batchInsert(ctx context.Context, rows [][]string) error {
-	tx, err := w.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	// Batch size
-	batchSize := 1000
-	for i := 0; i < len(rows); i += batchSize {
-		end := i + batchSize
-		if end > len(rows) {
-			end = len(rows)
+	// Convert rows to domain.Asset
+	var assets []*domain.Asset
+	for _, row := range rows {
+		if len(row) < 5 {
+			continue
 		}
-		batch := rows[i:end]
+		assets = append(assets, &domain.Asset{
+			Symbol:   row[0],
+			Name:     row[1],
+			Type:     row[2],
+			Exchange: row[3],
+			Currency: row[4],
+		})
+	}
 
-		if err := w.insertBatch(ctx, tx, batch); err != nil {
+	batchSize := 1000
+	for i := 0; i < len(assets); i += batchSize {
+		end := i + batchSize
+		if end > len(assets) {
+			end = len(assets)
+		}
+		batch := assets[i:end]
+		if err := w.repo.UpsertAssets(batch); err != nil {
 			return err
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	log.Printf("Successfully ingested %d assets.", len(rows))
+	log.Printf("Successfully ingested %d assets.", len(assets))
 	return nil
-}
-
-func (w *IngestionWorker) insertBatch(ctx context.Context, tx *sql.Tx, batch [][]string) error {
-	valueStrings := make([]string, 0, len(batch))
-	valueArgs := make([]interface{}, 0, len(batch)*5)
-
-	for i, row := range batch {
-		// Assuming CSV columns: symbol, name, type, exchange, currency
-		if len(row) < 5 {
-			continue // Skip invalid rows
-		}
-
-		n := i * 5
-		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)", n+1, n+2, n+3, n+4, n+5))
-		valueArgs = append(valueArgs, row[0], row[1], row[2], row[3], row[4])
-	}
-
-	if len(valueStrings) == 0 {
-		return nil
-	}
-
-	stmt := fmt.Sprintf(`
-		INSERT INTO marketdata.assets (symbol, name, type, exchange, currency)
-		VALUES %s
-		ON CONFLICT (symbol) DO UPDATE SET
-			name = EXCLUDED.name,
-			type = EXCLUDED.type,
-			exchange = EXCLUDED.exchange,
-			currency = EXCLUDED.currency,
-			updated_at = NOW()
-	`, strings.Join(valueStrings, ","))
-
-	_, err := tx.ExecContext(ctx, stmt, valueArgs...)
-	if err != nil {
-		return fmt.Errorf("failed to execute batch insert: %w", err)
-	}
-
-	return nil
-}
-
-// ConnectDB is a helper to establish DB connection if needed independently
-func ConnectDB() (*sql.DB, error) {
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-	sslmode := os.Getenv("DB_SSLMODE")
-
-	if host == "" {
-		host = "localhost"
-	}
-	if port == "" {
-		port = "5432"
-	}
-	if user == "" {
-		user = "garcios"
-	}
-	if password == "" {
-		password = "Password123"
-	}
-	if dbname == "" {
-		dbname = "portfolio"
-	}
-	if sslmode == "" {
-		sslmode = "disable"
-	}
-
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host, port, user, password, dbname, sslmode)
-
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	return db, nil
 }
