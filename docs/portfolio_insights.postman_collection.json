@@ -420,7 +420,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"id\": \"user123\"\n}",
+                            "raw": "{\n    \"id\": \"cc4c8131-a0a4-4d28-a482-35fefae52969\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -436,7 +436,8 @@
                                 "user.UserService",
                                 "GetUser"
                             ]
-                        }
+                        },
+                        "description": "Get a user by ID. Use the ID returned from CreateUser."
                     },
                     "response": []
                 },
@@ -452,7 +453,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"email\": \"test@example.com\",\n    \"name\": \"Test User\",\n    \"password\": \"password123\"\n}",
+                            "raw": "{\n    \"email\": \"newuser@example.com\",\n    \"name\": \"New User\",\n    \"password\": \"securepass123\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -468,7 +469,8 @@
                                 "user.UserService",
                                 "CreateUser"
                             ]
-                        }
+                        },
+                        "description": "Create a new user. Returns the generated ID."
                     },
                     "response": []
                 }
@@ -477,7 +479,7 @@
     ],
     "variable": [
         {
-            "key": "marketdata_url",
+            "key": "user_url",
             "value": "http://localhost:50051",
             "type": "string"
         },
@@ -492,7 +494,7 @@
             "type": "string"
         },
         {
-            "key": "user_url",
+            "key": "marketdata_url",
             "value": "http://localhost:50054",
             "type": "string"
         }

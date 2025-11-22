@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Insights - Database Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .connection-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .connection-info h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .connection-detail {
+            display: flex;
+            margin-bottom: 10px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .connection-detail strong {
+            width: 120px;
+            color: #667eea;
+        }
+
+        .schemas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .schema-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .schema-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .schema-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .schema-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 15px;
+        }
+
+        .schema-icon.customers { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .schema-icon.txn { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .schema-icon.marketdata { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .schema-icon.investments { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+
+        .schema-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .table-list {
+            list-style: none;
+        }
+
+        .table-item {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+
+        .table-item:hover {
+            background: #e9ecef;
+        }
+
+        .table-icon {
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 14px;
+        }
+
+        .table-name {
+            font-weight: 600;
+            color: #333;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .stats {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .stats h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .instructions {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 30px;
+        }
+
+        .instructions h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .instructions code {
+            background: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            color: #667eea;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        .badge.primary { background: #667eea; color: white; }
+        .badge.success { background: #43e97b; color: white; }
+        .badge.info { background: #4facfe; color: white; }
+        .badge.warning { background: #f5576c; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Database Explorer</h1>
+            <p class="subtitle">Portfolio Insights - PostgreSQL Schema Visualization</p>
+            
+            <div class="connection-info">
+                <h3>🔌 Connection Details</h3>
+                <div class="connection-detail">
+                    <strong>Host:</strong>
+                    <span>localhost</span>
+                </div>
+                <div class="connection-detail">
+                    <strong>Port:</strong>
+                    <span>5432</span>
+                </div>
+                <div class="connection-detail">
+                    <strong>Database:</strong>
+                    <span>portfolio</span>
+                </div>
+                <div class="connection-detail">
+                    <strong>Username:</strong>
+                    <span>garcios</span>
+                </div>
+                <div class="connection-detail">
+                    <strong>Password:</strong>
+                    <span>Password123</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <h2>📈 Database Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">4</div>
+                    <div class="stat-label">Schemas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">6</div>
+                    <div class="stat-label">Tables</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">Indexes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">1</div>
+                    <div class="stat-label">Foreign Keys</div>
+                </div>
+            </div>
+        </div>
+
+        <h2 style="color: white; margin: 30px 0 20px 0; font-size: 2rem;">🗂️ Database Schemas</h2>
+
+        <div class="schemas-grid">
+            <!-- Customers Schema -->
+            <div class="schema-card">
+                <div class="schema-header">
+                    <div class="schema-icon customers">👥</div>
+                    <div>
+                        <div class="schema-name">customers</div>
+                    </div>
+                </div>
+                <ul class="table-list">
+                    <li class="table-item">
+                        <div class="table-icon">📋</div>
+                        <span class="table-name">users</span>
+                        <span class="badge primary">1 table</span>
+                    </li>
+                </ul>
+                <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">
+                    User accounts and authentication data
+                </p>
+            </div>
+
+            <!-- Transaction Schema -->
+            <div class="schema-card">
+                <div class="schema-header">
+                    <div class="schema-icon txn">💳</div>
+                    <div>
+                        <div class="schema-name">txn</div>
+                    </div>
+                </div>
+                <ul class="table-list">
+                    <li class="table-item">
+                        <div class="table-icon">📋</div>
+                        <span class="table-name">transactions</span>
+                        <span class="badge warning">1 table</span>
+                    </li>
+                </ul>
+                <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">
+                    Buy/sell transaction records
+                </p>
+            </div>
+
+            <!-- MarketData Schema -->
+            <div class="schema-card">
+                <div class="schema-header">
+                    <div class="schema-icon marketdata">📈</div>
+                    <div>
+                        <div class="schema-name">marketdata</div>
+                    </div>
+                </div>
+                <ul class="table-list">
+                    <li class="table-item">
+                        <div class="table-icon">📋</div>
+                        <span class="table-name">assets</span>
+                    </li>
+                    <li class="table-item">
+                        <div class="table-icon">📋</div>
+                        <span class="table-name">asset_prices</span>
+                    </li>
+                </ul>
+                <span class="badge info" style="margin-top: 10px; display: inline-block;">2 tables</span>
+                <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">
+                    Asset information and pricing data
+                </p>
+            </div>
+
+            <!-- Investments Schema -->
+            <div class="schema-card">
+                <div class="schema-header">
+                    <div class="schema-icon investments">💰</div>
+                    <div>
+                        <div class="schema-name">investments</div>
+                    </div>
+                </div>
+                <ul class="table-list">
+                    <li class="table-item">
+                        <div class="table-icon">📋</div>
+                        <span class="table-name">holdings</span>
+                    </li>
+                    <li class="table-item">
+                        <div class="table-icon">📋</div>
+                        <span class="table-name">portfolio_history</span>
+                    </li>
+                </ul>
+                <span class="badge success" style="margin-top: 10px; display: inline-block;">2 tables</span>
+                <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">
+                    Portfolio holdings and performance tracking
+                </p>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h2>🔧 How to Connect with External Tools</h2>
+            <ol>
+                <li>
+                    <strong>Install a Database Client</strong><br>
+                    Choose one: DBeaver (free), TablePlus, pgAdmin, Postico, or DataGrip
+                </li>
+                <li>
+                    <strong>Create New Connection</strong><br>
+                    Use the connection details shown above
+                </li>
+                <li>
+                    <strong>Test Connection</strong><br>
+                    Click "Test Connection" to verify it works
+                </li>
+                <li>
+                    <strong>Explore Your Data</strong><br>
+                    Browse schemas: <code>customers</code>, <code>txn</code>, <code>marketdata</code>, <code>investments</code>
+                </li>
+            </ol>
+
+            <h3 style="margin-top: 30px; margin-bottom: 15px;">Quick psql Commands</h3>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; font-family: monospace;">
+                <div style="margin-bottom: 10px;"><code>\dn</code> - List all schemas</div>
+                <div style="margin-bottom: 10px;"><code>\dt customers.*</code> - List tables in customers schema</div>
+                <div style="margin-bottom: 10px;"><code>\d customers.users</code> - Describe users table</div>
+                <div style="margin-bottom: 10px;"><code>\di</code> - List all indexes</div>
+                <div><code>\q</code> - Quit psql</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

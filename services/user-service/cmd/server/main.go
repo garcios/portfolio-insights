@@ -17,7 +17,12 @@ func main() {
 	l := logger.New()
 
 	// Infrastructure
-	db := infrastructure.NewPostgresDB()
+	db, err := infrastructure.NewPostgresDB()
+	if err != nil {
+		l.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	defer db.Close()
 
 	// Repository
 	repo := repository.NewUserRepository(db)

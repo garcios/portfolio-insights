@@ -16,12 +16,16 @@ func (uc *UserUsecase) GetUser(id string) (*domain.User, error) {
 	return uc.repo.GetByID(id)
 }
 
-func (uc *UserUsecase) CreateUser(email, name, password string) error {
+func (uc *UserUsecase) CreateUser(email, name, password string) (*domain.User, error) {
 	// Add validation logic here
 	u := &domain.User{
 		Email:    email,
 		Name:     name,
 		Password: password, // Hash this in real impl
 	}
-	return uc.repo.Create(u)
+	err := uc.repo.Create(u)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
 }

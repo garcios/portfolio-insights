@@ -3,16 +3,16 @@ package grpc
 import (
 	"context"
 
-	"github.com/garcios/portfolio-insights/services/user-service/internal/usecase"
+	"github.com/garcios/portfolio-insights/services/user-service/internal/domain"
 	pb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
 )
 
 type UserHandler struct {
-	uc *usecase.UserUsecase
+	uc domain.UserUsecase
 	pb.UnimplementedUserServiceServer
 }
 
-func NewUserHandler(uc *usecase.UserUsecase) *UserHandler {
+func NewUserHandler(uc domain.UserUsecase) *UserHandler {
 	return &UserHandler{uc: uc}
 }
 
@@ -25,6 +25,9 @@ func (h *UserHandler) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 }
 
 func (h *UserHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
-	// TODO: Implement CreateUser in usecase and call it here
-	return &pb.CreateUserResponse{Id: "not-implemented"}, nil
+	user, err := h.uc.CreateUser(req.Email, req.Name, req.Password)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CreateUserResponse{Id: user.ID}, nil
 }
