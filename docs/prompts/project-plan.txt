@@ -1,0 +1,7 @@
+I need a detailed development plan for my portfolio-insights project. 
+
+The goal is to launch an MVP in 3 months. 
+
+I'm the only developer. 
+
+Please structure the plan into Phases (like Discovery, Design, Development, Testing, Deployment) and suggest key tasks and milestones for the core features.
