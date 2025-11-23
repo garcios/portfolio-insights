@@ -19,6 +19,14 @@ services:
       - "4222:4222"
       - "8222:8222"
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
   gateway:
     build:
       context: ../../
@@ -50,9 +58,19 @@ services:
     ports:
       - "50052:50052"
     environment:
+      - DB_HOST=postgres
+      - DB_USER=garcios
+      - DB_PASSWORD=Password123
+      - DB_NAME=portfolio
       - NATS_URL=nats://nats:4222
+      - REDIS_ADDR=redis:6379
+      - PRICE_CACHE_TTL_SECONDS=60
+      - MARKETDATA_SERVICE_ADDR=marketdata-service:50054
     depends_on:
+      - postgres
       - nats
+      - redis
+      - marketdata-service
 
   minio:
     image: minio/minio
@@ -105,3 +123,4 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  redis_data:

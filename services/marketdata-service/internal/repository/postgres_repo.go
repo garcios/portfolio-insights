@@ -123,6 +123,53 @@ func (r *postgresMarketDataRepo) GetLatestPrice(symbol string) (*domain.AssetPri
 	return &price, nil
 }
 
+func (r *postgresMarketDataRepo) GetLatestPrices(symbols []string) (map[string]*domain.AssetPrice, error) {
+	if len(symbols) == 0 {
+		return make(map[string]*domain.AssetPrice), nil
+	}
+
+	// Build placeholders for IN clause
+	placeholders := make([]string, len(symbols))
+	args := make([]interface{}, len(symbols))
+	for i, symbol := range symbols {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = symbol
+	}
+
+	query := fmt.Sprintf(`
+		SELECT a.symbol, p.id, p.asset_id, p.price, p.timestamp, p.created_at
+		FROM marketdata.asset_prices p
+		JOIN marketdata.assets a ON p.asset_id = a.id
+		WHERE a.symbol IN (%s)
+		AND p.id IN (
+			SELECT p2.id
+			FROM marketdata.asset_prices p2
+			JOIN marketdata.assets a2 ON p2.asset_id = a2.id
+			WHERE a2.symbol = a.symbol
+			ORDER BY p2.timestamp DESC
+			LIMIT 1
+		)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	prices := make(map[string]*domain.AssetPrice)
+	for rows.Next() {
+		var symbol string
+		var price domain.AssetPrice
+		if err := rows.Scan(&symbol, &price.ID, &price.AssetID, &price.Price, &price.Timestamp, &price.CreatedAt); err != nil {
+			return nil, err
+		}
+		prices[symbol] = &price
+	}
+
+	return prices, nil
+}
+
 func (r *postgresMarketDataRepo) GetHistoricalPrices(symbol string, start, end time.Time) ([]*domain.AssetPrice, error) {
 	query := `
 		SELECT p.id, p.asset_id, p.price, p.timestamp, p.created_at

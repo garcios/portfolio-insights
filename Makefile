@@ -45,3 +45,19 @@ proto-gen:
 	protoc --go_out=services/portfolio-service --go_opt=paths=source_relative \
     --go-grpc_out=services/portfolio-service --go-grpc_opt=paths=source_relative \
     proto/portfolio/portfolio.proto
+
+# Testing targets
+test-portfolio:
+	cd services/portfolio-service && go test ./internal/... -v
+
+test-portfolio-coverage:
+	cd services/portfolio-service && go test ./internal/... -cover -coverprofile=coverage.out
+	cd services/portfolio-service && go tool cover -html=coverage.out
+
+test-portfolio-race:
+	cd services/portfolio-service && go test ./internal/... -race
+
+test-all:
+	cd services/user-service && go test ./internal/... -v
+	cd services/transaction-service && go test ./internal/... -v
+	cd services/portfolio-service && go test ./internal/... -v

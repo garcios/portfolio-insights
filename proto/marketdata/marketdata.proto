@@ -10,6 +10,7 @@ service MarketDataService {
   rpc GetAsset(GetAssetRequest) returns (GetAssetResponse);
   rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse);
   rpc GetLatestPrice(GetLatestPriceRequest) returns (GetLatestPriceResponse);
+  rpc GetLatestPrices(GetLatestPricesRequest) returns (GetLatestPricesResponse);
   rpc GetHistoricalPrices(GetHistoricalPricesRequest) returns (GetHistoricalPricesResponse);
 }
 
@@ -52,6 +53,14 @@ message GetLatestPriceRequest {
 
 message GetLatestPriceResponse {
   AssetPrice price = 1;
+}
+
+message GetLatestPricesRequest {
+  repeated string symbols = 1;
+}
+
+message GetLatestPricesResponse {
+  map<string, AssetPrice> prices = 1;
 }
 
 message GetHistoricalPricesRequest {

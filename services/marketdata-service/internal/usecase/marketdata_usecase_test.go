@@ -67,6 +67,16 @@ func (m *MockMarketDataRepository) GetLatestPrice(symbol string) (*domain.AssetP
 	return nil, errors.New("not found")
 }
 
+func (m *MockMarketDataRepository) GetLatestPrices(symbols []string) (map[string]*domain.AssetPrice, error) {
+	result := make(map[string]*domain.AssetPrice)
+	for _, symbol := range symbols {
+		if prices, ok := m.prices[symbol]; ok && len(prices) > 0 {
+			result[symbol] = prices[len(prices)-1]
+		}
+	}
+	return result, nil
+}
+
 func (m *MockMarketDataRepository) GetHistoricalPrices(symbol string, start, end time.Time) ([]*domain.AssetPrice, error) {
 	if prices, ok := m.prices[symbol]; ok {
 		return prices, nil

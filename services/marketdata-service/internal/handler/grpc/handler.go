@@ -101,6 +101,32 @@ func (h *MarketDataHandler) GetLatestPrice(ctx context.Context, req *pb.GetLates
 	}, nil
 }
 
+func (h *MarketDataHandler) GetLatestPrices(ctx context.Context, req *pb.GetLatestPricesRequest) (*pb.GetLatestPricesResponse, error) {
+	symbols := req.GetSymbols()
+	if len(symbols) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "at least one symbol is required")
+	}
+
+	prices, err := h.usecase.GetLatestPrices(symbols)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to query prices: %v", err)
+	}
+
+	// Convert to proto map
+	priceMap := make(map[string]*pb.AssetPrice)
+	for symbol, price := range prices {
+		priceMap[symbol] = &pb.AssetPrice{
+			AssetId:   price.AssetID,
+			Price:     price.Price,
+			Timestamp: timestamppb.New(price.Timestamp),
+		}
+	}
+
+	return &pb.GetLatestPricesResponse{
+		Prices: priceMap,
+	}, nil
+}
+
 func (h *MarketDataHandler) GetHistoricalPrices(ctx context.Context, req *pb.GetHistoricalPricesRequest) (*pb.GetHistoricalPricesResponse, error) {
 	symbol := req.GetSymbol()
 	if symbol == "" {

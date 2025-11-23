@@ -32,6 +32,16 @@ func (m *MockMarketDataUsecase) GetLatestPrice(symbol string) (*domain.AssetPric
 	return nil, errors.New("not found")
 }
 
+func (m *MockMarketDataUsecase) GetLatestPrices(symbols []string) (map[string]*domain.AssetPrice, error) {
+	result := make(map[string]*domain.AssetPrice)
+	for _, symbol := range symbols {
+		if symbol == "AAPL" || symbol == "GOOGL" {
+			result[symbol] = &domain.AssetPrice{Price: 150.0, Timestamp: time.Now()}
+		}
+	}
+	return result, nil
+}
+
 func (m *MockMarketDataUsecase) GetHistoricalPrices(symbol string, start, end time.Time) ([]*domain.AssetPrice, error) {
 	return nil, nil
 }

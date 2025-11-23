@@ -47,6 +47,10 @@ func (uc *marketDataUsecase) GetLatestPrice(symbol string) (*domain.AssetPrice, 
 	return uc.repo.GetLatestPrice(symbol)
 }
 
+func (uc *marketDataUsecase) GetLatestPrices(symbols []string) (map[string]*domain.AssetPrice, error) {
+	return uc.repo.GetLatestPrices(symbols)
+}
+
 func (uc *marketDataUsecase) GetHistoricalPrices(symbol string, start, end time.Time) ([]*domain.AssetPrice, error) {
 	return uc.repo.GetHistoricalPrices(symbol, start, end)
 }

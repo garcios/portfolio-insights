@@ -30,6 +30,7 @@ type MarketDataRepository interface {
 
 	// Price operations
 	GetLatestPrice(symbol string) (*AssetPrice, error)
+	GetLatestPrices(symbols []string) (map[string]*AssetPrice, error)
 	GetHistoricalPrices(symbol string, start, end time.Time) ([]*AssetPrice, error)
 	InsertPrices(prices []*AssetPrice) error // For worker
 }
@@ -38,5 +39,6 @@ type MarketDataUsecase interface {
 	GetAsset(symbol string) (*Asset, error)
 	ListAssets(pageSize int, pageToken string) ([]*Asset, string, error)
 	GetLatestPrice(symbol string) (*AssetPrice, error)
+	GetLatestPrices(symbols []string) (map[string]*AssetPrice, error)
 	GetHistoricalPrices(symbol string, start, end time.Time) ([]*AssetPrice, error)
 }
