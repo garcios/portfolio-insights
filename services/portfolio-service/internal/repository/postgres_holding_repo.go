@@ -25,12 +25,13 @@ func (r *PostgresHoldingRepository) Upsert(holding *domain.Holding) error {
 	}()
 
 	query := `
-		INSERT INTO investments.holdings (user_id, symbol, quantity, average_cost_basis, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO investments.holdings (user_id, symbol, quantity, average_cost_basis, currency, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (user_id, symbol)
 		DO UPDATE SET
 			quantity = EXCLUDED.quantity,
 			average_cost_basis = EXCLUDED.average_cost_basis,
+			currency = EXCLUDED.currency,
 			updated_at = EXCLUDED.updated_at
 	`
 
@@ -40,6 +41,7 @@ func (r *PostgresHoldingRepository) Upsert(holding *domain.Holding) error {
 		holding.Symbol,
 		holding.Quantity,
 		holding.AverageCost,
+		holding.Currency,
 		holding.LastUpdated,
 	)
 
@@ -59,7 +61,7 @@ func (r *PostgresHoldingRepository) GetByUserAndSymbol(userID, symbol string) (*
 	}()
 
 	query := `
-		SELECT user_id, symbol, quantity, average_cost_basis, updated_at
+		SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at
 		FROM investments.holdings
 		WHERE user_id = $1 AND symbol = $2
 	`
@@ -70,6 +72,7 @@ func (r *PostgresHoldingRepository) GetByUserAndSymbol(userID, symbol string) (*
 		&holding.Symbol,
 		&holding.Quantity,
 		&holding.AverageCost,
+		&holding.Currency,
 		&holding.LastUpdated,
 	)
 
@@ -92,7 +95,7 @@ func (r *PostgresHoldingRepository) ListByUser(userID string) ([]*domain.Holding
 	}()
 
 	query := `
-		SELECT user_id, symbol, quantity, average_cost_basis, updated_at
+		SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at
 		FROM investments.holdings
 		WHERE user_id = $1
 		ORDER BY symbol ASC
@@ -113,6 +116,7 @@ func (r *PostgresHoldingRepository) ListByUser(userID string) ([]*domain.Holding
 			&holding.Symbol,
 			&holding.Quantity,
 			&holding.AverageCost,
+			&holding.Currency,
 			&holding.LastUpdated,
 		)
 		if err != nil {

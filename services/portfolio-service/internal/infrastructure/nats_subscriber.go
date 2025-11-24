@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"log/slog"
 
+	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/nats-io/nats.go"
@@ -28,13 +30,15 @@ type TransactionCreatedEvent struct {
 }
 
 type NATSSubscriber struct {
-	nc     *nats.Conn
-	sub    *nats.Subscription
-	repo   domain.HoldingRepository
-	logger *slog.Logger
+	nc                *nats.Conn
+	sub               *nats.Subscription
+	repo              domain.HoldingRepository
+	marketDataGateway *MarketDataGateway
+	assetCache        *AssetCache
+	logger            *slog.Logger
 }
 
-func NewNATSSubscriber(repo domain.HoldingRepository, l *slog.Logger) (*NATSSubscriber, error) {
+func NewNATSSubscriber(repo domain.HoldingRepository, marketDataGateway *MarketDataGateway, assetCache *AssetCache, l *slog.Logger) (*NATSSubscriber, error) {
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {
 		natsURL = "nats://nats:4222"
@@ -46,9 +50,11 @@ func NewNATSSubscriber(repo domain.HoldingRepository, l *slog.Logger) (*NATSSubs
 	}
 
 	subscriber := &NATSSubscriber{
-		nc:     nc,
-		repo:   repo,
-		logger: l,
+		nc:                nc,
+		repo:              repo,
+		marketDataGateway: marketDataGateway,
+		assetCache:        assetCache,
+		logger:            l,
 	}
 
 	return subscriber, nil
@@ -96,11 +102,50 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 	holding, err := s.repo.GetByUserAndSymbol(event.UserID, event.AssetSymbol)
 	if err != nil {
 		// If holding doesn't exist, create a new one
+		// Fetch currency from cache or marketdata service
+		currency := "USD" // Default currency
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Try cache first
+		var cachedAsset *CachedAsset
+		if s.assetCache != nil {
+			cachedAsset, err = s.assetCache.Get(ctx, event.AssetSymbol)
+			if err != nil {
+				s.logger.Warn("failed to get asset from cache", "error", err, "symbol", event.AssetSymbol)
+			}
+		}
+
+		if cachedAsset != nil {
+			// Cache hit
+			currency = cachedAsset.Currency
+			s.logger.Debug("asset currency from cache", "symbol", event.AssetSymbol, "currency", currency)
+		} else if s.marketDataGateway != nil {
+			// Cache miss - fetch from marketdata service
+			assetResp, err := s.marketDataGateway.client.GetAsset(ctx, &pb.GetAssetRequest{
+				Symbol: event.AssetSymbol,
+			})
+			if err != nil {
+				s.logger.Warn("failed to fetch asset from marketdata service, using default USD", "error", err, "symbol", event.AssetSymbol)
+			} else if assetResp.Asset != nil {
+				currency = assetResp.Asset.Currency
+				s.logger.Debug("asset currency from marketdata service", "symbol", event.AssetSymbol, "currency", currency)
+
+				// Cache the asset for future use
+				if s.assetCache != nil {
+					if err := s.assetCache.Set(ctx, assetResp.Asset); err != nil {
+						s.logger.Warn("failed to cache asset", "error", err, "symbol", event.AssetSymbol)
+					}
+				}
+			}
+		}
+
 		holding = &domain.Holding{
 			UserID:      event.UserID,
 			Symbol:      event.AssetSymbol,
 			Quantity:    0,
 			AverageCost: 0,
+			Currency:    currency,
 		}
 	}
 
@@ -139,6 +184,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		"symbol", event.AssetSymbol,
 		"new_quantity", holding.Quantity,
 		"average_cost", holding.AverageCost,
+		"currency", holding.Currency,
 	)
 
 	metrics.RecordNatsMessage(TransactionCreatedSubject, "success", time.Since(start).Seconds())

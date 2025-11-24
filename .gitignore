@@ -145,3 +145,8 @@ swagger.yaml
 # Misc
 .air.toml
 .air/
+tools/excel2csv/AllTradesReport.xlsx
+tools/excel2csv/AllTradesReport_Combined.csv
+tools/excel2csv/transactions.csv
+tools/excel2csv/excel2csv
+tools/excel2csv/csvtxn

@@ -59,6 +59,13 @@ func main() {
 		l.Info("Price caching enabled")
 	}
 
+	// Initialize Asset Cache
+	var assetCache *infrastructure.AssetCache
+	if redisClient != nil {
+		assetCache = infrastructure.NewAssetCache(redisClient)
+		l.Info("Asset caching enabled")
+	}
+
 	// Initialize Repository
 	repo := repository.NewPostgresHoldingRepository(db)
 
@@ -89,7 +96,7 @@ func main() {
 	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase)
 
 	// Initialize NATS Subscriber
-	subscriber, err := infrastructure.NewNATSSubscriber(repo, l)
+	subscriber, err := infrastructure.NewNATSSubscriber(repo, marketDataGateway, assetCache, l)
 	if err != nil {
 		l.Error("failed to create NATS subscriber", "error", err)
 		os.Exit(1)
@@ -100,6 +107,18 @@ func main() {
 	if err := subscriber.Start(); err != nil {
 		l.Error("failed to start NATS subscriber", "error", err)
 		os.Exit(1)
+	}
+
+	// Initialize and start cache warmer
+	if assetCache != nil && marketDataGateway != nil {
+		cacheWarmer := infrastructure.NewCacheWarmer(marketDataGateway, assetCache, l)
+
+		// Schedule periodic cache warming every 6 hours
+		// This keeps the cache fresh as assets don't change frequently
+		warmingInterval := 6 * time.Hour
+		cacheWarmer.SchedulePeriodicWarming(warmingInterval)
+
+		l.Info("Asset cache warmer started", "interval", warmingInterval.String())
 	}
 
 	// Start gRPC Server
