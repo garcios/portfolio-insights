@@ -9,6 +9,7 @@ import (
 	"log/slog"
 
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/nats-io/nats.go"
 )
 
@@ -74,9 +75,12 @@ func (s *NATSSubscriber) Stop() {
 }
 
 func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
+	start := time.Now()
+
 	var event TransactionCreatedEvent
 	if err := json.Unmarshal(msg.Data, &event); err != nil {
 		s.logger.Error("failed to unmarshal transaction created event", "error", err)
+		metrics.RecordNatsMessage(TransactionCreatedSubject, "unmarshal_error", time.Since(start).Seconds())
 		return
 	}
 
@@ -117,6 +121,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		}
 	default:
 		s.logger.Warn("unknown transaction type", "type", event.Type, "transaction_id", event.TransactionID)
+		metrics.RecordNatsMessage(TransactionCreatedSubject, "unknown_type", time.Since(start).Seconds())
 		return
 	}
 
@@ -125,6 +130,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 	// Save updated holding
 	if err := s.repo.Upsert(holding); err != nil {
 		s.logger.Error("failed to update holding", "error", err, "user_id", event.UserID, "symbol", event.AssetSymbol)
+		metrics.RecordNatsMessage(TransactionCreatedSubject, "db_error", time.Since(start).Seconds())
 		return
 	}
 
@@ -134,4 +140,6 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		"new_quantity", holding.Quantity,
 		"average_cost", holding.AverageCost,
 	)
+
+	metrics.RecordNatsMessage(TransactionCreatedSubject, "success", time.Since(start).Seconds())
 }

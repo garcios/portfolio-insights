@@ -88,6 +88,18 @@ func (m *MockMarketDataRepository) InsertPrices(prices []*domain.AssetPrice) err
 	return nil
 }
 
+func (m *MockMarketDataRepository) CountAssets() (int, error) {
+	return len(m.assets), nil
+}
+
+func (m *MockMarketDataRepository) CountPrices() (int, error) {
+	count := 0
+	for _, p := range m.prices {
+		count += len(p)
+	}
+	return count, nil
+}
+
 func TestGetAsset(t *testing.T) {
 	repo := NewMockRepo()
 	repo.assets["AAPL"] = &domain.Asset{Symbol: "AAPL", Name: "Apple"}

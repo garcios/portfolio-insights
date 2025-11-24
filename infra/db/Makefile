@@ -1,4 +1,4 @@
-DB_URL ?= postgres://user:password@localhost:5432/portfolio?sslmode=disable
+DB_URL ?= postgres://garcios:Password123@localhost:5432/portfolio?sslmode=disable
 
 .PHONY: migrate-up migrate-down migrate-force migrate-create
 

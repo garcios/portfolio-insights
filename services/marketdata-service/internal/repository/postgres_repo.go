@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/domain"
+	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
 )
 
 type postgresMarketDataRepo struct {
@@ -18,6 +19,11 @@ func NewPostgresMarketDataRepository(db *sql.DB) domain.MarketDataRepository {
 }
 
 func (r *postgresMarketDataRepo) GetAssetBySymbol(symbol string) (*domain.Asset, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_asset_by_symbol", "assets", time.Since(start).Seconds(), nil)
+	}()
+
 	query := `
 		SELECT id, symbol, name, type, exchange, currency, created_at, updated_at
 		FROM marketdata.assets
@@ -28,12 +34,18 @@ func (r *postgresMarketDataRepo) GetAssetBySymbol(symbol string) (*domain.Asset,
 		&asset.ID, &asset.Symbol, &asset.Name, &asset.Type, &asset.Exchange, &asset.Currency, &asset.CreatedAt, &asset.UpdatedAt,
 	)
 	if err != nil {
+		metrics.RecordDatabaseQuery("get_asset_by_symbol", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	return &asset, nil
 }
 
 func (r *postgresMarketDataRepo) ListAssets(limit, offset int) ([]*domain.Asset, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("list_assets", "assets", time.Since(start).Seconds(), nil)
+	}()
+
 	query := `
 		SELECT id, symbol, name, type, exchange, currency, created_at, updated_at
 		FROM marketdata.assets
@@ -42,6 +54,7 @@ func (r *postgresMarketDataRepo) ListAssets(limit, offset int) ([]*domain.Asset,
 	`
 	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
+		metrics.RecordDatabaseQuery("list_assets", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -58,6 +71,7 @@ func (r *postgresMarketDataRepo) ListAssets(limit, offset int) ([]*domain.Asset,
 }
 
 func (r *postgresMarketDataRepo) UpsertAssets(assets []*domain.Asset) error {
+	start := time.Now()
 	if len(assets) == 0 {
 		return nil
 	}
@@ -83,12 +97,19 @@ func (r *postgresMarketDataRepo) UpsertAssets(assets []*domain.Asset) error {
 	`, strings.Join(valueStrings, ","))
 
 	_, err := r.db.Exec(stmt, valueArgs...)
+	metrics.RecordDatabaseQuery("upsert_assets", "assets", time.Since(start).Seconds(), err)
 	return err
 }
 
 func (r *postgresMarketDataRepo) GetAllAssetIDs() (map[string]string, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_all_asset_ids", "assets", time.Since(start).Seconds(), nil)
+	}()
+
 	rows, err := r.db.Query("SELECT symbol, id FROM marketdata.assets")
 	if err != nil {
+		metrics.RecordDatabaseQuery("get_all_asset_ids", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -104,7 +125,27 @@ func (r *postgresMarketDataRepo) GetAllAssetIDs() (map[string]string, error) {
 	return assetMap, nil
 }
 
+func (r *postgresMarketDataRepo) CountAssets() (int, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("count_assets", "assets", time.Since(start).Seconds(), nil)
+	}()
+
+	var count int
+	err := r.db.QueryRow("SELECT COUNT(*) FROM marketdata.assets").Scan(&count)
+	if err != nil {
+		metrics.RecordDatabaseQuery("count_assets", "assets", time.Since(start).Seconds(), err)
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *postgresMarketDataRepo) GetLatestPrice(symbol string) (*domain.AssetPrice, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_latest_price", "asset_prices", time.Since(start).Seconds(), nil)
+	}()
+
 	query := `
 		SELECT p.id, p.asset_id, p.price, p.timestamp, p.created_at
 		FROM marketdata.asset_prices p
@@ -118,12 +159,18 @@ func (r *postgresMarketDataRepo) GetLatestPrice(symbol string) (*domain.AssetPri
 		&price.ID, &price.AssetID, &price.Price, &price.Timestamp, &price.CreatedAt,
 	)
 	if err != nil {
+		metrics.RecordDatabaseQuery("get_latest_price", "asset_prices", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	return &price, nil
 }
 
 func (r *postgresMarketDataRepo) GetLatestPrices(symbols []string) (map[string]*domain.AssetPrice, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_latest_prices_batch", "asset_prices", time.Since(start).Seconds(), nil)
+	}()
+
 	if len(symbols) == 0 {
 		return make(map[string]*domain.AssetPrice), nil
 	}
@@ -153,6 +200,7 @@ func (r *postgresMarketDataRepo) GetLatestPrices(symbols []string) (map[string]*
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
+		metrics.RecordDatabaseQuery("get_latest_prices_batch", "asset_prices", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -171,6 +219,11 @@ func (r *postgresMarketDataRepo) GetLatestPrices(symbols []string) (map[string]*
 }
 
 func (r *postgresMarketDataRepo) GetHistoricalPrices(symbol string, start, end time.Time) ([]*domain.AssetPrice, error) {
+	startTime := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_historical_prices", "asset_prices", time.Since(startTime).Seconds(), nil)
+	}()
+
 	query := `
 		SELECT p.id, p.asset_id, p.price, p.timestamp, p.created_at
 		FROM marketdata.asset_prices p
@@ -180,6 +233,7 @@ func (r *postgresMarketDataRepo) GetHistoricalPrices(symbol string, start, end t
 	`
 	rows, err := r.db.Query(query, symbol, start, end)
 	if err != nil {
+		metrics.RecordDatabaseQuery("get_historical_prices", "asset_prices", time.Since(startTime).Seconds(), err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -196,6 +250,7 @@ func (r *postgresMarketDataRepo) GetHistoricalPrices(symbol string, start, end t
 }
 
 func (r *postgresMarketDataRepo) InsertPrices(prices []*domain.AssetPrice) error {
+	start := time.Now()
 	if len(prices) == 0 {
 		return nil
 	}
@@ -215,5 +270,21 @@ func (r *postgresMarketDataRepo) InsertPrices(prices []*domain.AssetPrice) error
 	`, strings.Join(valueStrings, ","))
 
 	_, err := r.db.Exec(stmt, valueArgs...)
+	metrics.RecordDatabaseQuery("insert_prices", "asset_prices", time.Since(start).Seconds(), err)
 	return err
+}
+
+func (r *postgresMarketDataRepo) CountPrices() (int, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("count_prices", "asset_prices", time.Since(start).Seconds(), nil)
+	}()
+
+	var count int
+	err := r.db.QueryRow("SELECT COUNT(*) FROM marketdata.asset_prices").Scan(&count)
+	if err != nil {
+		metrics.RecordDatabaseQuery("count_prices", "asset_prices", time.Since(start).Seconds(), err)
+		return 0, err
+	}
+	return count, nil
 }

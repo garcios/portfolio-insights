@@ -7,6 +7,7 @@ import (
 	"time"
 
 	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -50,10 +51,16 @@ func (g *MarketDataGateway) Close() error {
 // GetCurrentPrice fetches the current price for a single symbol
 // Uses cache-aside pattern: check cache first, then fetch from service
 func (g *MarketDataGateway) GetCurrentPrice(ctx context.Context, symbol string) (float64, error) {
+	start := time.Now()
+
 	// Try cache first
 	if g.cache != nil {
+		cacheStart := time.Now()
 		cached, err := g.cache.Get(ctx, symbol)
+		metrics.RecordCacheOperation("get", "price", cached != nil, time.Since(cacheStart).Seconds())
+
 		if err == nil && cached != nil {
+			metrics.RecordPriceFetch("cache", 1)
 			return cached.Price, nil
 		}
 	}
@@ -63,10 +70,15 @@ func (g *MarketDataGateway) GetCurrentPrice(ctx context.Context, symbol string) 
 		Symbol: symbol,
 	}
 
+	serviceStart := time.Now()
 	resp, err := g.client.GetLatestPrice(ctx, req)
+	duration := time.Since(serviceStart).Seconds()
+
 	if err != nil {
+		metrics.RecordMarketDataRequest("get_latest_price", "error", duration)
 		return 0, fmt.Errorf("failed to get latest price for %s: %w", symbol, err)
 	}
+	metrics.RecordMarketDataRequest("get_latest_price", "success", duration)
 
 	if resp.Price == nil {
 		return 0, fmt.Errorf("no price data available for %s", symbol)
@@ -74,18 +86,23 @@ func (g *MarketDataGateway) GetCurrentPrice(ctx context.Context, symbol string) 
 
 	price := resp.Price.Price
 	timestamp := resp.Price.Timestamp.AsTime()
+	metrics.RecordPriceFetch("service", 1)
 
 	// Cache the result
 	if g.cache != nil {
-		_ = g.cache.Set(ctx, symbol, price, timestamp) // Ignore cache errors
+		cacheStart := time.Now()
+		err := g.cache.Set(ctx, symbol, price, timestamp)
+		metrics.RecordCacheOperation("set", "price", err == nil, time.Since(cacheStart).Seconds())
 	}
 
+	metrics.RecordMarketDataRequest("total_operation", "success", time.Since(start).Seconds())
 	return price, nil
 }
 
 // GetCurrentPrices fetches current prices for multiple symbols
 // Uses cache-aside pattern with batch operations
 func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []string) (map[string]float64, error) {
+	start := time.Now()
 	if len(symbols) == 0 {
 		return make(map[string]float64), nil
 	}
@@ -95,11 +112,15 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 
 	// Check cache for all symbols
 	if g.cache != nil {
+		cacheStart := time.Now()
 		cachedPrices, err := g.cache.GetMultiple(ctx, symbols)
+		metrics.RecordCacheOperation("get_multiple", "price", err == nil, time.Since(cacheStart).Seconds())
+
 		if err == nil {
 			for symbol, cached := range cachedPrices {
 				prices[symbol] = cached.Price
 			}
+			metrics.RecordPriceFetch("cache", len(prices))
 		}
 
 		// Determine which symbols need to be fetched
@@ -118,14 +139,20 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 			Symbols: uncachedSymbols,
 		}
 
+		serviceStart := time.Now()
 		resp, err := g.client.GetLatestPrices(ctx, req)
+		duration := time.Since(serviceStart).Seconds()
+
 		if err != nil {
+			metrics.RecordMarketDataRequest("get_latest_prices_batch", "error", duration)
 			return nil, fmt.Errorf("failed to get latest prices: %w", err)
 		}
+		metrics.RecordMarketDataRequest("get_latest_prices_batch", "success", duration)
 
 		// Process response and cache results
 		fetchedPrices := make(map[string]float64)
 		timestamp := time.Now()
+		count := 0
 
 		for symbol, assetPrice := range resp.Prices {
 			if assetPrice != nil {
@@ -134,14 +161,19 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 				if !assetPrice.Timestamp.AsTime().IsZero() {
 					timestamp = assetPrice.Timestamp.AsTime()
 				}
+				count++
 			}
 		}
+		metrics.RecordPriceFetch("service", count)
 
 		// Cache the fetched prices
 		if g.cache != nil && len(fetchedPrices) > 0 {
-			_ = g.cache.SetMultiple(ctx, fetchedPrices, timestamp) // Ignore cache errors
+			cacheStart := time.Now()
+			err := g.cache.SetMultiple(ctx, fetchedPrices, timestamp)
+			metrics.RecordCacheOperation("set_multiple", "price", err == nil, time.Since(cacheStart).Seconds())
 		}
 	}
 
+	metrics.RecordMarketDataRequest("total_batch_operation", "success", time.Since(start).Seconds())
 	return prices, nil
 }

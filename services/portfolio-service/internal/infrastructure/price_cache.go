@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -43,26 +44,34 @@ func NewPriceCache(client *redis.Client) *PriceCache {
 
 // Get retrieves a cached price for a symbol
 func (pc *PriceCache) Get(ctx context.Context, symbol string) (*CachedPrice, error) {
+	start := time.Now()
 	key := pc.priceKey(symbol)
 
 	data, err := pc.client.Get(ctx, key).Bytes()
+	duration := time.Since(start).Seconds()
+
 	if err == redis.Nil {
+		metrics.RecordCacheOperation("get", "redis", false, duration)
 		return nil, nil // Cache miss
 	}
 	if err != nil {
+		metrics.RecordCacheOperation("get", "redis", false, duration)
 		return nil, fmt.Errorf("failed to get cached price: %w", err)
 	}
 
 	var cached CachedPrice
 	if err := json.Unmarshal(data, &cached); err != nil {
+		metrics.RecordCacheOperation("get", "redis", false, duration) // Treat unmarshal error as miss/fail
 		return nil, fmt.Errorf("failed to unmarshal cached price: %w", err)
 	}
 
+	metrics.RecordCacheOperation("get", "redis", true, duration)
 	return &cached, nil
 }
 
 // GetMultiple retrieves cached prices for multiple symbols
 func (pc *PriceCache) GetMultiple(ctx context.Context, symbols []string) (map[string]*CachedPrice, error) {
+	start := time.Now()
 	if len(symbols) == 0 {
 		return make(map[string]*CachedPrice), nil
 	}
@@ -87,28 +96,41 @@ func (pc *PriceCache) GetMultiple(ctx context.Context, symbols []string) (map[st
 
 	// Parse results
 	result := make(map[string]*CachedPrice)
+	hits := 0
+	misses := 0
+
 	for i, cmd := range cmds {
 		data, err := cmd.Bytes()
 		if err == redis.Nil {
+			misses++
 			continue // Cache miss for this symbol
 		}
 		if err != nil {
+			misses++
 			continue // Skip errors for individual keys
 		}
 
 		var cached CachedPrice
 		if err := json.Unmarshal(data, &cached); err != nil {
+			misses++
 			continue // Skip unmarshaling errors
 		}
 
 		result[symbols[i]] = &cached
+		hits++
 	}
+
+	duration := time.Since(start).Seconds()
+	metrics.CacheOperationDuration.WithLabelValues("get_multiple", "redis").Observe(duration)
+	metrics.CacheHitsTotal.WithLabelValues("redis").Add(float64(hits))
+	metrics.CacheMissesTotal.WithLabelValues("redis").Add(float64(misses))
 
 	return result, nil
 }
 
 // Set caches a price for a symbol
 func (pc *PriceCache) Set(ctx context.Context, symbol string, price float64, timestamp time.Time) error {
+	start := time.Now()
 	key := pc.priceKey(symbol)
 
 	cached := CachedPrice{
@@ -127,11 +149,13 @@ func (pc *PriceCache) Set(ctx context.Context, symbol string, price float64, tim
 		return fmt.Errorf("failed to cache price: %w", err)
 	}
 
+	metrics.CacheOperationDuration.WithLabelValues("set", "redis").Observe(time.Since(start).Seconds())
 	return nil
 }
 
 // SetMultiple caches multiple prices
 func (pc *PriceCache) SetMultiple(ctx context.Context, prices map[string]float64, timestamp time.Time) error {
+	start := time.Now()
 	if len(prices) == 0 {
 		return nil
 	}
@@ -160,6 +184,7 @@ func (pc *PriceCache) SetMultiple(ctx context.Context, prices map[string]float64
 		return fmt.Errorf("failed to cache prices: %w", err)
 	}
 
+	metrics.CacheOperationDuration.WithLabelValues("set_multiple", "redis").Observe(time.Since(start).Seconds())
 	return nil
 }
 

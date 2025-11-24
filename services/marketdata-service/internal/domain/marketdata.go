@@ -27,12 +27,14 @@ type MarketDataRepository interface {
 	ListAssets(limit, offset int) ([]*Asset, error)
 	UpsertAssets(assets []*Asset) error         // For worker
 	GetAllAssetIDs() (map[string]string, error) // For price worker
+	CountAssets() (int, error)                  // For metrics
 
 	// Price operations
 	GetLatestPrice(symbol string) (*AssetPrice, error)
 	GetLatestPrices(symbols []string) (map[string]*AssetPrice, error)
 	GetHistoricalPrices(symbol string, start, end time.Time) ([]*AssetPrice, error)
 	InsertPrices(prices []*AssetPrice) error // For worker
+	CountPrices() (int, error)               // For metrics
 }
 
 type MarketDataUsecase interface {

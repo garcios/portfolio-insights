@@ -43,6 +43,7 @@ services:
       dockerfile: services/user-service/Dockerfile
     ports:
       - "50051:50051"
+      - "9096:9096"
     environment:
       - DB_HOST=postgres
       - DB_USER=garcios
@@ -57,6 +58,7 @@ services:
       dockerfile: services/portfolio-service/Dockerfile
     ports:
       - "50052:50052"
+      - "9098:9090"
     environment:
       - DB_HOST=postgres
       - DB_USER=garcios
@@ -90,6 +92,7 @@ services:
       dockerfile: services/marketdata-service/Dockerfile
     ports:
       - "50054:50054"
+      - "9099:9099"
     environment:
       - DB_HOST=postgres
       - DB_USER=garcios
@@ -109,6 +112,7 @@ services:
       dockerfile: services/transaction-service/Dockerfile
     ports:
       - "50053:50053"
+      - "9097:9097"
     environment:
       - DB_HOST=postgres
       - DB_USER=garcios

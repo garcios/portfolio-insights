@@ -17,6 +17,7 @@ type UserRepository interface {
 	Create(user *User) error
 	Update(user *User) error
 	Delete(id string) error
+	Count() (int, error)
 }
 
 type UserUsecase interface {

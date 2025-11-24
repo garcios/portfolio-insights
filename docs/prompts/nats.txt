@@ -3,15 +3,11 @@ Modify CreateTransaction to publish a NATS message when a transaction is created
 The message should contain the following information:
 - Transaction ID
 - User ID
-- Asset ID
-- Asset Type
-- Asset Name
 - Asset Symbol
-- Asset Price
-- Asset Quantity
+- Price Per Share
+- Quantity
 - Transaction Type
-- Transaction Date
-- Transaction Amount
+- Executed Date
 
 The message should be sent to the transaction-service.transaction.created topic.
 

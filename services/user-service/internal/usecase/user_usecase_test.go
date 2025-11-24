@@ -15,6 +15,7 @@ type MockUserRepository struct {
 	CreateFunc     func(user *domain.User) error
 	UpdateFunc     func(user *domain.User) error
 	DeleteFunc     func(id string) error
+	CountFunc      func() (int, error)
 }
 
 func (m *MockUserRepository) GetByID(id string) (*domain.User, error) {
@@ -35,6 +36,13 @@ func (m *MockUserRepository) Update(user *domain.User) error {
 
 func (m *MockUserRepository) Delete(id string) error {
 	return m.DeleteFunc(id)
+}
+
+func (m *MockUserRepository) Count() (int, error) {
+	if m.CountFunc != nil {
+		return m.CountFunc()
+	}
+	return 0, nil
 }
 
 func TestUserUsecase_GetUser(t *testing.T) {

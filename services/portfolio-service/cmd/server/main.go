@@ -2,22 +2,36 @@ package main
 
 import (
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	portfoliohandler "github.com/garcios/portfolio-insights/services/portfolio-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/infrastructure"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 )
 
 func main() {
 	l := logger.New()
 	l.Info("Portfolio Service starting...")
+
+	// Start Metrics Server
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		l.Info("Metrics server listening on :9090")
+		if err := http.ListenAndServe(":9090", nil); err != nil {
+			l.Error("failed to start metrics server", "error", err)
+		}
+	}()
 
 	// Connect to Database
 	db, err := infrastructure.NewPostgresDB()
@@ -47,6 +61,18 @@ func main() {
 
 	// Initialize Repository
 	repo := repository.NewPostgresHoldingRepository(db)
+
+	// Start background metrics updater
+	go func() {
+		ticker := time.NewTicker(15 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			count, err := repo.Count()
+			if err == nil {
+				metrics.HoldingsTotal.Set(float64(count))
+			}
+		}
+	}()
 
 	// Initialize MarketData Gateway with cache
 	marketDataGateway, err := infrastructure.NewMarketDataGateway(priceCache)
@@ -88,7 +114,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	grpcServer := grpc.NewServer()
+	// Register Metrics Middleware
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(middleware.MetricsUnaryInterceptor()),
+	)
 	pb.RegisterPortfolioServiceServer(grpcServer, portfolioHandler)
 
 	go func() {

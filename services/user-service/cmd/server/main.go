@@ -2,19 +2,34 @@ package main
 
 import (
 	"net"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/infrastructure"
+	"github.com/garcios/portfolio-insights/services/user-service/internal/metrics"
+	"github.com/garcios/portfolio-insights/services/user-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/usecase"
 	pb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	googleGrpc "google.golang.org/grpc"
 )
 
 func main() {
 	l := logger.New()
+	l.Info("User Service starting...")
+
+	// Start Metrics Server
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		l.Info("Metrics server listening on :9096")
+		if err := http.ListenAndServe(":9096", nil); err != nil {
+			l.Error("failed to start metrics server", "error", err)
+		}
+	}()
 
 	// Infrastructure
 	db, err := infrastructure.NewPostgresDB()
@@ -26,6 +41,17 @@ func main() {
 
 	// Repository
 	repo := repository.NewUserRepository(db)
+
+	// Start background metrics updater
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			if count, err := repo.Count(); err == nil {
+				metrics.TotalUsers.Set(float64(count))
+			}
+		}
+	}()
 
 	// Usecase
 	uc := usecase.NewUserUsecase(repo)
@@ -46,7 +72,10 @@ func main() {
 
 	l.Info("User Service listening on port " + port)
 
-	s := googleGrpc.NewServer()
+	// Register Metrics Middleware
+	s := googleGrpc.NewServer(
+		googleGrpc.UnaryInterceptor(middleware.MetricsUnaryInterceptor()),
+	)
 	pb.RegisterUserServiceServer(s, h)
 	if err := s.Serve(lis); err != nil {
 		l.Error("failed to serve", "error", err)
