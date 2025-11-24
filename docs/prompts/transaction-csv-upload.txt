@@ -1,0 +1,49 @@
+Goal
+Enable users to upload a CSV file containing financial transaction records. The transaction-service must ingest and save this data into the txn.transactions database table.
+
+Functional Requirements
+File Upload (Front-End/API):
+
+The user must be able to upload a single file in .csv format.
+
+The service must validate the file type upon upload.
+
+Data Structure/Format:
+
+The CSV must contain the following mandatory columns:
+
+- symbol (Unique identifier for the asset)
+
+- executed_at (Date of the transaction)
+
+- quantity (number of shares)
+
+- price_per_share (price per share)
+
+- type (BUY or SELL)
+
+
+The system should be robust enough to handle optional columns but must fail if mandatory columns are missing.
+
+Backend Processing (Ingestion Service):
+
+Upon successful upload, 
+- the backend service must be able to identify the user_id from the request.
+- Validate the user_id exists by calling the user service.
+- the backend service must parse and validate the data type and format of each field.
+
+Each valid row must be mapped to the corresponding columns in the transactions table.
+
+The data must be persisted to the transactions table using a bulk insert operation for performance.
+
+Error Handling & Reporting:
+
+File-Level Error: If the file is invalid (e.g., wrong format, missing mandatory headers), the upload should be rejected, and a specific error message should be returned.
+
+Row-Level Error: If the file is processed but contains specific row-level errors (e.g., duplicate data, invalid date format), these rows should be skipped. 
+The user must receive a summary report detailing the total records processed, successful records ingested, and failed records, including the reason for failure.
+
+Database Interaction
+Target Table: transactions
+
+Schema: Must support ingestion of all required data types.

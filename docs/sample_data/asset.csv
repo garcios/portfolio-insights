@@ -1,11 +1,61 @@
 symbol,name,type,exchange,currency
-MSFT,Microsoft Corporation,Stock,NASDAQ,USD
+AMAT, Applied Materials Inc.,Stock,NASDAQ,USD
+AMD, Advanced Micro Devices Inc.,Stock,NASDAQ,USD
+AMZN, Amazon.com Inc.,Stock,NASDAQ,USD
+AVGO, Broadcom Inc.,Stock,NASDAQ,USD
+AZN, AstraZeneca plc,Stock,NASDAQ,USD
+CCJ, Cameco Corporation,Stock,NASDAQ,USD
+CME, CME Group Inc.,Stock,NASDAQ,USD
+EQIX, Equinix Inc.,Stock,NASDAQ,USD
+FTNT, Fortinet Inc.,Stock,NASDAQ,USD
+GOOG, Google LLC,Stock,NASDAQ,USD
 GOOGL,Alphabet Inc. Class A,Stock,NASDAQ,USD
-AMZN,Amazon.com Inc.,Stock,NASDAQ,USD
-META,Meta Platforms Inc.,Stock,NASDAQ,USD
-NVDA,NVIDIA Corporation,Stock,NASDAQ,USD
-AVGO,Broadcom Inc.,Stock,NASDAQ,USD
-TSM,Taiwan Semiconductor Manufacturing Co Ltd,ADR,NYSE,USD
-AMD,Advanced Micro Devices Inc.,Stock,NASDAQ,USD
-UBER,Uber Technologies Inc.,Stock,NYSE,USD
-MA,Mastercard Incorporated,Stock,NYSE,USD
+MA, Mastercard Incorporated,Stock,NYSE,USD
+META, Meta Platforms Inc.,Stock,NASDAQ,USD
+NVDA, NVIDIA Corporation,Stock,NASDAQ,USD
+TSM, Taiwan Semiconductor Manufacturing Company Limited,Stock,NYSE,USD
+UBER, Uber Technologies Inc.,Stock,NYSE,USD
+AGL, AGL Energy,Stock,ASX,AUD
+ALX, Atlas Arteria,Stock,ASX,AUD
+ANZ, ANZ Bank,Stock,ASX,AUD
+AUB, AUB Group LTD,Stock,ASX,AUD
+ASX, ASX Limited,Stock,ASX,AUD
+AX1, Accent Group Ltd,Stock,ASX,AUD
+AZJ, Aurizon Holdings Ltd,Stock,ASX,AUD
+CBA, Commonwealth Bank of Australia,Stock,ASX,AUD
+CHC, Charter Hall Group,Stock,ASX,AUD
+COL, Coles Group,Stock,ASX,AUD
+CSL, CSL Ltd,Stock,ASX,AUD
+DRR, Deterra, Stock,ASX,AUD
+DVDY, Vaneck MorningStart Asutralian MOAT ETF,ETF,ASX,AUD
+DXS, Dexus,Stock,ASX,AUD
+EDV, Endeavour,Stock,ASX,AUD
+GNE, Genesis Energy Ltdd.,Stock,ASX,AUD
+IAA, iShares Asia Pacific 50 ETF,ETF,ASX,AUD
+IEU, iShares Europe ETF,ETF,ASX,AUD
+IFRA, Vaneck FTSE Global Infrastructure(AUD Hedged)ETF,ETF,ASX,AUD
+IOO, iShares Global 100 ETF,ETF,ASX,AUD
+IVV, iShares S&P 500 ETF,ETF,ASX,AUD
+IXI, iShares Global Consumer Staples ETF,ETF,ASX,AUD
+MAQ, Macquirie Technology,Stock,ASX,AUD
+MOAT, MorningStart Australian MOAT ETF,ETF,ASX,AUD
+NAB, National Australia Bank,Stock,ASX,AUD
+NDQ, Betashares NASDAQ 100 ETF,ETF,ASX,AUD
+NHW, NRW Holdings Limited,Stock,ASX,AUD
+REIT, Vaneck FTSE International Property(AUD Hedged) ETF,ETF,ASX,AUD  
+RMD, Resmed Inc, Stock,ASX,AUD
+SDF, Steadfast Group Ltd,Stock,ASX,AUD
+SHL, Sonic Healthcare Ltd,Stock,ASX,AUD
+STW, SPDR S&P/ASX 200 ETF,ETF,ASX,AUD
+TCL, Transurban Group,Stock,ASX,AUD
+TLC, The Lottery Group,Stock,ASX,AUD
+TLS, Telstra Group,Stock,ASX,AUD
+VAE, Vanguard FTSE Asia Ex Japan Shares Index ETF,ETF,ASX,AUD
+VAP, Vanguard Australian Property Securities Index ETF,ETF,ASX,AUD
+VEU, Vanguard All World ex US ETF,ETF,ASX,AUD
+WBC, Westpac Banking Corporation,Stock,ASX,AUD
+WDMF,iShares World Equity Factor ETF,ETF,ASX,AUD
+WDS, Woodside Energy,Stock,ASX,AUD
+WES, Wesfarmers Limited,Stock,ASX,AUD
+WTC, Wisetech Global Ltd,Stock,ASX,AUD
+XYZ, Block Inc.,Stock,NASDAQ,USD

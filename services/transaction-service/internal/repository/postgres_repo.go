@@ -31,6 +31,44 @@ func (r *postgresTransactionRepo) Create(ctx context.Context, transaction *domai
 	).Scan(&transaction.ID, &transaction.CreatedAt, &transaction.UpdatedAt)
 }
 
+func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions []*domain.Transaction) error {
+	if len(transactions) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, created_at, updated_at
+	`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, transaction := range transactions {
+		err = stmt.QueryRowContext(ctx,
+			transaction.UserID,
+			transaction.Symbol,
+			transaction.Type,
+			transaction.Quantity,
+			transaction.PricePerShare,
+			transaction.ExecutedAt,
+		).Scan(&transaction.ID, &transaction.CreatedAt, &transaction.UpdatedAt)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
 func (r *postgresTransactionRepo) GetByID(ctx context.Context, id string) (*domain.Transaction, error) {
 	query := `
 		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at

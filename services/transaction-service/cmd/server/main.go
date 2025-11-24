@@ -9,6 +9,7 @@ import (
 
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	transactionhandler "github.com/garcios/portfolio-insights/services/transaction-service/internal/handler/grpc"
+	httphandler "github.com/garcios/portfolio-insights/services/transaction-service/internal/handler/http"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/repository"
@@ -54,26 +55,36 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize Usecase
+	// Initialize Usecases
 	uc := usecase.NewTransactionUsecase(repo, userGateway, marketDataGateway, eventPublisher)
+	csvUsecase := usecase.NewCSVUploadUsecase(repo, userGateway, marketDataGateway, eventPublisher)
 
-	// Start metrics server
+	// Initialize HTTP handlers
+	csvHandler := httphandler.NewCSVUploadHandler(csvUsecase)
+
+	// Start HTTP server for CSV upload and metrics
+	httpPort := os.Getenv("HTTP_PORT")
+	if httpPort == "" {
+		httpPort = "8081"
+	}
+
 	metricsPort := os.Getenv("METRICS_PORT")
 	if metricsPort == "" {
 		metricsPort = "9097"
 	}
 
 	go func() {
-		metricsMux := http.NewServeMux()
-		metricsMux.Handle("/metrics", promhttp.Handler())
-		metricsMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		httpMux := http.NewServeMux()
+		httpMux.HandleFunc("/upload-csv", csvHandler.UploadCSV)
+		httpMux.Handle("/metrics", promhttp.Handler())
+		httpMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("OK"))
 		})
 
-		l.Info("Metrics server listening on port " + metricsPort)
-		if err := http.ListenAndServe(":"+metricsPort, metricsMux); err != nil {
-			l.Error("Metrics server failed", "error", err)
+		l.Info("HTTP server listening on port " + httpPort)
+		if err := http.ListenAndServe(":"+httpPort, httpMux); err != nil {
+			l.Error("HTTP server failed", "error", err)
 		}
 	}()
 

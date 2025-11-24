@@ -113,12 +113,14 @@ services:
     ports:
       - "50053:50053"
       - "9097:9097"
+      - "8081:8081"
     environment:
       - DB_HOST=postgres
       - DB_USER=garcios
       - DB_PASSWORD=Password123
       - DB_NAME=portfolio
       - PORT=50053
+      - HTTP_PORT=8081
       - NATS_URL=nats://nats:4222
     depends_on:
       - postgres

@@ -1,0 +1,17 @@
+Create a tool called csvtxn.go that convert a CSV with the following format and sample data:
+
+CSL,ASX,Csl Limited,2020-09-08,Buy,5.0000,286.38,AUD,,29.95,AUD,1.00,"1,461.85"
+STW,ASX,Spdr S&P/Asx 200 Etf,2020-09-11,Buy,18.0000,54.86,AUD,,29.95,AUD,1.00,"1,017.43"
+COL,ASX,Coles Group,2023-05-09,Buy,55.0000,18.13,AUD,,29.95,AUD,1.00,"1,027.10"
+IAA,ASX,Ishares Asia 50 Etf,2023-05-10,Buy,11.0000,86.22,AUD,,9.95,AUD,1.00,958.37
+
+INTO the following CSV format and sample data.
+
+symbol,executed_at,quantity,price_per_share,type
+AAPL,2024-01-15,100,150.50,BUY
+GOOGL,2024-01-16,50,2800.00,BUY
+MSFT,2024-01-17,75,380.25,BUY
+TSLA,2024-01-18,30,245.00,BUY
+AAPL,2024-02-01,25,155.00,SELL
+
+The output should be transactions.csv

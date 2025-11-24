@@ -27,7 +27,7 @@
 - [x] **API**: Expose `CreateTransaction`, `ListTransactions`, `GetTransaction`.
 
 ### Week 4: Portfolio Service (The Aggregator)
-- [ ] **Calculation Engine**: Implement logic to calculate current holdings based on transaction history.
+- [x] **Calculation Engine**: Implement logic to calculate current holdings based on transaction events from NATS.
 - [ ] **Value Calculation**: Fetch latest prices from `marketdata-service` to calculate total portfolio value.
 - [ ] **History Tracking**: Implement snapshots of portfolio value over time for the performance chart.
 - [ ] **DB Integration**: Store in `investments.holdings` and `investments.portfolio_history`.
@@ -68,9 +68,9 @@
 - [ ] **Currency Support**: (Optional) Allow viewing portfolio in USD/EUR/GBP.
 
 ### Week 10: Infrastructure & Observability
-- [ ] **Observability Stack**: Deploy Prometheus and Grafana containers via Docker Compose.
-- [ ] **Instrumentation**: Add Prometheus metrics middleware to all Go microservices (Request latency, Error rates, Active goroutines).
-- [ ] **Dashboards**: Create Grafana dashboards to visualize service health, system metrics (CPU/Memory), and business metrics (e.g., New Users, Total Transactions).
+- [x] **Observability Stack**: Deploy Prometheus and Grafana containers via Docker Compose.
+- [x] **Instrumentation**: Add Prometheus metrics middleware to all Go microservices (Request latency, Error rates, Active goroutines).
+- [x] **Dashboards**: Create Grafana dashboards to visualize service health, system metrics (CPU/Memory), and business metrics (e.g., New Users, Total Transactions).
 - [ ] **CI/CD**: Setup GitHub Actions for automated testing and linting.
 - [ ] **Docker Optimization**: Multi-stage builds for smaller images.
 - [ ] **Environment Config**: Ensure strict separation of Dev/Prod configs.

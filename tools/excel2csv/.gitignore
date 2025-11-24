@@ -1,0 +1,12 @@
+# Binaries
+bin/excel2csv
+bin/csvtxn
+bin/*.exe
+
+# Test files
+ioFiles/*.xlsx
+ioFiles/*.csv
+
+# Go build cache
+*.test
+*.out

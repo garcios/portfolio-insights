@@ -28,6 +28,16 @@ func (m *MockTransactionRepository) Create(ctx context.Context, transaction *dom
 	return nil
 }
 
+func (m *MockTransactionRepository) BulkCreate(ctx context.Context, transactions []*domain.Transaction) error {
+	for _, tx := range transactions {
+		tx.ID = "test-id"
+		tx.CreatedAt = time.Now()
+		tx.UpdatedAt = time.Now()
+		m.transactions[tx.ID] = tx
+	}
+	return nil
+}
+
 func (m *MockTransactionRepository) GetByID(ctx context.Context, id string) (*domain.Transaction, error) {
 	if tx, ok := m.transactions[id]; ok {
 		return tx, nil

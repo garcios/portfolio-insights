@@ -1,0 +1,34 @@
+Write a command-line interface (CLI) tool in Go (Golang) named excel2csv that performs the following tasks:
+
+1. Core Requirements & Dependencies
+Go Package: Use the excelize library (github.com/xuri/excelize/v2) for reading and processing the Excel .xlsx file.
+
+CLI Usage: The tool must accept the path to the input .xlsx file as its first command-line argument.
+
+Error Handling (Strict): If the input file specified on the command line does not exist or is not a valid .xlsx file, the program must exit immediately with a non-zero exit code and print a clear error message to stderr.
+
+2. Sheet Selection & Output
+Sheet Specification: The tool must accept an optional, comma-separated list of sheet names via a flag (e.g., --sheets "Sheet1,Data Sheet").
+
+If the flag is not provided, the tool must convert all sheets found in the Excel file.
+
+If the flag is provided, the tool must convert only the specified sheets. If a specified sheet name does not exist, the tool should skip it and print a warning, but continue processing the remaining sheets.
+
+Output File Naming: For each converted sheet, the output CSV file must be named using the format: <original_excel_filename>_<sheet_name>.csv.
+
+Example: For report.xlsx and sheet Summary, the output should be report_Summary.csv.
+
+Output Location: All generated CSV files must be placed in the same directory as the input Excel file.
+
+3. Data Processing & Formatting
+Cell Value Conversion (Handling Specific Formats): The program must handle specific Excel cell formats, such as dates, times, and currencies. The Go program should use the excelize built-in functionality (like GetCellValue or equivalent format handling functions) to retrieve the formatted string value of the cell, rather than the raw numeric value. This ensures dates appear as dates (e.g., 2023-10-27) and not as serial numbers.
+
+Data Trimming: The program must detect and trim empty rows and columns. Conversion should begin from the first row and first column that contains actual data on that sheet, effectively skipping any leading blank space.
+
+CSV Standards:
+
+Ensure all fields are properly quoted if they contain the field separator (comma), newlines, or double quotes.
+
+The standard CSV separator should be a comma (,).
+
+4. The program should be places in tools directory and should be named excel2csv.go 

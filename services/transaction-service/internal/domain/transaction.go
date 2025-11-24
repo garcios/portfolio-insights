@@ -19,6 +19,7 @@ type Transaction struct {
 
 type TransactionRepository interface {
 	Create(ctx context.Context, transaction *Transaction) error
+	BulkCreate(ctx context.Context, transactions []*Transaction) error
 	GetByID(ctx context.Context, id string) (*Transaction, error)
 	ListByUserID(ctx context.Context, userID string, limit, offset int) ([]*Transaction, error)
 	Update(ctx context.Context, transaction *Transaction) error
