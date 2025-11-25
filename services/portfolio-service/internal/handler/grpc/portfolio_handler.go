@@ -52,6 +52,7 @@ func (h *PortfolioHandler) GetHoldings(ctx context.Context, req *pb.GetHoldingsR
 			CurrentValue:       currentValue,
 			GainLoss:           gainLoss,
 			GainLossPercentage: gainLossPct,
+			Currency:           holding.Currency,
 		}
 	}
 

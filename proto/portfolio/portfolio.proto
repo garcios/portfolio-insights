@@ -28,6 +28,7 @@ message Holding {
   double current_value = 5;
   double gain_loss = 6;
   double gain_loss_percentage = 7;
+  string currency = 8;
 }
 
 message GetPortfolioSummaryRequest {
