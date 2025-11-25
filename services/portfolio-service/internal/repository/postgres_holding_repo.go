@@ -97,7 +97,7 @@ func (r *PostgresHoldingRepository) ListByUser(userID string) ([]*domain.Holding
 	query := `
 		SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at
 		FROM investments.holdings
-		WHERE user_id = $1
+		WHERE user_id = $1 AND quantity > 0
 		ORDER BY symbol ASC
 	`
 

@@ -164,6 +164,28 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		if holding.Quantity <= 0 {
 			holding.Quantity = 0
 		}
+	case "SPLIT":
+		// Stock split: increase quantity, decrease average cost proportionally
+		// Total cost basis remains the same
+		// Example: 2-for-1 split of 100 shares @ $100 = 200 shares @ $50
+		if holding.Quantity > 0 && event.Quantity > 0 {
+			// Calculate split ratio from the additional quantity
+			// If we had 100 shares and receive 100 more, it's a 2-for-1 split (ratio = 2.0)
+			splitRatio := (holding.Quantity + event.Quantity) / holding.Quantity
+
+			// Adjust average cost by the inverse of the split ratio
+			holding.AverageCost = holding.AverageCost / splitRatio
+
+			// Add the new shares
+			holding.Quantity += event.Quantity
+
+			s.logger.Info("Processed stock split",
+				"symbol", event.AssetSymbol,
+				"split_ratio", splitRatio,
+				"new_quantity", holding.Quantity,
+				"new_average_cost", holding.AverageCost,
+			)
+		}
 	default:
 		s.logger.Warn("unknown transaction type", "type", event.Type, "transaction_id", event.TransactionID)
 		metrics.RecordNatsMessage(TransactionCreatedSubject, "unknown_type", time.Since(start).Seconds())

@@ -91,24 +91,27 @@ func convertCSV(inputFile, outputFile string) error {
 		}
 
 		// Ensure we have enough fields
-		if len(record) < 13 {
+		if len(record) < 8 {
 			errors = append(errors, fmt.Sprintf("Row %d: insufficient fields (expected 13, got %d)", i+1, len(record)))
 			continue
 		}
 
 		brokerTx := BrokerTransaction{
-			Symbol:      strings.TrimSpace(record[0]),
-			Exchange:    strings.TrimSpace(record[1]),
-			Name:        strings.TrimSpace(record[2]),
-			Date:        strings.TrimSpace(record[3]),
-			Action:      strings.TrimSpace(record[4]),
-			Quantity:    strings.TrimSpace(record[5]),
-			Price:       strings.TrimSpace(record[6]),
-			Currency:    strings.TrimSpace(record[7]),
-			Fee:         strings.TrimSpace(record[9]),
-			FeeCurrency: strings.TrimSpace(record[10]),
-			FXRate:      strings.TrimSpace(record[11]),
-			Total:       strings.TrimSpace(record[12]),
+			Symbol:   strings.TrimSpace(record[0]),
+			Exchange: strings.TrimSpace(record[1]),
+			Name:     strings.TrimSpace(record[2]),
+			Date:     strings.TrimSpace(record[3]),
+			Action:   strings.TrimSpace(record[4]),
+			Quantity: strings.TrimSpace(record[5]),
+			Price:    strings.TrimSpace(record[6]),
+			Currency: strings.TrimSpace(record[7]),
+		}
+
+		if len(record) > 8 {
+			brokerTx.Fee = strings.TrimSpace(record[9])
+			brokerTx.FeeCurrency = strings.TrimSpace(record[10])
+			brokerTx.FXRate = strings.TrimSpace(record[11])
+			brokerTx.Total = strings.TrimSpace(record[12])
 		}
 
 		tx, err := convertTransaction(brokerTx)
@@ -210,10 +213,11 @@ func convertTransaction(bt BrokerTransaction) (Transaction, error) {
 
 	// Price - remove commas and parse
 	price, err := parseNumber(bt.Price)
-	if err != nil {
+	if err != nil && bt.Action != "Split" {
+		fmt.Printf("Invalid price: %s\n", bt.Action)
 		return tx, fmt.Errorf("invalid price: %w", err)
 	}
-	if price <= 0 {
+	if price <= 0 && bt.Action != "Split" {
 		return tx, fmt.Errorf("price must be positive")
 	}
 	tx.PricePerShare = price
@@ -228,6 +232,9 @@ func convertTransaction(bt BrokerTransaction) (Transaction, error) {
 		tx.Type = "BUY"
 	} else if action == "SELL" || action == "S" {
 		tx.Type = "SELL"
+	} else if action == "SPLIT" {
+		tx.Type = "SPLIT"
+		fmt.Printf("SPLIT: %s\n", bt.Symbol)
 	} else {
 		// Default to BUY for positive quantities if action is unclear
 		tx.Type = "BUY"

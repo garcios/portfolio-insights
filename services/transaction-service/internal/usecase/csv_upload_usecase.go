@@ -197,27 +197,39 @@ func (uc *csvUploadUsecase) parseCSVRow(record []string, headerMap map[string]in
 		return nil, fmt.Errorf("quantity must be positive")
 	}
 
-	// Parse price_per_share
-	priceStr, err := getValue("price_per_share")
-	if err != nil {
-		return nil, err
-	}
-	price, err := strconv.ParseFloat(priceStr, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid price_per_share: %w", err)
-	}
-	if price <= 0 {
-		return nil, fmt.Errorf("price_per_share must be positive")
-	}
-
 	// Parse type
 	txType, err := getValue("type")
 	if err != nil {
 		return nil, err
 	}
 	txType = strings.ToUpper(txType)
-	if txType != "BUY" && txType != "SELL" {
-		return nil, fmt.Errorf("type must be BUY or SELL")
+	if txType != "BUY" && txType != "SELL" && txType != "SPLIT" {
+		return nil, fmt.Errorf("type must be BUY, SELL, or SPLIT")
+	}
+
+	// Parse price_per_share
+	// For SPLIT transactions, price can be 0 or empty
+	priceStr, err := getValue("price_per_share")
+	if err != nil {
+		return nil, err
+	}
+
+	var price float64
+	if priceStr == "" || priceStr == "0" {
+		// Empty or zero price is only allowed for SPLIT transactions
+		if txType != "SPLIT" {
+			return nil, fmt.Errorf("price_per_share is required for %s transactions", txType)
+		}
+		price = 0
+	} else {
+		price, err = strconv.ParseFloat(priceStr, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid price_per_share: %w", err)
+		}
+		// Price must be positive for BUY and SELL, but can be 0 for SPLIT
+		if price <= 0 && txType != "SPLIT" {
+			return nil, fmt.Errorf("price_per_share must be positive for %s transactions", txType)
+		}
 	}
 
 	return &domain.Transaction{
