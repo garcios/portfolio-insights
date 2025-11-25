@@ -100,6 +100,14 @@ func (m *MockMarketDataRepository) CountPrices() (int, error) {
 	return count, nil
 }
 
+func (m *MockMarketDataRepository) InsertCurrencyRates(rates []*domain.CurrencyRate) error {
+	return nil
+}
+
+func (m *MockMarketDataRepository) GetLatestCurrencyRate(baseCurrency, targetCurrency string) (*domain.CurrencyRate, error) {
+	return nil, errors.New("not implemented")
+}
+
 func TestGetAsset(t *testing.T) {
 	repo := NewMockRepo()
 	repo.assets["AAPL"] = &domain.Asset{Symbol: "AAPL", Name: "Apple"}

@@ -177,3 +177,32 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 	metrics.RecordMarketDataRequest("total_batch_operation", "success", time.Since(start).Seconds())
 	return prices, nil
 }
+
+// GetCurrencyRate fetches the latest currency exchange rate
+func (g *MarketDataGateway) GetCurrencyRate(ctx context.Context, baseCurrency, targetCurrency string) (float64, error) {
+	// If currencies are the same, rate is 1.0
+	if baseCurrency == targetCurrency {
+		return 1.0, nil
+	}
+
+	start := time.Now()
+	req := &pb.GetLatestCurrencyRateRequest{
+		BaseCurrency:   baseCurrency,
+		TargetCurrency: targetCurrency,
+	}
+
+	resp, err := g.client.GetLatestCurrencyRate(ctx, req)
+	duration := time.Since(start).Seconds()
+
+	if err != nil {
+		metrics.RecordMarketDataRequest("get_currency_rate", "error", duration)
+		return 0, fmt.Errorf("failed to get currency rate for %s/%s: %w", baseCurrency, targetCurrency, err)
+	}
+	metrics.RecordMarketDataRequest("get_currency_rate", "success", duration)
+
+	if resp.CurrencyRate == nil {
+		return 0, fmt.Errorf("no currency rate available for %s/%s", baseCurrency, targetCurrency)
+	}
+
+	return resp.CurrencyRate.Rate, nil
+}

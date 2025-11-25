@@ -267,6 +267,8 @@ func (r *postgresMarketDataRepo) InsertPrices(prices []*domain.AssetPrice) error
 	stmt := fmt.Sprintf(`
 		INSERT INTO marketdata.asset_prices (asset_id, price, timestamp)
 		VALUES %s
+		ON CONFLICT (asset_id, timestamp) DO UPDATE SET
+			price = EXCLUDED.price
 	`, strings.Join(valueStrings, ","))
 
 	_, err := r.db.Exec(stmt, valueArgs...)
@@ -287,4 +289,55 @@ func (r *postgresMarketDataRepo) CountPrices() (int, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+func (r *postgresMarketDataRepo) InsertCurrencyRates(rates []*domain.CurrencyRate) error {
+	start := time.Now()
+	if len(rates) == 0 {
+		return nil
+	}
+
+	valueStrings := make([]string, 0, len(rates))
+	valueArgs := make([]interface{}, 0, len(rates)*4)
+
+	for i, rate := range rates {
+		n := i * 4
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d, $%d)", n+1, n+2, n+3, n+4))
+		valueArgs = append(valueArgs, rate.BaseCurrency, rate.TargetCurrency, rate.Rate, rate.RateDate)
+	}
+
+	stmt := fmt.Sprintf(`
+		INSERT INTO marketdata.currency_rates (base_currency, target_currency, rate, rate_date)
+		VALUES %s
+		ON CONFLICT (base_currency, target_currency, rate_date) DO UPDATE SET
+			rate = EXCLUDED.rate
+	`, strings.Join(valueStrings, ","))
+
+	_, err := r.db.Exec(stmt, valueArgs...)
+	metrics.RecordDatabaseQuery("insert_currency_rates", "currency_rates", time.Since(start).Seconds(), err)
+	return err
+}
+
+func (r *postgresMarketDataRepo) GetLatestCurrencyRate(baseCurrency, targetCurrency string) (*domain.CurrencyRate, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_latest_currency_rate", "currency_rates", time.Since(start).Seconds(), nil)
+	}()
+
+	query := `
+		SELECT id, base_currency, target_currency, rate, rate_date, created_at
+		FROM marketdata.currency_rates
+		WHERE base_currency = $1 AND target_currency = $2
+		ORDER BY rate_date DESC
+		LIMIT 1
+	`
+	var rate domain.CurrencyRate
+	err := r.db.QueryRow(query, baseCurrency, targetCurrency).Scan(
+		&rate.ID, &rate.BaseCurrency, &rate.TargetCurrency, &rate.Rate, &rate.RateDate, &rate.CreatedAt,
+	)
+	if err != nil {
+		metrics.RecordDatabaseQuery("get_latest_currency_rate", "currency_rates", time.Since(start).Seconds(), err)
+		return nil, err
+	}
+	return &rate, nil
 }

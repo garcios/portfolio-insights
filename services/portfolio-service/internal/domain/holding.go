@@ -20,6 +20,7 @@ type PortfolioSummary struct {
 	TotalCost   float64
 	GainLoss    float64
 	GainLossPct float64
+	Currency    string // Currency of the summary (e.g., USD, AUD)
 	LastUpdated time.Time
 }
 

@@ -1,0 +1,16 @@
+In infra/db,  create a new table called currency_rates. It should sit in existing marketdata schema. 
+Fields to Include:
+
+- id (Primary Key, UUID auto generated)
+
+- base_currency (e.g., 'USD', 'EUR')
+
+- target_currency (e.g., 'GBP', 'JPY')
+
+- rate (The actual exchange rate)
+
+- rate_date (The date the rate is valid for)
+
+- created_at (Timestamp for when the record was inserted)
+
+Crucial: Include a unique constraint on the combination of base_currency, target_currency, and rate_date to prevent duplicate entries.

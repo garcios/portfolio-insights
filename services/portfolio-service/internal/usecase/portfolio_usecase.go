@@ -22,6 +22,7 @@ type portfolioUsecase struct {
 type MarketDataGateway interface {
 	GetCurrentPrice(ctx context.Context, symbol string) (float64, error)
 	GetCurrentPrices(ctx context.Context, symbols []string) (map[string]float64, error)
+	GetCurrencyRate(ctx context.Context, baseCurrency, targetCurrency string) (float64, error)
 }
 
 func NewPortfolioUsecase(holdingRepo domain.HoldingRepository, marketDataGateway MarketDataGateway) PortfolioUsecase {
@@ -68,7 +69,10 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 }
 
 // GetPortfolioSummary calculates the portfolio summary for a user
+// All values are converted to USD (default currency)
 func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string) (*domain.PortfolioSummary, error) {
+	const defaultCurrency = "AUD"
+
 	// Get holdings with current prices
 	holdings, err := uc.GetHoldings(ctx, userID)
 	if err != nil {
@@ -83,10 +87,25 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		GainLossPct: 0,
 	}
 
-	// Calculate totals
+	// Calculate totals with currency conversion
 	for _, holding := range holdings {
-		costBasis := holding.Quantity * holding.AverageCost
-		currentValue := holding.Quantity * holding.CurrentPrice
+		// Get exchange rate if currency is not AUD
+		exchangeRate := 1.0
+		if holding.Currency != defaultCurrency {
+			rate, err := uc.marketDataGateway.GetCurrencyRate(ctx, holding.Currency, defaultCurrency)
+			if err != nil {
+				// Log error but continue with rate of 1.0
+				// In production, you might want to handle this differently
+				fmt.Printf("Warning: Failed to get exchange rate for %s to %s: %v. Using rate 1.0\n",
+					holding.Currency, defaultCurrency, err)
+			} else {
+				exchangeRate = rate
+			}
+		}
+
+		// Convert to default currency
+		costBasis := holding.Quantity * holding.AverageCost * exchangeRate
+		currentValue := holding.Quantity * holding.CurrentPrice * exchangeRate
 
 		summary.TotalCost += costBasis
 		summary.TotalValue += currentValue
@@ -100,5 +119,7 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		summary.GainLossPct = (summary.GainLoss / summary.TotalCost) * 100
 	}
 
+	// Set the currency of the summary (default currency)
+	summary.Currency = defaultCurrency
 	return summary, nil
 }

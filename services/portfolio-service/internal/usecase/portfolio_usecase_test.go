@@ -91,6 +91,14 @@ func (m *mockMarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []
 	return prices, nil
 }
 
+func (m *mockMarketDataGateway) GetCurrencyRate(ctx context.Context, baseCurrency, targetCurrency string) (float64, error) {
+	if m.err != nil {
+		return 0, m.err
+	}
+	// For testing, return 1.0 (no conversion)
+	return 1.0, nil
+}
+
 func TestGetHoldings_Success(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()

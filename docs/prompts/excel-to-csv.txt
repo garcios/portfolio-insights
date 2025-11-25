@@ -31,4 +31,4 @@ Ensure all fields are properly quoted if they contain the field separator (comma
 
 The standard CSV separator should be a comma (,).
 
-4. The program should be places in tools directory and should be named excel2csv.go 
+4. The program should be places in tools/excel2csv directory and should be named excel2csv.go 

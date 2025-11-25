@@ -160,3 +160,34 @@ func (h *MarketDataHandler) GetHistoricalPrices(ctx context.Context, req *pb.Get
 
 	return &pb.GetHistoricalPricesResponse{Prices: pbPrices}, nil
 }
+
+func (h *MarketDataHandler) GetLatestCurrencyRate(ctx context.Context, req *pb.GetLatestCurrencyRateRequest) (*pb.GetLatestCurrencyRateResponse, error) {
+	baseCurrency := req.GetBaseCurrency()
+	targetCurrency := req.GetTargetCurrency()
+
+	if baseCurrency == "" {
+		return nil, status.Error(codes.InvalidArgument, "base_currency is required")
+	}
+	if targetCurrency == "" {
+		return nil, status.Error(codes.InvalidArgument, "target_currency is required")
+	}
+
+	rate, err := h.usecase.GetLatestCurrencyRate(baseCurrency, targetCurrency)
+	if err == sql.ErrNoRows {
+		return nil, status.Errorf(codes.NotFound, "currency rate for %s/%s not found", baseCurrency, targetCurrency)
+	}
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to query currency rate: %v", err)
+	}
+
+	return &pb.GetLatestCurrencyRateResponse{
+		CurrencyRate: &pb.CurrencyRate{
+			Id:             rate.ID,
+			BaseCurrency:   rate.BaseCurrency,
+			TargetCurrency: rate.TargetCurrency,
+			Rate:           rate.Rate,
+			RateDate:       timestamppb.New(rate.RateDate),
+			CreatedAt:      timestamppb.New(rate.CreatedAt),
+		},
+	}, nil
+}

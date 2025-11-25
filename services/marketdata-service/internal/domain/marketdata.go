@@ -21,6 +21,15 @@ type AssetPrice struct {
 	CreatedAt time.Time
 }
 
+type CurrencyRate struct {
+	ID             string
+	BaseCurrency   string
+	TargetCurrency string
+	Rate           float64
+	RateDate       time.Time
+	CreatedAt      time.Time
+}
+
 type MarketDataRepository interface {
 	// Asset operations
 	GetAssetBySymbol(symbol string) (*Asset, error)
@@ -35,6 +44,10 @@ type MarketDataRepository interface {
 	GetHistoricalPrices(symbol string, start, end time.Time) ([]*AssetPrice, error)
 	InsertPrices(prices []*AssetPrice) error // For worker
 	CountPrices() (int, error)               // For metrics
+
+	// Currency rate operations
+	InsertCurrencyRates(rates []*CurrencyRate) error // For worker
+	GetLatestCurrencyRate(baseCurrency, targetCurrency string) (*CurrencyRate, error)
 }
 
 type MarketDataUsecase interface {
@@ -43,4 +56,5 @@ type MarketDataUsecase interface {
 	GetLatestPrice(symbol string) (*AssetPrice, error)
 	GetLatestPrices(symbols []string) (map[string]*AssetPrice, error)
 	GetHistoricalPrices(symbol string, start, end time.Time) ([]*AssetPrice, error)
+	GetLatestCurrencyRate(baseCurrency, targetCurrency string) (*CurrencyRate, error)
 }

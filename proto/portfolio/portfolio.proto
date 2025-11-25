@@ -17,7 +17,8 @@ message PortfolioSummary {
   double total_value = 2;
   double total_gain_loss = 3;
   double total_gain_loss_percentage = 4;
-  google.protobuf.Timestamp last_updated = 5;
+  string currency = 5;
+  google.protobuf.Timestamp last_updated = 6;
 }
 
 message Holding {

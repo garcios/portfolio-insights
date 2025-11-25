@@ -77,13 +77,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize Currency Ingestion Worker
+	currencyWorker, err := worker.NewCurrencyIngestionWorker(repo)
+	if err != nil {
+		l.Error("failed to create currency worker", "error", err)
+		os.Exit(1)
+	}
+
 	// Start Workers
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	ingestionWorker.Start(ctx)
 	priceWorker.Start(ctx)
-	l.Info("Ingestion workers started")
+	currencyWorker.Start(ctx)
+	l.Info("Ingestion workers started (assets, prices, currency rates)")
 
 	// Start gRPC Server
 	lis, err := net.Listen("tcp", ":50054")
