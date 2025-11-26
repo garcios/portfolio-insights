@@ -10,6 +10,7 @@ import (
 
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
+	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
 )
 
 // CreateUser is the resolver for the createUser field.
@@ -24,7 +25,32 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 
 // Portfolio is the resolver for the portfolio field.
 func (r *queryResolver) Portfolio(ctx context.Context, id string) (*model.Portfolio, error) {
-	panic(fmt.Errorf("not implemented: Portfolio - portfolio"))
+	// Call portfolio service to get holdings
+	// Assuming portfolio ID is the same as User ID for now
+	req := &pb.GetHoldingsRequest{
+		UserId: id,
+	}
+
+	resp, err := r.PortfolioClient.GetHoldings(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get holdings: %w", err)
+	}
+
+	var holdings []*model.Holding
+	for _, h := range resp.Holdings {
+		holdings = append(holdings, &model.Holding{
+			Symbol:   h.Symbol,
+			Quantity: h.Quantity,
+			Value:    h.CurrentValue,
+		})
+	}
+
+	return &model.Portfolio{
+		ID:       id,
+		UserID:   id,
+		Name:     "My Portfolio",
+		Holdings: holdings,
+	}, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

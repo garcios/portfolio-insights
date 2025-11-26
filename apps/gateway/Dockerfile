@@ -12,6 +12,7 @@ WORKDIR /app/apps/gateway
 RUN go mod download
 
 # Install gqlgen and generate GraphQL code
+WORKDIR /app/apps/gateway
 RUN go install github.com/99designs/gqlgen@v0.17.45
 RUN go run github.com/99designs/gqlgen generate
 

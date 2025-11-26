@@ -10,6 +10,9 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/graph"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
 	"github.com/garcios/portfolio-insights/pkg/logger"
+	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const defaultPort = "8080"
@@ -21,7 +24,23 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
+	portfolioServiceAddr := os.Getenv("PORTFOLIO_SERVICE_ADDR")
+	if portfolioServiceAddr == "" {
+		portfolioServiceAddr = "localhost:50052"
+	}
+
+	conn, err := grpc.NewClient(portfolioServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		l.Error("Failed to connect to portfolio service", "error", err)
+		os.Exit(1)
+	}
+	defer conn.Close()
+
+	portfolioClient := pb.NewPortfolioServiceClient(conn)
+
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{
+		PortfolioClient: portfolioClient,
+	}}))
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)

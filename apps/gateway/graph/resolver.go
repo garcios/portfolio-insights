@@ -4,4 +4,10 @@ package graph
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
 
-type Resolver struct{}
+import (
+	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+)
+
+type Resolver struct {
+	PortfolioClient pb.PortfolioServiceClient
+}

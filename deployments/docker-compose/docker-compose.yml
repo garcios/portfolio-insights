@@ -33,6 +33,8 @@ services:
       dockerfile: apps/gateway/Dockerfile
     ports:
       - "8080:8080"
+    environment:
+      - PORTFOLIO_SERVICE_ADDR=portfolio-service:50052
     depends_on:
       - user-service
       - portfolio-service

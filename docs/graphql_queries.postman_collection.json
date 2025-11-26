@@ -1,0 +1,99 @@
+{
+    "info": {
+        "_postman_id": "portfolio-insights-graphql-queries",
+        "name": "Portfolio Insights GraphQL Queries",
+        "description": "Collection of GraphQL queries and mutations for the Portfolio Insights Gateway.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Queries",
+            "item": [
+                {
+                    "name": "Get Me",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "graphql",
+                            "graphql": {
+                                "query": "query {\n  me {\n    id\n    username\n    email\n  }\n}",
+                                "variables": ""
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "query"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Get Portfolio",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "graphql",
+                            "graphql": {
+                                "query": "query GetPortfolio($id: ID!) {\n  portfolio(id: $id) {\n    id\n    userId\n    name\n    holdings {\n      symbol\n      quantity\n      value\n    }\n  }\n}",
+                                "variables": "{\n  \"id\": \"0fdc618a-0cd2-4c04-aec4-44646c813e6a\"\n}"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "query"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Mutations",
+            "item": [
+                {
+                    "name": "Create User",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "graphql",
+                            "graphql": {
+                                "query": "mutation CreateUser($input: NewUser!) {\n  createUser(input: $input) {\n    id\n    username\n    email\n  }\n}",
+                                "variables": "{\n  \"input\": {\n    \"username\": \"testuser\",\n    \"email\": \"test@example.com\"\n  }\n}"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "query"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8080",
+            "type": "string"
+        }
+    ]
+}
