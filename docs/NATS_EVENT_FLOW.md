@@ -1,69 +1,41 @@
 # NATS Event Flow Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Transaction Creation Flow                        │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+sequenceDiagram
+    participant Client
+    participant TS as Transaction Service
+    participant US as User Service
+    participant MS as Market Data Service
+    participant DB as PostgreSQL
+    participant NATS as NATS Message Bus
+    participant PS as Portfolio Service
+    participant Repo as Holdings Repository
 
-┌──────────┐         ┌───────────────────┐         ┌──────────┐
-│  Client  │         │ Transaction       │         │ User     │
-│  (gRPC)  │────1───▶│ Service           │────2───▶│ Service  │
-└──────────┘         │                   │         │ (gRPC)   │
-                     │ CreateTransaction │◀───3────│          │
-                     │                   │         └──────────┘
-                     │                   │         
-                     │                   │         ┌──────────┐
-                     │                   │────4───▶│ Market   │
-                     │                   │         │ Data     │
-                     │                   │◀───5────│ Service  │
-                     │                   │         └──────────┘
-                     │                   │         
-                     │                   │         ┌──────────┐
-                     │                   │────6───▶│ Postgres │
-                     │                   │         │ Database │
-                     │                   │◀───7────│          │
-                     └─────────┬─────────┘         └──────────┘
-                               │
-                               │ 8. Publish Event
-                               ▼
-                     ┌─────────────────┐
-                     │      NATS       │
-                     │   Message Bus   │
-                     │                 │
-                     │ Topic:          │
-                     │ transaction-    │
-                     │ service.        │
-                     │ transaction.    │
-                     │ created         │
-                     └────────┬────────┘
-                              │
-                              │ 9. Subscribe
-                              ▼
-                     ┌─────────────────┐
-                     │ Portfolio       │
-                     │ Service         │
-                     │                 │
-                     │ - Receive Event │
-                     │ - Calculate     │
-                     │   Holdings      │
-                     │ - Update Avg    │
-                     │   Cost          │
-                     └────────┬────────┘
-                              │
-                              │ 10. Store
-                              ▼
-                     ┌─────────────────┐
-                     │  In-Memory      │
-                     │  Repository     │
-                     │                 │
-                     │  Holdings:      │
-                     │  {              │
-                     │   user_id,      │
-                     │   symbol,       │
-                     │   quantity,     │
-                     │   avg_cost      │
-                     │  }              │
-                     └─────────────────┘
+    Client->>TS: 1. CreateTransaction (gRPC)
+    
+    Note over TS: Validate Transaction
+    TS->>US: 2. ValidateUser (gRPC)
+    US-->>TS: 3. User Exists ✓
+    
+    TS->>MS: 4. ValidateAsset (gRPC)
+    MS-->>TS: 5. Asset Exists ✓
+    
+    TS->>DB: 6. Save Transaction
+    DB-->>TS: 7. Transaction Saved ✓
+    
+    TS->>NATS: 8. Publish Event<br/>Topic: transaction-service.transaction.created
+    TS-->>Client: Transaction Created
+    
+    Note over NATS: Event Message:<br/>{transaction_id, user_id,<br/>asset_symbol, price, qty, type}
+    
+    NATS->>PS: 9. Deliver Event (Subscriber)
+    
+    Note over PS: Process Event:<br/>- Calculate new avg cost<br/>- Update quantity
+    
+    PS->>Repo: 10. Update Holdings
+    Repo-->>PS: Holdings Updated ✓
+    
+    Note over Repo: Holdings State:<br/>{user_id, symbol,<br/>quantity, avg_cost}
 ```
 
 ## Step-by-Step Flow
