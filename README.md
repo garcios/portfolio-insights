@@ -27,6 +27,20 @@ graph TD
         UserService -->|SQL| DB[(PostgreSQL)]
         PortfolioService -->|SQL| DB
         TransactionService -->|SQL| DB
+        PortfolioService -->|Cache| Redis[(Redis)]
+    end
+    
+    subgraph "Observability"
+        UserService -->|Metrics| Prometheus[Prometheus]
+        PortfolioService -->|Metrics| Prometheus
+        TransactionService -->|Metrics| Prometheus
+        MarketData -->|Metrics| Prometheus
+        Gateway -->|Metrics| Prometheus
+        
+        Prometheus -->|Alerts| Alertmanager[Alertmanager]
+        Prometheus -->|Data Source| Grafana[Grafana]
+        
+        Ops[Operations Team] -->|Monitor| Grafana
     end
 ```
 
@@ -74,6 +88,14 @@ All services follow **Clean Architecture** principles (Domain, Usecase, Reposito
 ### 4. Infrastructure
 - **NATS**: Cloud-native messaging system used for the event bus.
 - **PostgreSQL**: Relational database for persistent storage.
+- **Redis**: In-memory cache for market data prices (reduces API calls to external providers).
+
+### 5. Observability
+- **Prometheus**: Metrics collection and time-series database. Scrapes metrics from all services.
+- **Grafana**: Visualization and dashboarding platform. Provides real-time insights into system health and performance.
+- **Alertmanager**: Handles alerts from Prometheus and routes them to appropriate channels (e.g., email, Slack).
+- **Metrics Exposed**: All services expose Prometheus metrics on dedicated ports (e.g., `:9096` for user-service, `:9098` for portfolio-service).
+
 
 ## 🔄 Data Flow Examples
 
@@ -161,3 +183,17 @@ Access the app at `http://localhost:5173`.
 
 ### Running GraphQL Playground
 Access the GraphQL Playground at `http://localhost:8080`.
+
+### Running the Monitoring Stack
+To start Prometheus, Grafana, and Alertmanager:
+
+```bash
+cd deployments/monitoring
+./start-monitoring.sh
+```
+
+Access the monitoring tools:
+- **Grafana**: `http://localhost:3001` (admin/admin)
+- **Prometheus**: `http://localhost:9090`
+- **Alertmanager**: `http://localhost:9093`
+
