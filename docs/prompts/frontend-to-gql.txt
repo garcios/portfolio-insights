@@ -17,3 +17,31 @@ The frontend shoud be able to display the holdings data in a table with the foll
     - Gain/Loss
     - Gain/Loss Percentage
     - Currency
+
+
+ The frontend can make the following GraphQL query:
+
+ query GetPortfolio($id: ID!) {
+  portfolio(id: $id) {
+    id
+    userId
+    name
+    summary {
+      totalValue
+      totalGainLoss
+      totalGainLossPercentage
+      currency
+      lastUpdated
+    }
+    holdings {
+      symbol
+      quantity
+      averagePrice
+      currentPrice
+      currentValue
+      gainLoss
+      gainLossPercentage
+      currency
+    }
+  }
+}   

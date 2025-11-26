@@ -1,0 +1,14 @@
+In schema.graphqls, modify Holding to add more attributes like below:
+
+type Holding {
+  symbol: String!
+  quantity: Float!
+  averagePrice: Float!
+  currentPrice: Float!
+  currentValue: Float!
+  gainLoss: Float!
+  gainLossPercentage: Float!
+  currency: String!
+}
+
+Make necessary changes in the resolver and the postman collection.

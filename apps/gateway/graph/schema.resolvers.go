@@ -62,10 +62,38 @@ func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error
 
 // Portfolio is the resolver for the portfolio field.
 func (r *queryResolver) Portfolio(ctx context.Context, id string) (*model.Portfolio, error) {
-	// Call portfolio service to get holdings
-	// Assuming portfolio ID is the same as User ID for now
+	// Only return basic portfolio info
+	// Holdings and Summary will be resolved by their own field resolvers
+	return &model.Portfolio{
+		ID:     id,
+		UserID: id,
+		Name:   "My Portfolio",
+	}, nil
+}
+
+// Mutation returns generated.MutationResolver implementation.
+func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
+
+// Query returns generated.QueryResolver implementation.
+func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
+
+type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *Resolver) Portfolio() generated.PortfolioResolver { return &portfolioResolver{r} }
+
+type portfolioResolver struct{ *Resolver }
+
+func (r *portfolioResolver) Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error) {
+	// This resolver only executes if the query requests the holdings field
 	holdingsReq := &portfoliopb.GetHoldingsRequest{
-		UserId: id,
+		UserId: obj.UserID,
 	}
 
 	holdingsResp, err := r.PortfolioClient.GetHoldings(ctx, holdingsReq)
@@ -87,49 +115,29 @@ func (r *queryResolver) Portfolio(ctx context.Context, id string) (*model.Portfo
 		})
 	}
 
-	// Fetch portfolio summary
+	return holdings, nil
+}
+func (r *portfolioResolver) Summary(ctx context.Context, obj *model.Portfolio) (*model.PortfolioSummary, error) {
+	// This resolver only executes if the query requests the summary field
 	summaryReq := &portfoliopb.GetPortfolioSummaryRequest{
-		UserId: id,
+		UserId: obj.UserID,
 	}
 
 	summaryResp, err := r.PortfolioClient.GetPortfolioSummary(ctx, summaryReq)
 	if err != nil {
-		// If summary fails, log but don't fail the entire query
-		// Return portfolio without summary
-		return &model.Portfolio{
-			ID:       id,
-			UserID:   id,
-			Name:     "My Portfolio",
-			Summary:  nil,
-			Holdings: holdings,
-		}, nil
+		// Return nil for optional field if it fails
+		return nil, nil
 	}
 
-	var summary *model.PortfolioSummary
-	if summaryResp.Summary != nil {
-		summary = &model.PortfolioSummary{
-			TotalValue:              summaryResp.Summary.TotalValue,
-			TotalGainLoss:           summaryResp.Summary.TotalGainLoss,
-			TotalGainLossPercentage: summaryResp.Summary.TotalGainLossPercentage,
-			Currency:                summaryResp.Summary.Currency,
-			LastUpdated:             summaryResp.Summary.LastUpdated.AsTime().Format("2006-01-02T15:04:05Z07:00"),
-		}
+	if summaryResp.Summary == nil {
+		return nil, nil
 	}
 
-	return &model.Portfolio{
-		ID:       id,
-		UserID:   id,
-		Name:     "My Portfolio",
-		Summary:  summary,
-		Holdings: holdings,
+	return &model.PortfolioSummary{
+		TotalValue:              summaryResp.Summary.TotalValue,
+		TotalGainLoss:           summaryResp.Summary.TotalGainLoss,
+		TotalGainLossPercentage: summaryResp.Summary.TotalGainLossPercentage,
+		Currency:                summaryResp.Summary.Currency,
+		LastUpdated:             summaryResp.Summary.LastUpdated.AsTime().Format("2006-01-02T15:04:05Z07:00"),
 	}, nil
 }
-
-// Mutation returns generated.MutationResolver implementation.
-func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
-
-// Query returns generated.QueryResolver implementation.
-func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
-
-type mutationResolver struct{ *Resolver }
-type queryResolver struct{ *Resolver }

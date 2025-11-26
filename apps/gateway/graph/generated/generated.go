@@ -39,6 +39,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	Mutation() MutationResolver
+	Portfolio() PortfolioResolver
 	Query() QueryResolver
 }
 
@@ -92,6 +93,10 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input model.NewUser) (*model.User, error)
+}
+type PortfolioResolver interface {
+	Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error)
+	Summary(ctx context.Context, obj *model.Portfolio) (*model.PortfolioSummary, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
