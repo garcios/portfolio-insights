@@ -10,8 +10,8 @@ The system follows a microservices architecture pattern, utilizing **gRPC** for 
 
 ```mermaid
 graph TD
-    User[User] -->|HTTPS| Frontend[Frontend App (React)]
-    Frontend -->|GraphQL| Gateway[API Gateway (Go/gqlgen)]
+    User[User] -->|HTTPS| Frontend["Frontend App (React)"]
+    Frontend -->|GraphQL| Gateway["API Gateway (Go/gqlgen)"]
     
     subgraph "Backend Services (Go)"
         Gateway -->|gRPC| UserService[User Service]
