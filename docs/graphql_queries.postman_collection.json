@@ -34,6 +34,30 @@
                     "response": []
                 },
                 {
+                    "name": "Get User",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "graphql",
+                            "graphql": {
+                                "query": "query GetUser($id: ID!) {\n  user(id: $id) {\n    id\n    username\n    email\n  }\n}",
+                                "variables": "{\n  \"id\": \"3a4b3185-5abb-4899-9835-829ddb91e3a6\"\n}"
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "query"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
                     "name": "Get Portfolio",
                     "request": {
                         "method": "POST",
@@ -41,7 +65,7 @@
                         "body": {
                             "mode": "graphql",
                             "graphql": {
-                                "query": "query GetPortfolio($id: ID!) {\n  portfolio(id: $id) {\n    id\n    userId\n    name\n    holdings {\n      symbol\n      quantity\n      value\n    }\n  }\n}",
+                                "query": "query GetPortfolio($id: ID!) {\n  portfolio(id: $id) {\n    id\n    userId\n    name\n    summary {\n      totalValue\n      totalGainLoss\n      totalGainLossPercentage\n      currency\n      lastUpdated\n    }\n    holdings {\n      symbol\n      quantity\n      averagePrice\n      currentPrice\n      currentValue\n      gainLoss\n      gainLossPercentage\n      currency\n    }\n  }\n}",
                                 "variables": "{\n  \"id\": \"0fdc618a-0cd2-4c04-aec4-44646c813e6a\"\n}"
                             }
                         },

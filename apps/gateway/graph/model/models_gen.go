@@ -3,9 +3,14 @@
 package model
 
 type Holding struct {
-	Symbol   string  `json:"symbol"`
-	Quantity float64 `json:"quantity"`
-	Value    float64 `json:"value"`
+	Symbol             string  `json:"symbol"`
+	Quantity           float64 `json:"quantity"`
+	AveragePrice       float64 `json:"averagePrice"`
+	CurrentPrice       float64 `json:"currentPrice"`
+	CurrentValue       float64 `json:"currentValue"`
+	GainLoss           float64 `json:"gainLoss"`
+	GainLossPercentage float64 `json:"gainLossPercentage"`
+	Currency           string  `json:"currency"`
 }
 
 type Mutation struct {
@@ -17,10 +22,19 @@ type NewUser struct {
 }
 
 type Portfolio struct {
-	ID       string     `json:"id"`
-	UserID   string     `json:"userId"`
-	Name     string     `json:"name"`
-	Holdings []*Holding `json:"holdings"`
+	ID       string            `json:"id"`
+	UserID   string            `json:"userId"`
+	Name     string            `json:"name"`
+	Summary  *PortfolioSummary `json:"summary,omitempty"`
+	Holdings []*Holding        `json:"holdings"`
+}
+
+type PortfolioSummary struct {
+	TotalValue              float64 `json:"totalValue"`
+	TotalGainLoss           float64 `json:"totalGainLoss"`
+	TotalGainLossPercentage float64 `json:"totalGainLossPercentage"`
+	Currency                string  `json:"currency"`
+	LastUpdated             string  `json:"lastUpdated"`
 }
 
 type Query struct {

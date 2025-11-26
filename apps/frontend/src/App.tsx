@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ApolloProvider } from '@apollo/client';
+import { useState } from 'react';
+import { ApolloProvider, useQuery, gql } from '@apollo/client';
 import {
     Wallet,
     TrendingUp,
@@ -15,97 +15,88 @@ import StatsCard from './components/StatsCard';
 import PortfolioChart from './components/PortfolioChart';
 import HoldingsTable from './components/HoldingsTable';
 import LoadingSpinner from './components/LoadingSpinner';
-import { Portfolio, PortfolioPerformance, Holding } from './types/portfolio';
+import { PortfolioPerformance } from './types/portfolio';
 
-// Mock data generator for demonstration
-const generateMockData = (): {
-    portfolio: Portfolio;
-    performance: PortfolioPerformance[];
-    stats: {
-        totalValue: number;
-        totalChange: number;
-        dayChange: number;
-    };
-} => {
-    // Generate mock holdings
-    const symbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'NVDA', 'META'];
-    const holdings: Holding[] = symbols.map(symbol => ({
-        symbol,
-        quantity: Math.random() * 100 + 10,
-        value: Math.random() * 50000 + 10000,
-    }));
+const GET_PORTFOLIO = gql`
+  query GetPortfolio($id: ID!) {
+    portfolio(id: $id) {
+      id
+      userId
+      name
+      summary {
+        totalValue
+        totalGainLoss
+        totalGainLossPercentage
+        currency
+        lastUpdated
+      }
+      holdings {
+        symbol
+        quantity
+        averagePrice
+        currentPrice
+        currentValue
+        gainLoss
+        gainLossPercentage
+        currency
+      }
+    }
+  }
+`;
 
-    const totalValue = holdings.reduce((sum, h) => sum + h.value, 0);
-
-    // Generate mock performance data for the last 30 days
+// Helper to generate mock performance data based on current value
+// since the API doesn't support history yet
+const generateMockPerformance = (currentValue: number): PortfolioPerformance[] => {
     const performance: PortfolioPerformance[] = [];
     const today = new Date();
-    let currentValue = totalValue * 0.85; // Start at 85% of current value
+    // Start at 85% of current value 30 days ago
+    let value = currentValue * 0.85;
 
     for (let i = 29; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
 
         // Add some randomness with upward trend
-        currentValue += (Math.random() - 0.4) * (totalValue * 0.02);
+        value += (Math.random() - 0.4) * (currentValue * 0.02);
 
         performance.push({
             date: date.toISOString().split('T')[0],
-            value: currentValue,
+            value: value,
         });
     }
 
-    // Ensure the last value matches current total
-    performance[performance.length - 1].value = totalValue;
-
-    const totalChange = ((totalValue - performance[0].value) / performance[0].value) * 100;
-    const dayChange = ((totalValue - performance[performance.length - 2].value) / performance[performance.length - 2].value) * 100;
-
-    return {
-        portfolio: {
-            id: 'portfolio-1',
-            userId: 'user-1',
-            name: 'My Investment Portfolio',
-            holdings,
-        },
-        performance,
-        stats: {
-            totalValue,
-            totalChange,
-            dayChange,
-        },
-    };
+    // Ensure last point matches current value
+    performance[performance.length - 1].value = currentValue;
+    return performance;
 };
 
 function AppContent() {
-    const [isLoading, setIsLoading] = useState(true);
-    const [data, setData] = useState<ReturnType<typeof generateMockData> | null>(null);
+    // Hardcoded user ID for demo purposes
+    const userId = "02b28ee7-9ba2-427a-b918-a3d8e2cc00dc";
+
+    const { loading, error, data, refetch } = useQuery(GET_PORTFOLIO, {
+        variables: { id: userId },
+        pollInterval: 30000, // Refresh every 30 seconds
+    });
+
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const loadData = () => {
+    const handleRefresh = async () => {
         setIsRefreshing(true);
-        // Simulate API call
-        setTimeout(() => {
-            setData(generateMockData());
-            setIsLoading(false);
-            setIsRefreshing(false);
-        }, 1000);
+        await refetch();
+        setIsRefreshing(false);
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    const formatCurrency = (value: number) => {
+    const formatCurrency = (value: number, currency: string = 'USD') => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
-            currency: 'USD',
+            currency: currency,
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
         }).format(value);
     };
 
-    if (isLoading || !data) {
+    if (loading && !data) {
         return (
             <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
                 <LoadingSpinner />
@@ -113,8 +104,52 @@ function AppContent() {
         );
     }
 
-    const { portfolio, performance, stats } = data;
-    const isPositive = stats.totalChange >= 0;
+    if (error) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                background: 'var(--color-bg-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--color-text-primary)'
+            }}>
+                <div style={{ textAlign: 'center' }}>
+                    <h2>Error loading portfolio</h2>
+                    <p>{error.message}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        style={{
+                            marginTop: '16px',
+                            padding: '8px 16px',
+                            background: 'var(--color-primary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const portfolio = data?.portfolio;
+    const summary = portfolio?.summary || {
+        totalValue: 0,
+        totalGainLoss: 0,
+        totalGainLossPercentage: 0,
+        currency: 'USD'
+    };
+
+    // Generate mock performance data for the chart
+    const performance = generateMockPerformance(summary.totalValue);
+    const isPositive = summary.totalGainLoss >= 0;
+
+    // Calculate day change (mocked as 1/10th of total change for demo)
+    const dayChange = summary.totalGainLoss / 10;
 
     return (
         <div style={{
@@ -171,22 +206,22 @@ function AppContent() {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button
-                            onClick={loadData}
-                            disabled={isRefreshing}
+                            onClick={handleRefresh}
+                            disabled={isRefreshing || loading}
                             style={{
                                 padding: '10px',
                                 borderRadius: '8px',
                                 background: 'var(--color-bg-tertiary)',
                                 border: '1px solid var(--color-border)',
                                 color: 'var(--color-text-secondary)',
-                                cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                                cursor: (isRefreshing || loading) ? 'not-allowed' : 'pointer',
                                 transition: 'all 0.2s',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                             }}
                             onMouseEnter={(e) => {
-                                if (!isRefreshing) {
+                                if (!isRefreshing && !loading) {
                                     e.currentTarget.style.background = 'var(--color-bg-hover)';
                                     e.currentTarget.style.borderColor = 'var(--color-border-light)';
                                 }
@@ -199,7 +234,7 @@ function AppContent() {
                             <RefreshCw
                                 size={18}
                                 style={{
-                                    animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+                                    animation: (isRefreshing || loading) ? 'spin 1s linear infinite' : 'none',
                                 }}
                             />
                         </button>
@@ -272,16 +307,16 @@ function AppContent() {
                 <div className="grid grid-cols-4" style={{ marginBottom: '32px' }}>
                     <StatsCard
                         title="Total Value"
-                        value={formatCurrency(stats.totalValue)}
-                        change={stats.totalChange}
+                        value={formatCurrency(summary.totalValue, summary.currency)}
+                        change={summary.totalGainLossPercentage}
                         changeLabel="All time"
                         icon={DollarSign}
                         iconColor="var(--color-primary)"
                     />
                     <StatsCard
                         title="Day Change"
-                        value={formatCurrency(stats.totalValue * (stats.dayChange / 100))}
-                        change={stats.dayChange}
+                        value={formatCurrency(dayChange, summary.currency)}
+                        change={summary.totalGainLossPercentage / 10} // Mocked day change %
                         changeLabel="Today"
                         icon={TrendingUp}
                         iconColor="var(--color-success)"

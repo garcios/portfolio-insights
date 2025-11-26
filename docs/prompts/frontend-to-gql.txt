@@ -1,0 +1,19 @@
+Modify the frontend to use the new GraphQL API:
+
+It should call the GraphQL API to get the portfolio data and display it in the frontend.
+
+The frontend should be able to display the portfolio summary in the header card with the following information:
+    - Portfolio Name
+    - Portfolio Value
+    - Portfolio Gain/Loss
+    - Portfolio Gain/Loss Percentage
+    - Portfolio Currency
+   
+The frontend shoud be able to display the holdings data in a table with the following columns:
+    - Symbol
+    - Quantity
+    - Average Price
+    - Current Price
+    - Gain/Loss
+    - Gain/Loss Percentage
+    - Currency

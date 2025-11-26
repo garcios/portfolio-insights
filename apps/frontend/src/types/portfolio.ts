@@ -4,16 +4,30 @@ export interface User {
     email: string;
 }
 
+export interface PortfolioSummary {
+    totalValue: number;
+    totalGainLoss: number;
+    totalGainLossPercentage: number;
+    currency: string;
+    lastUpdated: string;
+}
+
 export interface Holding {
     symbol: string;
     quantity: number;
-    value: number;
+    averagePrice: number;
+    currentPrice: number;
+    currentValue: number;
+    gainLoss: number;
+    gainLossPercentage: number;
+    currency: string;
 }
 
 export interface Portfolio {
     id: string;
     userId: string;
     name: string;
+    summary?: PortfolioSummary;
     holdings: Holding[];
 }
 

@@ -1,0 +1,5 @@
+In apps/gateway/graph/schema.graphqls add user info to the query.
+
+Make other necessary changes to make this work. For example, add reference to USER_SERVICE_ADDR in order to make the call to user-service gRPC.
+Modidy the docker-compose.yml file to add the user-service in the environment variables of gateway service.
+

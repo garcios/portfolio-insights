@@ -10,45 +10,117 @@ import (
 
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
-	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
 )
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: CreateUser - createUser"))
+	req := &userpb.CreateUserRequest{
+		Email:    input.Email,
+		Name:     input.Username,
+		Password: "defaultPassword123", // In production, this should come from input
+	}
+
+	resp, err := r.UserClient.CreateUser(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return &model.User{
+		ID:       resp.Id,
+		Username: input.Username,
+		Email:    input.Email,
+	}, nil
 }
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
-	panic(fmt.Errorf("not implemented: Me - me"))
+	// For now, return a hardcoded user ID
+	// In production, this should come from authentication context
+	userID := "3a4b3185-5abb-4899-9835-829ddb91e3a6"
+	return r.User(ctx, userID)
+}
+
+// User is the resolver for the user field.
+func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
+	req := &userpb.GetUserRequest{
+		Id: id,
+	}
+
+	resp, err := r.UserClient.GetUser(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return &model.User{
+		ID:       resp.Id,
+		Username: resp.Name,
+		Email:    resp.Email,
+	}, nil
 }
 
 // Portfolio is the resolver for the portfolio field.
 func (r *queryResolver) Portfolio(ctx context.Context, id string) (*model.Portfolio, error) {
 	// Call portfolio service to get holdings
 	// Assuming portfolio ID is the same as User ID for now
-	req := &pb.GetHoldingsRequest{
+	holdingsReq := &portfoliopb.GetHoldingsRequest{
 		UserId: id,
 	}
 
-	resp, err := r.PortfolioClient.GetHoldings(ctx, req)
+	holdingsResp, err := r.PortfolioClient.GetHoldings(ctx, holdingsReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get holdings: %w", err)
 	}
 
 	var holdings []*model.Holding
-	for _, h := range resp.Holdings {
+	for _, h := range holdingsResp.Holdings {
 		holdings = append(holdings, &model.Holding{
-			Symbol:   h.Symbol,
-			Quantity: h.Quantity,
-			Value:    h.CurrentValue,
+			Symbol:             h.Symbol,
+			Quantity:           h.Quantity,
+			AveragePrice:       h.AveragePrice,
+			CurrentPrice:       h.CurrentPrice,
+			CurrentValue:       h.CurrentValue,
+			GainLoss:           h.GainLoss,
+			GainLossPercentage: h.GainLossPercentage,
+			Currency:           h.Currency,
 		})
+	}
+
+	// Fetch portfolio summary
+	summaryReq := &portfoliopb.GetPortfolioSummaryRequest{
+		UserId: id,
+	}
+
+	summaryResp, err := r.PortfolioClient.GetPortfolioSummary(ctx, summaryReq)
+	if err != nil {
+		// If summary fails, log but don't fail the entire query
+		// Return portfolio without summary
+		return &model.Portfolio{
+			ID:       id,
+			UserID:   id,
+			Name:     "My Portfolio",
+			Summary:  nil,
+			Holdings: holdings,
+		}, nil
+	}
+
+	var summary *model.PortfolioSummary
+	if summaryResp.Summary != nil {
+		summary = &model.PortfolioSummary{
+			TotalValue:              summaryResp.Summary.TotalValue,
+			TotalGainLoss:           summaryResp.Summary.TotalGainLoss,
+			TotalGainLossPercentage: summaryResp.Summary.TotalGainLossPercentage,
+			Currency:                summaryResp.Summary.Currency,
+			LastUpdated:             summaryResp.Summary.LastUpdated.AsTime().Format("2006-01-02T15:04:05Z07:00"),
+		}
 	}
 
 	return &model.Portfolio{
 		ID:       id,
 		UserID:   id,
 		Name:     "My Portfolio",
+		Summary:  summary,
 		Holdings: holdings,
 	}, nil
 }

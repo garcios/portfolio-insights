@@ -6,6 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.45
 	github.com/garcios/portfolio-insights/pkg v0.0.0
 	github.com/garcios/portfolio-insights/services/portfolio-service v0.0.0-00010101000000-000000000000
+	github.com/garcios/portfolio-insights/services/user-service v0.0.0-00010101000000-000000000000
 	github.com/vektah/gqlparser/v2 v2.5.11
 	google.golang.org/grpc v1.77.0
 )
@@ -27,3 +28,5 @@ require (
 replace github.com/garcios/portfolio-insights/pkg => ../../pkg
 
 replace github.com/garcios/portfolio-insights/services/portfolio-service => ../../services/portfolio-service
+
+replace github.com/garcios/portfolio-insights/services/user-service => ../../services/user-service

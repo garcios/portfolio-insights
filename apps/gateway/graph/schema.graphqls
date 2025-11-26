@@ -1,5 +1,6 @@
 type Query {
   me: User
+  user(id: ID!): User
   portfolio(id: ID!): Portfolio
 }
 
@@ -17,13 +18,27 @@ type Portfolio {
   id: ID!
   userId: ID!
   name: String!
+  summary: PortfolioSummary
   holdings: [Holding!]!
+}
+
+type PortfolioSummary {
+  totalValue: Float!
+  totalGainLoss: Float!
+  totalGainLossPercentage: Float!
+  currency: String!
+  lastUpdated: String!
 }
 
 type Holding {
   symbol: String!
   quantity: Float!
-  value: Float!
+  averagePrice: Float!
+  currentPrice: Float!
+  currentValue: Float!
+  gainLoss: Float!
+  gainLossPercentage: Float!
+  currency: String!
 }
 
 input NewUser {

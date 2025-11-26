@@ -5,9 +5,11 @@ package graph
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 import (
-	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
 )
 
 type Resolver struct {
-	PortfolioClient pb.PortfolioServiceClient
+	PortfolioClient portfoliopb.PortfolioServiceClient
+	UserClient      userpb.UserServiceClient
 }

@@ -1,0 +1,26 @@
+
+In gateway/graph/schema.graphqls add the modify Portfolio to add summary field, like below:
+
+
+type Portfolio {
+  id: ID!
+  userId: ID!
+  name: String!
+  summary: [PortfolioSummary!]!
+  holdings: [Holding!]!
+}
+
+
+
+The PortfolioSummary type should be added to the schema.graphqls file, like below:
+
+
+type PortfolioSummary {
+  totalValue: Float!
+  totalGainLoss: Float!
+  totalGainLossPercentage: Float!
+  currency: String!
+  lastUpdated: String!
+}
+
+The PortfolioSummary should be resolved from the portfolio-service gRPC endpoint GetPortfolioSummary.

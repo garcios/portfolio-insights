@@ -35,6 +35,7 @@ services:
       - "8080:8080"
     environment:
       - PORTFOLIO_SERVICE_ADDR=portfolio-service:50052
+      - USER_SERVICE_ADDR=user-service:50051
     depends_on:
       - user-service
       - portfolio-service
