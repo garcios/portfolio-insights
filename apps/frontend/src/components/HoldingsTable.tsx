@@ -275,6 +275,50 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings }) => {
                                     </tr>
                                 );
                             })}
+
+                            {/* Subtotal Row */}
+                            {(() => {
+                                const currencyHoldings = holdingsByCurrency[currency];
+                                const subtotalGainLoss = currencyHoldings.reduce((sum, h) => sum + h.gainLoss, 0);
+                                const subtotalValue = currencyHoldings.reduce((sum, h) => sum + h.currentValue, 0);
+                                const isSubtotalPositive = subtotalGainLoss >= 0;
+
+                                return (
+                                    <tr style={{
+                                        background: 'var(--color-bg-tertiary)',
+                                        borderBottom: '2px solid var(--color-border)',
+                                        fontWeight: '700',
+                                    }}>
+                                        <td style={{
+                                            padding: '12px',
+                                            fontSize: '0.875rem',
+                                            color: 'var(--color-text-primary)',
+                                        }}>
+                                            {currency} Subtotal
+                                        </td>
+                                        <td colSpan={3}></td>
+                                        <td style={{
+                                            padding: '12px',
+                                            textAlign: 'right',
+                                            fontSize: '0.875rem',
+                                            fontWeight: '700',
+                                            color: isSubtotalPositive ? 'var(--color-success)' : 'var(--color-danger)',
+                                        }}>
+                                            {isSubtotalPositive ? '+' : ''}{formatCurrency(subtotalGainLoss, currency)}
+                                        </td>
+                                        <td></td>
+                                        <td style={{
+                                            padding: '12px',
+                                            textAlign: 'right',
+                                            fontSize: '0.875rem',
+                                            fontWeight: '700',
+                                            color: 'var(--color-text-primary)',
+                                        }}>
+                                            {formatCurrency(subtotalValue, currency)}
+                                        </td>
+                                    </tr>
+                                );
+                            })()}
                         </React.Fragment>
                     ))}
                 </tbody>

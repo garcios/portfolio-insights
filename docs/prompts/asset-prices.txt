@@ -1,0 +1,39 @@
+In tools/asset-prices, create a new file called asset_prices_eodhd.go.
+The structure of the file should be similar to asset_prices.go.
+
+The only difference is that it should use the EODHD API instead of Tiingo.
+
+Here's an example of the API endpoint:
+
+
+https://eodhd.com/api/eod/IVV.AU?from=2020-01-05&to=2020-02-10&period=d&api_token=6927f7803067a1.09328017&fmt=csv
+
+
+Here you can use ‘from’ and ‘to’ parameters with the format ‘YYYY-MM-DD’. 
+For example, if you need to get data only from Jan 5, 2017, to Feb 10, 2017, 
+you need to use from=2017-01-05 and to=2017-02-10. 
+
+
+
+
+The output from above API will be a CSV file with the following columns and sample data:
+
+Date,Open,High,Low,Close,Adjusted_close,Volume
+2024-11-27,62,62.16,61.92,62,61.3335,329002
+2024-11-28,61.6,61.79,61.53,61.7,61.0368,338497
+2024-11-29,61.7,61.7,61.51,61.58,60.918,203474
+2024-12-02,61.79,61.94,61.75,61.88,61.2148,338061
+
+
+You must create a file of the following format:
+
+symbol,price,timestamp
+
+
+You must use the Adjusted_close column as the price.
+symbol is the ticker of the asset.
+timestamp is the date of the price.
+
+
+Remove ".AU" from Ticker when writing to output e.g. IVV.AU should be written as IVV. 
+

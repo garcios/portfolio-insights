@@ -1,0 +1,18 @@
+Add asset_name in proto/portfolio/portfolio.proto, like below:
+
+message Holding {
+  string symbol = 1;
+  double quantity = 2;
+  double average_price = 3;
+  double current_price = 4;
+  double current_value = 5;
+  double gain_loss = 6;
+  double gain_loss_percentage = 7;
+  string currency = 8;
+  string asset_name=9;
+}
+
+Make necessary adjustments in the following:
+ - portfolio-service 
+ - GraphQL query in apps/gateway
+ - In Frontend, replace the  holding.currency with holding.asset_name (i.e. subtext below the symbol)

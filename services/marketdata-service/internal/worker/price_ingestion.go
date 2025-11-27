@@ -145,8 +145,25 @@ func (w *PriceIngestionWorker) batchInsert(ctx context.Context, rows [][]string,
 
 		timestamp := time.Now()
 		if len(row) > 2 && row[2] != "" {
-			if t, err := time.Parse(time.RFC3339, row[2]); err == nil {
-				timestamp = t
+			// Try multiple date/time formats
+			formats := []string{
+				time.RFC3339,          // 2006-01-02T15:04:05Z07:00
+				"2006-01-02",          // YYYY-MM-DD
+				"2006-01-02 15:04:05", // YYYY-MM-DD HH:MM:SS
+				time.RFC3339Nano,      // 2006-01-02T15:04:05.999999999Z07:00
+			}
+
+			parsed := false
+			for _, format := range formats {
+				if t, err := time.Parse(format, row[2]); err == nil {
+					timestamp = t
+					parsed = true
+					break
+				}
+			}
+
+			if !parsed {
+				log.Printf("Price Worker: Warning - Could not parse timestamp '%s' for %s, using current time", row[2], symbol)
 			}
 		}
 

@@ -28,9 +28,10 @@
 
 ### Week 4: Portfolio Service (The Aggregator)
 - [x] **Calculation Engine**: Implement logic to calculate current holdings based on transaction events from NATS.
-- [ ] **Value Calculation**: Fetch latest prices from `marketdata-service` to calculate total portfolio value.
+- [x] **Value Calculation**: Fetch latest prices from `marketdata-service` to calculate total portfolio value.
 - [ ] **History Tracking**: Implement snapshots of portfolio value over time for the performance chart.
-- [ ] **DB Integration**: Store in `investments.holdings` and `investments.portfolio_history`.
+- [x] **DB Integration**: Store in `investments.holdings`.
+- [ ] **DB Integration**: Store in `investments.portfolio_history`.
 
 ---
 

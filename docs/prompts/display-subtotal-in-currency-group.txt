@@ -1,0 +1,6 @@
+Modify the frontend to display the subtotal in the currency group.
+
+The subtotal should be displayed in the currency group, and the currency should be displayed in the currency group.
+
+The calculation should be done in the frontend, not in the backend.
+
