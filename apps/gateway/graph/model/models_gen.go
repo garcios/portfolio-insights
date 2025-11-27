@@ -11,6 +11,7 @@ type Holding struct {
 	GainLoss           float64 `json:"gainLoss"`
 	GainLossPercentage float64 `json:"gainLossPercentage"`
 	Currency           string  `json:"currency"`
+	AssetName          string  `json:"assetName"`
 }
 
 type Mutation struct {

@@ -30,6 +30,7 @@ message Holding {
   double gain_loss = 6;
   double gain_loss_percentage = 7;
   string currency = 8;
+  string asset_name = 9;
 }
 
 message GetPortfolioSummaryRequest {

@@ -82,7 +82,7 @@ func main() {
 	}()
 
 	// Initialize MarketData Gateway with cache
-	marketDataGateway, err := infrastructure.NewMarketDataGateway(priceCache)
+	marketDataGateway, err := infrastructure.NewMarketDataGateway(priceCache, assetCache)
 	if err != nil {
 		l.Error("failed to create marketdata gateway", "error", err)
 		os.Exit(1)

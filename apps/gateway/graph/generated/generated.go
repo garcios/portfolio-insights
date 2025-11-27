@@ -48,6 +48,7 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Holding struct {
+		AssetName          func(childComplexity int) int
 		AveragePrice       func(childComplexity int) int
 		Currency           func(childComplexity int) int
 		CurrentPrice       func(childComplexity int) int
@@ -95,8 +96,8 @@ type MutationResolver interface {
 	CreateUser(ctx context.Context, input model.NewUser) (*model.User, error)
 }
 type PortfolioResolver interface {
-	Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error)
 	Summary(ctx context.Context, obj *model.Portfolio) (*model.PortfolioSummary, error)
+	Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
@@ -122,6 +123,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Holding.assetName":
+		if e.complexity.Holding.AssetName == nil {
+			break
+		}
+
+		return e.complexity.Holding.AssetName(childComplexity), true
 
 	case "Holding.averagePrice":
 		if e.complexity.Holding.AveragePrice == nil {
@@ -460,6 +468,7 @@ type Holding {
   gainLoss: Float!
   gainLossPercentage: Float!
   currency: String!
+  assetName: String!
 }
 
 input NewUser {
@@ -924,6 +933,50 @@ func (ec *executionContext) fieldContext_Holding_currency(ctx context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _Holding_assetName(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Holding_assetName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AssetName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Holding_assetName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Holding",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_createUser(ctx, field)
 	if err != nil {
@@ -1133,7 +1186,7 @@ func (ec *executionContext) _Portfolio_summary(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Summary, nil
+		return ec.resolvers.Portfolio().Summary(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1151,8 +1204,8 @@ func (ec *executionContext) fieldContext_Portfolio_summary(ctx context.Context, 
 	fc = &graphql.FieldContext{
 		Object:     "Portfolio",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "totalValue":
@@ -1186,7 +1239,7 @@ func (ec *executionContext) _Portfolio_holdings(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Holdings, nil
+		return ec.resolvers.Portfolio().Holdings(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1207,8 +1260,8 @@ func (ec *executionContext) fieldContext_Portfolio_holdings(ctx context.Context,
 	fc = &graphql.FieldContext{
 		Object:     "Portfolio",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "symbol":
@@ -1227,6 +1280,8 @@ func (ec *executionContext) fieldContext_Portfolio_holdings(ctx context.Context,
 				return ec.fieldContext_Holding_gainLossPercentage(ctx, field)
 			case "currency":
 				return ec.fieldContext_Holding_currency(ctx, field)
+			case "assetName":
+				return ec.fieldContext_Holding_assetName(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Holding", field.Name)
 		},
@@ -3754,6 +3809,11 @@ func (ec *executionContext) _Holding(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "assetName":
+			out.Values[i] = ec._Holding_assetName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3840,25 +3900,87 @@ func (ec *executionContext) _Portfolio(ctx context.Context, sel ast.SelectionSet
 		case "id":
 			out.Values[i] = ec._Portfolio_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "userId":
 			out.Values[i] = ec._Portfolio_userId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._Portfolio_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "summary":
-			out.Values[i] = ec._Portfolio_summary(ctx, field, obj)
-		case "holdings":
-			out.Values[i] = ec._Portfolio_holdings(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Portfolio_summary(ctx, field, obj)
+				return res
 			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "holdings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Portfolio_holdings(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

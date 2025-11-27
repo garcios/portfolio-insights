@@ -34,6 +34,62 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	}, nil
 }
 
+// Summary is the resolver for the summary field.
+func (r *portfolioResolver) Summary(ctx context.Context, obj *model.Portfolio) (*model.PortfolioSummary, error) {
+	// This resolver only executes if the query requests the summary field
+	summaryReq := &portfoliopb.GetPortfolioSummaryRequest{
+		UserId: obj.UserID,
+	}
+
+	summaryResp, err := r.PortfolioClient.GetPortfolioSummary(ctx, summaryReq)
+	if err != nil {
+		// Return nil for optional field if it fails
+		return nil, nil
+	}
+
+	if summaryResp.Summary == nil {
+		return nil, nil
+	}
+
+	return &model.PortfolioSummary{
+		TotalValue:              summaryResp.Summary.TotalValue,
+		TotalGainLoss:           summaryResp.Summary.TotalGainLoss,
+		TotalGainLossPercentage: summaryResp.Summary.TotalGainLossPercentage,
+		Currency:                summaryResp.Summary.Currency,
+		LastUpdated:             summaryResp.Summary.LastUpdated.AsTime().Format("2006-01-02T15:04:05Z07:00"),
+	}, nil
+}
+
+// Holdings is the resolver for the holdings field.
+func (r *portfolioResolver) Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error) {
+	// This resolver only executes if the query requests the holdings field
+	holdingsReq := &portfoliopb.GetHoldingsRequest{
+		UserId: obj.UserID,
+	}
+
+	holdingsResp, err := r.PortfolioClient.GetHoldings(ctx, holdingsReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get holdings: %w", err)
+	}
+
+	var holdings []*model.Holding
+	for _, h := range holdingsResp.Holdings {
+		holdings = append(holdings, &model.Holding{
+			Symbol:             h.Symbol,
+			Quantity:           h.Quantity,
+			AveragePrice:       h.AveragePrice,
+			CurrentPrice:       h.CurrentPrice,
+			CurrentValue:       h.CurrentValue,
+			GainLoss:           h.GainLoss,
+			GainLossPercentage: h.GainLossPercentage,
+			Currency:           h.Currency,
+			AssetName:          h.AssetName,
+		})
+	}
+
+	return holdings, nil
+}
+
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	// For now, return a hardcoded user ID
@@ -74,70 +130,12 @@ func (r *queryResolver) Portfolio(ctx context.Context, id string) (*model.Portfo
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
+// Portfolio returns generated.PortfolioResolver implementation.
+func (r *Resolver) Portfolio() generated.PortfolioResolver { return &portfolioResolver{r} }
+
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
-type queryResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *Resolver) Portfolio() generated.PortfolioResolver { return &portfolioResolver{r} }
-
 type portfolioResolver struct{ *Resolver }
-
-func (r *portfolioResolver) Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error) {
-	// This resolver only executes if the query requests the holdings field
-	holdingsReq := &portfoliopb.GetHoldingsRequest{
-		UserId: obj.UserID,
-	}
-
-	holdingsResp, err := r.PortfolioClient.GetHoldings(ctx, holdingsReq)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get holdings: %w", err)
-	}
-
-	var holdings []*model.Holding
-	for _, h := range holdingsResp.Holdings {
-		holdings = append(holdings, &model.Holding{
-			Symbol:             h.Symbol,
-			Quantity:           h.Quantity,
-			AveragePrice:       h.AveragePrice,
-			CurrentPrice:       h.CurrentPrice,
-			CurrentValue:       h.CurrentValue,
-			GainLoss:           h.GainLoss,
-			GainLossPercentage: h.GainLossPercentage,
-			Currency:           h.Currency,
-		})
-	}
-
-	return holdings, nil
-}
-func (r *portfolioResolver) Summary(ctx context.Context, obj *model.Portfolio) (*model.PortfolioSummary, error) {
-	// This resolver only executes if the query requests the summary field
-	summaryReq := &portfoliopb.GetPortfolioSummaryRequest{
-		UserId: obj.UserID,
-	}
-
-	summaryResp, err := r.PortfolioClient.GetPortfolioSummary(ctx, summaryReq)
-	if err != nil {
-		// Return nil for optional field if it fails
-		return nil, nil
-	}
-
-	if summaryResp.Summary == nil {
-		return nil, nil
-	}
-
-	return &model.PortfolioSummary{
-		TotalValue:              summaryResp.Summary.TotalValue,
-		TotalGainLoss:           summaryResp.Summary.TotalGainLoss,
-		TotalGainLossPercentage: summaryResp.Summary.TotalGainLossPercentage,
-		Currency:                summaryResp.Summary.Currency,
-		LastUpdated:             summaryResp.Summary.LastUpdated.AsTime().Format("2006-01-02T15:04:05Z07:00"),
-	}, nil
-}
+type queryResolver struct{ *Resolver }

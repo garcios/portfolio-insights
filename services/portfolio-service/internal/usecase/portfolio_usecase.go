@@ -23,6 +23,7 @@ type MarketDataGateway interface {
 	GetCurrentPrice(ctx context.Context, symbol string) (float64, error)
 	GetCurrentPrices(ctx context.Context, symbols []string) (map[string]float64, error)
 	GetCurrencyRate(ctx context.Context, baseCurrency, targetCurrency string) (float64, error)
+	GetAssetName(ctx context.Context, symbol string) (string, error)
 }
 
 func NewPortfolioUsecase(holdingRepo domain.HoldingRepository, marketDataGateway MarketDataGateway) PortfolioUsecase {
@@ -58,10 +59,16 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 		return holdings, nil
 	}
 
-	// Enrich holdings with current prices
+	// Enrich holdings with current prices and asset names
 	for _, holding := range holdings {
 		if price, ok := prices[holding.Symbol]; ok {
 			holding.CurrentPrice = price
+		}
+
+		// Fetch asset name (best effort)
+		name, err := uc.marketDataGateway.GetAssetName(ctx, holding.Symbol)
+		if err == nil {
+			holding.AssetName = name
 		}
 	}
 

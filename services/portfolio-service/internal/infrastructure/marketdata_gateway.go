@@ -13,12 +13,13 @@ import (
 )
 
 type MarketDataGateway struct {
-	client pb.MarketDataServiceClient
-	conn   *grpc.ClientConn
-	cache  *PriceCache
+	client     pb.MarketDataServiceClient
+	conn       *grpc.ClientConn
+	cache      *PriceCache
+	assetCache *AssetCache
 }
 
-func NewMarketDataGateway(cache *PriceCache) (*MarketDataGateway, error) {
+func NewMarketDataGateway(cache *PriceCache, assetCache *AssetCache) (*MarketDataGateway, error) {
 	marketDataAddr := os.Getenv("MARKETDATA_SERVICE_ADDR")
 	if marketDataAddr == "" {
 		marketDataAddr = "localhost:50054"
@@ -35,9 +36,10 @@ func NewMarketDataGateway(cache *PriceCache) (*MarketDataGateway, error) {
 	client := pb.NewMarketDataServiceClient(conn)
 
 	return &MarketDataGateway{
-		client: client,
-		conn:   conn,
-		cache:  cache,
+		client:     client,
+		conn:       conn,
+		cache:      cache,
+		assetCache: assetCache,
 	}, nil
 }
 
@@ -205,4 +207,65 @@ func (g *MarketDataGateway) GetCurrencyRate(ctx context.Context, baseCurrency, t
 	}
 
 	return resp.CurrencyRate.Rate, nil
+}
+
+// GetAsset fetches asset details for a symbol
+// Uses cache-aside pattern
+func (g *MarketDataGateway) GetAsset(ctx context.Context, symbol string) (*pb.Asset, error) {
+	start := time.Now()
+
+	// Try cache first
+	if g.assetCache != nil {
+		cacheStart := time.Now()
+		cached, err := g.assetCache.Get(ctx, symbol)
+		metrics.RecordCacheOperation("get", "asset", cached != nil, time.Since(cacheStart).Seconds())
+
+		if err == nil && cached != nil {
+			return &pb.Asset{
+				Symbol:   cached.Symbol,
+				Name:     cached.Name,
+				Type:     cached.Type,
+				Exchange: cached.Exchange,
+				Currency: cached.Currency,
+			}, nil
+		}
+	}
+
+	// Cache miss - fetch from service
+	req := &pb.GetAssetRequest{
+		Symbol: symbol,
+	}
+
+	serviceStart := time.Now()
+	resp, err := g.client.GetAsset(ctx, req)
+	duration := time.Since(serviceStart).Seconds()
+
+	if err != nil {
+		metrics.RecordMarketDataRequest("get_asset", "error", duration)
+		return nil, fmt.Errorf("failed to get asset for %s: %w", symbol, err)
+	}
+	metrics.RecordMarketDataRequest("get_asset", "success", duration)
+
+	if resp.Asset == nil {
+		return nil, fmt.Errorf("no asset data available for %s", symbol)
+	}
+
+	// Cache the result
+	if g.assetCache != nil {
+		cacheStart := time.Now()
+		err := g.assetCache.Set(ctx, resp.Asset)
+		metrics.RecordCacheOperation("set", "asset", err == nil, time.Since(cacheStart).Seconds())
+	}
+
+	metrics.RecordMarketDataRequest("total_asset_operation", "success", time.Since(start).Seconds())
+	return resp.Asset, nil
+}
+
+// GetAssetName fetches just the name of the asset
+func (g *MarketDataGateway) GetAssetName(ctx context.Context, symbol string) (string, error) {
+	asset, err := g.GetAsset(ctx, symbol)
+	if err != nil {
+		return "", err
+	}
+	return asset.Name, nil
 }

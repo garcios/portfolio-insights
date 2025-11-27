@@ -9,6 +9,7 @@ type Holding struct {
 	Quantity     float64
 	AverageCost  float64
 	Currency     string  // Currency of the holding (e.g., USD, AUD, EUR)
+	AssetName    string  // Name of the asset (e.g., "Apple Inc.")
 	CurrentPrice float64 // Enriched from market data
 	LastUpdated  time.Time
 }

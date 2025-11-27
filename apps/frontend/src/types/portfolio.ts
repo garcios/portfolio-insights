@@ -21,6 +21,7 @@ export interface Holding {
     gainLoss: number;
     gainLossPercentage: number;
     currency: string;
+    assetName: string;
 }
 
 export interface Portfolio {

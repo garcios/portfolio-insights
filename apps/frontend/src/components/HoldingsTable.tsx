@@ -195,7 +195,7 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings }) => {
                                                         fontSize: '0.75rem',
                                                         color: 'var(--color-text-tertiary)',
                                                     }}>
-                                                        {holding.currency}
+                                                        {holding.assetName}
                                                     </div>
                                                 </div>
                                             </div>

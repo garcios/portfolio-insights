@@ -39,6 +39,7 @@ const GET_PORTFOLIO = gql`
         gainLoss
         gainLossPercentage
         currency
+        assetName
       }
     }
   }

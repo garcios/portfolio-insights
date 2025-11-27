@@ -99,6 +99,13 @@ func (m *mockMarketDataGateway) GetCurrencyRate(ctx context.Context, baseCurrenc
 	return 1.0, nil
 }
 
+func (m *mockMarketDataGateway) GetAssetName(ctx context.Context, symbol string) (string, error) {
+	if m.err != nil {
+		return "", m.err
+	}
+	return symbol + " Name", nil
+}
+
 func TestGetHoldings_Success(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
