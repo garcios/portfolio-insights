@@ -105,6 +105,20 @@ type Holding {
 }
 ```
 
+#### PortfolioPerformancePoint
+```graphql
+type PortfolioPerformancePoint {
+  timestamp: String!
+  value: Float!
+}
+```
+
+Represents a single data point in portfolio performance history.
+
+- **timestamp**: ISO 8601 formatted date-time string (e.g., "2023-11-01T00:00:00Z")
+- **value**: Total portfolio value at that point in time
+
+
 ### Queries
 
 #### me
@@ -182,6 +196,95 @@ query GetPortfolio($id: ID!) {
   }
 }
 ```
+
+#### portfolioPerformance(userId: ID!, period: String!)
+Retrieves historical portfolio performance data over a specified time period.
+
+```graphql
+query GetPortfolioPerformance($userId: ID!, $period: String!) {
+  portfolioPerformance(userId: $userId, period: $period) {
+    timestamp
+    value
+  }
+}
+```
+
+**Variables:**
+```json
+{
+  "userId": "user-123",
+  "period": "1m"
+}
+```
+
+**Supported Periods:**
+- `"1d"` - Last 1 day
+- `"1w"` - Last 1 week
+- `"1m"` - Last 1 month
+- `"3m"` - Last 3 months
+- `"1y"` - Last 1 year
+- `"all"` - All available history
+
+**Response:**
+```json
+{
+  "data": {
+    "portfolioPerformance": [
+      {
+        "timestamp": "2023-11-01T00:00:00Z",
+        "value": 15234.50
+      },
+      {
+        "timestamp": "2023-11-02T00:00:00Z",
+        "value": 15456.75
+      },
+      {
+        "timestamp": "2023-11-03T00:00:00Z",
+        "value": 15123.25
+      }
+    ]
+  }
+}
+```
+
+**Use Cases:**
+
+1. **Performance Chart**: Display portfolio value over time
+   ```graphql
+   query PortfolioChart($userId: ID!) {
+     portfolioPerformance(userId: $userId, period: "1m") {
+       timestamp
+       value
+     }
+   }
+   ```
+
+2. **Year-to-Date Performance**: Track annual performance
+   ```graphql
+   query YTDPerformance($userId: ID!) {
+     portfolioPerformance(userId: $userId, period: "1y") {
+       timestamp
+       value
+     }
+   }
+   ```
+
+3. **All-Time Performance**: View complete portfolio history
+   ```graphql
+   query AllTimePerformance($userId: ID!) {
+     portfolioPerformance(userId: $userId, period: "all") {
+       timestamp
+       value
+     }
+   }
+   ```
+
+**Notes:**
+- Data points are returned in chronological order
+- Timestamps are in ISO 8601 format
+- Values represent total portfolio value in the default currency
+- Empty array is returned if no historical data exists for the period
+
 
 ### Mutations
 

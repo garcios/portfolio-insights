@@ -94,21 +94,32 @@ func (h *PortfolioHandler) GetPortfolioSummary(ctx context.Context, req *pb.GetP
 }
 
 // GetPortfolioPerformance retrieves historical portfolio performance
-// Note: This is a stub implementation - you'll need to implement portfolio_history tracking
 func (h *PortfolioHandler) GetPortfolioPerformance(ctx context.Context, req *pb.GetPortfolioPerformanceRequest) (*pb.GetPortfolioPerformanceResponse, error) {
 	if req.UserId == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id is required")
 	}
 
-	// TODO: Implement portfolio performance tracking
-	// This would require:
-	// 1. A portfolio_history table (which already exists in your schema)
-	// 2. A scheduled job to snapshot portfolio values
-	// 3. Query logic to retrieve historical data based on the period
+	if req.Period == "" {
+		return nil, status.Error(codes.InvalidArgument, "period is required")
+	}
 
-	// For now, return empty data
+	// Query historical snapshots from the database
+	snapshots, err := h.historyRepo.GetHistoryByPeriod(ctx, req.UserId, req.Period)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get portfolio history: %v", err)
+	}
+
+	// Convert snapshots to performance points
+	dataPoints := make([]*pb.PortfolioPerformancePoint, len(snapshots))
+	for i, snapshot := range snapshots {
+		dataPoints[i] = &pb.PortfolioPerformancePoint{
+			Timestamp: timestamppb.New(snapshot.Timestamp),
+			Value:     snapshot.TotalValue,
+		}
+	}
+
 	return &pb.GetPortfolioPerformanceResponse{
-		DataPoints: []*pb.PortfolioPerformancePoint{},
+		DataPoints: dataPoints,
 	}, nil
 }
 

@@ -2,6 +2,7 @@ type Query {
   me: User
   user(id: ID!): User
   portfolio(id: ID!): Portfolio
+  portfolioPerformance(userId: ID!, period: String!): [PortfolioPerformancePoint!]!
 }
 
 type Mutation {
@@ -45,4 +46,9 @@ type Holding {
 input NewUser {
   username: String!
   email: String!
+}
+
+type PortfolioPerformancePoint {
+  timestamp: String!
+  value: Float!
 }

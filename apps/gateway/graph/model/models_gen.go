@@ -30,6 +30,11 @@ type Portfolio struct {
 	Holdings []*Holding        `json:"holdings"`
 }
 
+type PortfolioPerformancePoint struct {
+	Timestamp string  `json:"timestamp"`
+	Value     float64 `json:"value"`
+}
+
 type PortfolioSummary struct {
 	TotalValue              float64 `json:"totalValue"`
 	TotalGainLoss           float64 `json:"totalGainLoss"`

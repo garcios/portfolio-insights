@@ -45,47 +45,44 @@ const GET_PORTFOLIO = gql`
   }
 `;
 
-// Helper to generate mock performance data based on current value
-// since the API doesn't support history yet
-const generateMockPerformance = (currentValue: number): PortfolioPerformance[] => {
-    const performance: PortfolioPerformance[] = [];
-    const today = new Date();
-    // Start at 85% of current value 30 days ago
-    let value = currentValue * 0.85;
-
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-
-        // Add some randomness with upward trend
-        value += (Math.random() - 0.4) * (currentValue * 0.02);
-
-        performance.push({
-            date: date.toISOString().split('T')[0],
-            value: value,
-        });
+const GET_PORTFOLIO_PERFORMANCE = gql`
+  query GetPortfolioPerformance($userId: ID!, $period: String!) {
+    portfolioPerformance(userId: $userId, period: $period) {
+      timestamp
+      value
     }
-
-    // Ensure last point matches current value
-    performance[performance.length - 1].value = currentValue;
-    return performance;
-};
+  }
+`;
 
 function AppContent() {
     // Hardcoded user ID for demo purposes
     const userId = "02b28ee7-9ba2-427a-b918-a3d8e2cc00dc";
+    const [selectedPeriod, setSelectedPeriod] = useState('1m');
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const { loading, error, data, refetch } = useQuery(GET_PORTFOLIO, {
         variables: { id: userId },
         pollInterval: 30000, // Refresh every 30 seconds
     });
 
-    const [isRefreshing, setIsRefreshing] = useState(false);
+    const {
+        loading: performanceLoading,
+        error: performanceError,
+        data: performanceData,
+        refetch: refetchPerformance
+    } = useQuery(GET_PORTFOLIO_PERFORMANCE, {
+        variables: { userId, period: selectedPeriod },
+        pollInterval: 60000, // Refresh every 60 seconds
+    });
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
-        await refetch();
+        await Promise.all([refetch(), refetchPerformance()]);
         setIsRefreshing(false);
+    };
+
+    const handlePeriodChange = (period: string) => {
+        setSelectedPeriod(period);
     };
 
     const formatCurrency = (value: number, currency: string = 'USD') => {
@@ -145,8 +142,12 @@ function AppContent() {
         currency: 'USD'
     };
 
-    // Generate mock performance data for the chart
-    const performance = generateMockPerformance(summary.totalValue);
+    // Transform performance data from API
+    const performance: PortfolioPerformance[] = performanceData?.portfolioPerformance?.map((point: any) => ({
+        date: point.timestamp.split('T')[0], // Convert ISO timestamp to date
+        value: point.value,
+    })) || [];
+
     const isPositive = summary.totalGainLoss >= 0;
 
     // Calculate day change (mocked as 1/10th of total change for demo)
@@ -357,43 +358,58 @@ function AppContent() {
                                 fontSize: '0.875rem',
                                 color: 'var(--color-text-tertiary)',
                             }}>
-                                Last 30 days
+                                {selectedPeriod === '1d' && 'Last 24 hours'}
+                                {selectedPeriod === '1w' && 'Last 7 days'}
+                                {selectedPeriod === '1m' && 'Last 30 days'}
+                                {selectedPeriod === '3m' && 'Last 3 months'}
+                                {selectedPeriod === '1y' && 'Last 12 months'}
+                                {selectedPeriod === 'all' && 'All time'}
                             </p>
                         </div>
                         <div style={{
                             display: 'flex',
                             gap: '8px',
                         }}>
-                            {['1D', '1W', '1M', '3M', '1Y', 'ALL'].map((period) => (
+                            {[
+                                { label: '1D', value: '1d' },
+                                { label: '1W', value: '1w' },
+                                { label: '1M', value: '1m' },
+                                { label: '3M', value: '3m' },
+                                { label: '1Y', value: '1y' },
+                                { label: 'ALL', value: 'all' }
+                            ].map(({ label, value }) => (
                                 <button
-                                    key={period}
+                                    key={value}
+                                    onClick={() => handlePeriodChange(value)}
+                                    disabled={performanceLoading}
                                     style={{
                                         padding: '6px 12px',
                                         borderRadius: '6px',
                                         fontSize: '0.75rem',
                                         fontWeight: '600',
-                                        background: period === '1M'
+                                        background: selectedPeriod === value
                                             ? 'var(--color-primary)'
                                             : 'var(--color-bg-tertiary)',
-                                        color: period === '1M'
+                                        color: selectedPeriod === value
                                             ? 'white'
                                             : 'var(--color-text-tertiary)',
                                         border: 'none',
-                                        cursor: 'pointer',
+                                        cursor: performanceLoading ? 'not-allowed' : 'pointer',
                                         transition: 'all 0.2s',
+                                        opacity: performanceLoading ? 0.6 : 1,
                                     }}
                                     onMouseEnter={(e) => {
-                                        if (period !== '1M') {
+                                        if (selectedPeriod !== value && !performanceLoading) {
                                             e.currentTarget.style.background = 'var(--color-bg-hover)';
                                         }
                                     }}
                                     onMouseLeave={(e) => {
-                                        if (period !== '1M') {
+                                        if (selectedPeriod !== value) {
                                             e.currentTarget.style.background = 'var(--color-bg-tertiary)';
                                         }
                                     }}
                                 >
-                                    {period}
+                                    {label}
                                 </button>
                             ))}
                         </div>

@@ -127,6 +127,29 @@ func (r *queryResolver) Portfolio(ctx context.Context, id string) (*model.Portfo
 	}, nil
 }
 
+// PortfolioPerformance is the resolver for the portfolioPerformance field.
+func (r *queryResolver) PortfolioPerformance(ctx context.Context, userID string, period string) ([]*model.PortfolioPerformancePoint, error) {
+	req := &portfoliopb.GetPortfolioPerformanceRequest{
+		UserId: userID,
+		Period: period,
+	}
+
+	resp, err := r.PortfolioClient.GetPortfolioPerformance(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get portfolio performance: %w", err)
+	}
+
+	var dataPoints []*model.PortfolioPerformancePoint
+	for _, dp := range resp.DataPoints {
+		dataPoints = append(dataPoints, &model.PortfolioPerformancePoint{
+			Timestamp: dp.Timestamp.AsTime().Format("2006-01-02T15:04:05Z07:00"),
+			Value:     dp.Value,
+		})
+	}
+
+	return dataPoints, nil
+}
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 

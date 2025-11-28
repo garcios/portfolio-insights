@@ -71,6 +71,11 @@ type ComplexityRoot struct {
 		UserID   func(childComplexity int) int
 	}
 
+	PortfolioPerformancePoint struct {
+		Timestamp func(childComplexity int) int
+		Value     func(childComplexity int) int
+	}
+
 	PortfolioSummary struct {
 		Currency                func(childComplexity int) int
 		LastUpdated             func(childComplexity int) int
@@ -80,9 +85,10 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Me        func(childComplexity int) int
-		Portfolio func(childComplexity int, id string) int
-		User      func(childComplexity int, id string) int
+		Me                   func(childComplexity int) int
+		Portfolio            func(childComplexity int, id string) int
+		PortfolioPerformance func(childComplexity int, userID string, period string) int
+		User                 func(childComplexity int, id string) int
 	}
 
 	User struct {
@@ -103,6 +109,7 @@ type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	User(ctx context.Context, id string) (*model.User, error)
 	Portfolio(ctx context.Context, id string) (*model.Portfolio, error)
+	PortfolioPerformance(ctx context.Context, userID string, period string) ([]*model.PortfolioPerformancePoint, error)
 }
 
 type executableSchema struct {
@@ -234,6 +241,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Portfolio.UserID(childComplexity), true
 
+	case "PortfolioPerformancePoint.timestamp":
+		if e.complexity.PortfolioPerformancePoint.Timestamp == nil {
+			break
+		}
+
+		return e.complexity.PortfolioPerformancePoint.Timestamp(childComplexity), true
+
+	case "PortfolioPerformancePoint.value":
+		if e.complexity.PortfolioPerformancePoint.Value == nil {
+			break
+		}
+
+		return e.complexity.PortfolioPerformancePoint.Value(childComplexity), true
+
 	case "PortfolioSummary.currency":
 		if e.complexity.PortfolioSummary.Currency == nil {
 			break
@@ -287,6 +308,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Portfolio(childComplexity, args["id"].(string)), true
+
+	case "Query.portfolioPerformance":
+		if e.complexity.Query.PortfolioPerformance == nil {
+			break
+		}
+
+		args, err := ec.field_Query_portfolioPerformance_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PortfolioPerformance(childComplexity, args["userId"].(string), args["period"].(string)), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -431,6 +464,7 @@ var sources = []*ast.Source{
   me: User
   user(id: ID!): User
   portfolio(id: ID!): Portfolio
+  portfolioPerformance(userId: ID!, period: String!): [PortfolioPerformancePoint!]!
 }
 
 type Mutation {
@@ -475,6 +509,11 @@ input NewUser {
   username: String!
   email: String!
 }
+
+type PortfolioPerformancePoint {
+  timestamp: String!
+  value: Float!
+}
 `, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -510,6 +549,30 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_portfolioPerformance_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["userId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["userId"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["period"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("period"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["period"] = arg1
 	return args, nil
 }
 
@@ -1289,6 +1352,94 @@ func (ec *executionContext) fieldContext_Portfolio_holdings(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _PortfolioPerformancePoint_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioPerformancePoint) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioPerformancePoint_timestamp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Timestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioPerformancePoint_timestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioPerformancePoint",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioPerformancePoint_value(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioPerformancePoint) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioPerformancePoint_value(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioPerformancePoint_value(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioPerformancePoint",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PortfolioSummary_totalValue(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_PortfolioSummary_totalValue(ctx, field)
 	if err != nil {
@@ -1676,6 +1827,67 @@ func (ec *executionContext) fieldContext_Query_portfolio(ctx context.Context, fi
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_portfolio_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_portfolioPerformance(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_portfolioPerformance(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PortfolioPerformance(rctx, fc.Args["userId"].(string), fc.Args["period"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PortfolioPerformancePoint)
+	fc.Result = res
+	return ec.marshalNPortfolioPerformancePoint2ᚕᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐPortfolioPerformancePointᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_portfolioPerformance(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "timestamp":
+				return ec.fieldContext_PortfolioPerformancePoint_timestamp(ctx, field)
+			case "value":
+				return ec.fieldContext_PortfolioPerformancePoint_value(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PortfolioPerformancePoint", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_portfolioPerformance_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4004,6 +4216,50 @@ func (ec *executionContext) _Portfolio(ctx context.Context, sel ast.SelectionSet
 	return out
 }
 
+var portfolioPerformancePointImplementors = []string{"PortfolioPerformancePoint"}
+
+func (ec *executionContext) _PortfolioPerformancePoint(ctx context.Context, sel ast.SelectionSet, obj *model.PortfolioPerformancePoint) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, portfolioPerformancePointImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PortfolioPerformancePoint")
+		case "timestamp":
+			out.Values[i] = ec._PortfolioPerformancePoint_timestamp(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "value":
+			out.Values[i] = ec._PortfolioPerformancePoint_value(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var portfolioSummaryImplementors = []string{"PortfolioSummary"}
 
 func (ec *executionContext) _PortfolioSummary(ctx context.Context, sel ast.SelectionSet, obj *model.PortfolioSummary) graphql.Marshaler {
@@ -4130,6 +4386,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_portfolio(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "portfolioPerformance":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_portfolioPerformance(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -4647,6 +4925,60 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 func (ec *executionContext) unmarshalNNewUser2githubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐNewUser(ctx context.Context, v interface{}) (model.NewUser, error) {
 	res, err := ec.unmarshalInputNewUser(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPortfolioPerformancePoint2ᚕᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐPortfolioPerformancePointᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PortfolioPerformancePoint) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPortfolioPerformancePoint2ᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐPortfolioPerformancePoint(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPortfolioPerformancePoint2ᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐPortfolioPerformancePoint(ctx context.Context, sel ast.SelectionSet, v *model.PortfolioPerformancePoint) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PortfolioPerformancePoint(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
