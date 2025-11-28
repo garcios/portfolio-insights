@@ -6,24 +6,28 @@ Build a Transactions Page for a portfolio-insight application. The page should a
 
 Functional Requirements
 
-1. Transactions List
+1. Transactions List and Search Page
 	•	Display all transactions in a table or card list.
 	•	Each transaction record must include:
-	•	date
-	•	ticker (e.g., AAPL, MSFT, ASX:CSL)
-	•	type (Buy / Sell)
-	•	quantity
-	•	price
-	•	total (quantity × price)
+		- date
+		- ticker (e.g., AAPL, MSFT, ASX:CSL)
+		- type (Buy / Sell)
+		- quantity
+		- price
+		- total (quantity × price)
 	•	Support sorting by date (newest first), and filtering by:
-	•	ticker symbol
-	•	transaction type (Buy/Sell)
+		- ticker symbol
+		- transaction type (Buy/Sell)
 
-2. Search
 	•	Provide a search input that filters by ticker symbol in real time.
 	•	Should handle partial matches (e.g., searching “A” matches AAPL, AMZN, ASX:ANZ).
+	•	Other filters are the following:
+		- trade type (Buy/Sell/Split/Dividend dropdown)
+		- trade date (date range)
+	•	Support sorting by date (newest first).
+	•	Support pagination (e.g., 10 items per page).
 
-3. Add New Transaction
+2. Add New Transaction
 	•	Include a button “Add Transaction” that opens a modal or side panel.
 	
     Form fields:
@@ -44,6 +48,11 @@ Functional Requirements
 	•	Add the new transaction to the list
 	•	Recalculate totals
 	•	Close modal
+
+3. Upload CSV transactions
+	•	Include a button “Upload CSV” that opens a file picker.
+	•   Do not integrate with the backend yet.
+
 
 ⸻
 
