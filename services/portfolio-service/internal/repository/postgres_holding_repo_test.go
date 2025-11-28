@@ -29,7 +29,7 @@ func TestUpsert_Insert(t *testing.T) {
 
 	// Expect INSERT query
 	mock.ExpectExec("INSERT INTO investments.holdings").
-		WithArgs(holding.UserID, holding.Symbol, holding.Quantity, holding.AverageCost, sqlmock.AnyArg()).
+		WithArgs(holding.UserID, holding.Symbol, holding.Quantity, holding.AverageCost, holding.Currency, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// Execute
@@ -65,7 +65,7 @@ func TestUpsert_Update(t *testing.T) {
 
 	// Expect UPSERT query (ON CONFLICT DO UPDATE)
 	mock.ExpectExec("INSERT INTO investments.holdings").
-		WithArgs(holding.UserID, holding.Symbol, holding.Quantity, holding.AverageCost, sqlmock.AnyArg()).
+		WithArgs(holding.UserID, holding.Symbol, holding.Quantity, holding.AverageCost, holding.Currency, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// Execute
@@ -101,7 +101,7 @@ func TestUpsert_Error(t *testing.T) {
 
 	// Expect query to fail
 	mock.ExpectExec("INSERT INTO investments.holdings").
-		WithArgs(holding.UserID, holding.Symbol, holding.Quantity, holding.AverageCost, sqlmock.AnyArg()).
+		WithArgs(holding.UserID, holding.Symbol, holding.Quantity, holding.AverageCost, holding.Currency, sqlmock.AnyArg()).
 		WillReturnError(sql.ErrConnDone)
 
 	// Execute
@@ -132,10 +132,10 @@ func TestGetByUserAndSymbol_Success(t *testing.T) {
 	expectedTime := time.Now()
 
 	// Expect SELECT query
-	rows := sqlmock.NewRows([]string{"user_id", "symbol", "quantity", "average_cost_basis", "updated_at"}).
-		AddRow(userID, symbol, 10.0, 150.0, expectedTime)
+	rows := sqlmock.NewRows([]string{"user_id", "symbol", "quantity", "average_cost_basis", "currency", "updated_at"}).
+		AddRow(userID, symbol, 10.0, 150.0, "USD", expectedTime)
 
-	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, updated_at FROM investments.holdings").
+	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID, symbol).
 		WillReturnRows(rows)
 
@@ -182,7 +182,7 @@ func TestGetByUserAndSymbol_NotFound(t *testing.T) {
 	symbol := "AAPL"
 
 	// Expect SELECT query to return no rows
-	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, updated_at FROM investments.holdings").
+	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID, symbol).
 		WillReturnError(sql.ErrNoRows)
 
@@ -217,11 +217,11 @@ func TestListByUser_Success(t *testing.T) {
 	now := time.Now()
 
 	// Expect SELECT query
-	rows := sqlmock.NewRows([]string{"user_id", "symbol", "quantity", "average_cost_basis", "updated_at"}).
-		AddRow(userID, "AAPL", 10.0, 150.0, now).
-		AddRow(userID, "GOOGL", 5.0, 2800.0, now)
+	rows := sqlmock.NewRows([]string{"user_id", "symbol", "quantity", "average_cost_basis", "currency", "updated_at"}).
+		AddRow(userID, "AAPL", 10.0, 150.0, "USD", now).
+		AddRow(userID, "GOOGL", 5.0, 2800.0, "USD", now)
 
-	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, updated_at FROM investments.holdings").
+	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID).
 		WillReturnRows(rows)
 
@@ -273,9 +273,9 @@ func TestListByUser_Empty(t *testing.T) {
 	userID := "user-456"
 
 	// Expect SELECT query to return no rows
-	rows := sqlmock.NewRows([]string{"user_id", "symbol", "quantity", "average_cost_basis", "updated_at"})
+	rows := sqlmock.NewRows([]string{"user_id", "symbol", "quantity", "average_cost_basis", "currency", "updated_at"})
 
-	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, updated_at FROM investments.holdings").
+	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID).
 		WillReturnRows(rows)
 
@@ -309,7 +309,7 @@ func TestListByUser_QueryError(t *testing.T) {
 	userID := "user-123"
 
 	// Expect query to fail
-	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, updated_at FROM investments.holdings").
+	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID).
 		WillReturnError(sql.ErrConnDone)
 

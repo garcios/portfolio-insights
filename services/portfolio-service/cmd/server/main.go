@@ -68,6 +68,7 @@ func main() {
 
 	// Initialize Repository
 	repo := repository.NewPostgresHoldingRepository(db)
+	historyRepo := repository.NewPostgresHistoryRepository(db)
 
 	// Start background metrics updater
 	go func() {
@@ -93,7 +94,7 @@ func main() {
 	portfolioUsecase := usecase.NewPortfolioUsecase(repo, marketDataGateway)
 
 	// Initialize gRPC Handler
-	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase)
+	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase, historyRepo)
 
 	// Initialize NATS Subscriber
 	subscriber, err := infrastructure.NewNATSSubscriber(repo, marketDataGateway, assetCache, l)

@@ -13,6 +13,7 @@ service MarketDataService {
   rpc GetLatestPrices(GetLatestPricesRequest) returns (GetLatestPricesResponse);
   rpc GetHistoricalPrices(GetHistoricalPricesRequest) returns (GetHistoricalPricesResponse);
   rpc GetLatestCurrencyRate(GetLatestCurrencyRateRequest) returns (GetLatestCurrencyRateResponse);
+  rpc GetHistoricalCurrencyRates(GetHistoricalCurrencyRatesRequest) returns (GetHistoricalCurrencyRatesResponse);
 }
 
 message Asset {
@@ -91,5 +92,16 @@ message GetLatestCurrencyRateRequest {
 
 message GetLatestCurrencyRateResponse {
   CurrencyRate currency_rate = 1;
+}
+
+message GetHistoricalCurrencyRatesRequest {
+  string base_currency = 1;
+  string target_currency = 2;
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
+}
+
+message GetHistoricalCurrencyRatesResponse {
+  repeated CurrencyRate rates = 1;
 }
 

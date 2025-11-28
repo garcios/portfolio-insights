@@ -1,0 +1,187 @@
+{
+    "info": {
+        "_postman_id": "portfolio-backfill-grpc",
+        "name": "Portfolio Backfill Admin (gRPC)",
+        "description": "Administrative gRPC collection for backfilling portfolio history snapshots. This endpoint requires an ADMIN_TOKEN environment variable to be set on the portfolio-service.\n\n**Important**: \n1. Import the proto files from the project into Postman\n2. Set the ADMIN_TOKEN environment variable in your Postman environment\n3. Ensure the portfolio-service is running on localhost:50052 (or update the server URL)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Portfolio Service - Admin",
+            "item": [
+                {
+                    "name": "BackfillHistory - Single User",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "grpc",
+                            "grpc": {
+                                "protoFile": "{{proto_path}}/portfolio/portfolio.proto",
+                                "service": "portfolio.PortfolioService",
+                                "method": "BackfillHistory",
+                                "message": "{\n    \"user_id\": \"user-123\",\n    \"start_date\": \"2023-01-01\",\n    \"end_date\": \"2023-12-31\",\n    \"dry_run\": false,\n    \"admin_token\": \"{{admin_token}}\"\n}"
+                            }
+                        },
+                        "url": {
+                            "raw": "grpc://{{portfolio_host}}:{{portfolio_port}}",
+                            "protocol": "grpc",
+                            "host": [
+                                "{{portfolio_host}}"
+                            ],
+                            "port": "{{portfolio_port}}"
+                        },
+                        "description": "Backfill portfolio history for a specific user for the entire year 2023. This will create daily snapshots of the portfolio value using historical prices."
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "BackfillHistory - All Users",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "grpc",
+                            "grpc": {
+                                "protoFile": "{{proto_path}}/portfolio/portfolio.proto",
+                                "service": "portfolio.PortfolioService",
+                                "method": "BackfillHistory",
+                                "message": "{\n    \"user_id\": \"\",\n    \"start_date\": \"2023-01-01\",\n    \"end_date\": \"2023-01-31\",\n    \"dry_run\": false,\n    \"admin_token\": \"{{admin_token}}\"\n}"
+                            }
+                        },
+                        "url": {
+                            "raw": "grpc://{{portfolio_host}}:{{portfolio_port}}",
+                            "protocol": "grpc",
+                            "host": [
+                                "{{portfolio_host}}"
+                            ],
+                            "port": "{{portfolio_port}}"
+                        },
+                        "description": "Backfill portfolio history for ALL users. Leave user_id empty to process all users with holdings. This example backfills January 2023."
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "BackfillHistory - Dry Run",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "grpc",
+                            "grpc": {
+                                "protoFile": "{{proto_path}}/portfolio/portfolio.proto",
+                                "service": "portfolio.PortfolioService",
+                                "method": "BackfillHistory",
+                                "message": "{\n    \"user_id\": \"user-123\",\n    \"start_date\": \"2023-01-01\",\n    \"end_date\": \"2023-01-07\",\n    \"dry_run\": true,\n    \"admin_token\": \"{{admin_token}}\"\n}"
+                            }
+                        },
+                        "url": {
+                            "raw": "grpc://{{portfolio_host}}:{{portfolio_port}}",
+                            "protocol": "grpc",
+                            "host": [
+                                "{{portfolio_host}}"
+                            ],
+                            "port": "{{portfolio_port}}"
+                        },
+                        "description": "Preview what would be backfilled without actually creating snapshots. Use dry_run: true to test the backfill operation. This will return the count of snapshots that would be created."
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "BackfillHistory - Recent Week",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "grpc",
+                            "grpc": {
+                                "protoFile": "{{proto_path}}/portfolio/portfolio.proto",
+                                "service": "portfolio.PortfolioService",
+                                "method": "BackfillHistory",
+                                "message": "{\n    \"user_id\": \"user-123\",\n    \"start_date\": \"2024-01-01\",\n    \"end_date\": \"2024-01-07\",\n    \"dry_run\": false,\n    \"admin_token\": \"{{admin_token}}\"\n}"
+                            }
+                        },
+                        "url": {
+                            "raw": "grpc://{{portfolio_host}}:{{portfolio_port}}",
+                            "protocol": "grpc",
+                            "host": [
+                                "{{portfolio_host}}"
+                            ],
+                            "port": "{{portfolio_port}}"
+                        },
+                        "description": "Backfill a recent week of portfolio history. Useful for filling in gaps or testing with a small date range."
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                },
+                {
+                    "name": "BackfillHistory - Default End Date",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "grpc",
+                            "grpc": {
+                                "protoFile": "{{proto_path}}/portfolio/portfolio.proto",
+                                "service": "portfolio.PortfolioService",
+                                "method": "BackfillHistory",
+                                "message": "{\n    \"user_id\": \"user-123\",\n    \"start_date\": \"2024-01-01\",\n    \"end_date\": \"\",\n    \"dry_run\": false,\n    \"admin_token\": \"{{admin_token}}\"\n}"
+                            }
+                        },
+                        "url": {
+                            "raw": "grpc://{{portfolio_host}}:{{portfolio_port}}",
+                            "protocol": "grpc",
+                            "host": [
+                                "{{portfolio_host}}"
+                            ],
+                            "port": "{{portfolio_port}}"
+                        },
+                        "description": "Backfill from a start date to today. Leave end_date empty to default to the current date. This will backfill all days from the start date until now."
+                    },
+                    "response": [],
+                    "protocolProfileBehavior": {
+                        "disableBodyPruning": true
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "portfolio_host",
+            "value": "localhost",
+            "type": "string",
+            "description": "Hostname of the portfolio-service"
+        },
+        {
+            "key": "portfolio_port",
+            "value": "50052",
+            "type": "string",
+            "description": "Port of the portfolio-service"
+        },
+        {
+            "key": "proto_path",
+            "value": "/path/to/portfolio-insights/proto",
+            "type": "string",
+            "description": "Absolute path to the proto directory in your project"
+        },
+        {
+            "key": "admin_token",
+            "value": "your-secret-admin-token-here",
+            "type": "string",
+            "description": "Admin token for authentication. This must match the ADMIN_TOKEN environment variable set on the portfolio-service."
+        }
+    ],
+    "protocolProfileBehavior": {}
+}

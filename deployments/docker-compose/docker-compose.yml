@@ -71,6 +71,7 @@ services:
       - REDIS_ADDR=redis:6379
       - PRICE_CACHE_TTL_SECONDS=60
       - MARKETDATA_SERVICE_ADDR=marketdata-service:50054
+      - ADMIN_TOKEN=secret
     depends_on:
       - postgres
       - nats

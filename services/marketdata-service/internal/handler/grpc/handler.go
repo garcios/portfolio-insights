@@ -191,3 +191,45 @@ func (h *MarketDataHandler) GetLatestCurrencyRate(ctx context.Context, req *pb.G
 		},
 	}, nil
 }
+
+func (h *MarketDataHandler) GetHistoricalCurrencyRates(ctx context.Context, req *pb.GetHistoricalCurrencyRatesRequest) (*pb.GetHistoricalCurrencyRatesResponse, error) {
+	baseCurrency := req.GetBaseCurrency()
+	targetCurrency := req.GetTargetCurrency()
+
+	if baseCurrency == "" {
+		return nil, status.Error(codes.InvalidArgument, "base_currency is required")
+	}
+	if targetCurrency == "" {
+		return nil, status.Error(codes.InvalidArgument, "target_currency is required")
+	}
+
+	startTime := req.GetStartTime().AsTime()
+	endTime := req.GetEndTime().AsTime()
+
+	if startTime.IsZero() || endTime.IsZero() {
+		return nil, status.Error(codes.InvalidArgument, "start_time and end_time are required")
+	}
+
+	if endTime.Before(startTime) {
+		return nil, status.Error(codes.InvalidArgument, "end_time must be after start_time")
+	}
+
+	rates, err := h.usecase.GetHistoricalCurrencyRates(baseCurrency, targetCurrency, startTime, endTime)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to query historical currency rates: %v", err)
+	}
+
+	var pbRates []*pb.CurrencyRate
+	for _, rate := range rates {
+		pbRates = append(pbRates, &pb.CurrencyRate{
+			Id:             rate.ID,
+			BaseCurrency:   rate.BaseCurrency,
+			TargetCurrency: rate.TargetCurrency,
+			Rate:           rate.Rate,
+			RateDate:       timestamppb.New(rate.RateDate),
+			CreatedAt:      timestamppb.New(rate.CreatedAt),
+		})
+	}
+
+	return &pb.GetHistoricalCurrencyRatesResponse{Rates: pbRates}, nil
+}

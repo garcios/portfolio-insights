@@ -341,3 +341,33 @@ func (r *postgresMarketDataRepo) GetLatestCurrencyRate(baseCurrency, targetCurre
 	}
 	return &rate, nil
 }
+
+func (r *postgresMarketDataRepo) GetHistoricalCurrencyRates(baseCurrency, targetCurrency string, start, end time.Time) ([]*domain.CurrencyRate, error) {
+	startTime := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_historical_currency_rates", "currency_rates", time.Since(startTime).Seconds(), nil)
+	}()
+
+	query := `
+		SELECT id, base_currency, target_currency, rate, rate_date, created_at
+		FROM marketdata.currency_rates
+		WHERE base_currency = $1 AND target_currency = $2 AND rate_date >= $3 AND rate_date <= $4
+		ORDER BY rate_date ASC
+	`
+	rows, err := r.db.Query(query, baseCurrency, targetCurrency, start, end)
+	if err != nil {
+		metrics.RecordDatabaseQuery("get_historical_currency_rates", "currency_rates", time.Since(startTime).Seconds(), err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var rates []*domain.CurrencyRate
+	for rows.Next() {
+		var rate domain.CurrencyRate
+		if err := rows.Scan(&rate.ID, &rate.BaseCurrency, &rate.TargetCurrency, &rate.Rate, &rate.RateDate, &rate.CreatedAt); err != nil {
+			return nil, err
+		}
+		rates = append(rates, &rate)
+	}
+	return rates, nil
+}

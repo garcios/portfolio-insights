@@ -48,6 +48,7 @@ type MarketDataRepository interface {
 	// Currency rate operations
 	InsertCurrencyRates(rates []*CurrencyRate) error // For worker
 	GetLatestCurrencyRate(baseCurrency, targetCurrency string) (*CurrencyRate, error)
+	GetHistoricalCurrencyRates(baseCurrency, targetCurrency string, start, end time.Time) ([]*CurrencyRate, error)
 }
 
 type MarketDataUsecase interface {
@@ -57,4 +58,5 @@ type MarketDataUsecase interface {
 	GetLatestPrices(symbols []string) (map[string]*AssetPrice, error)
 	GetHistoricalPrices(symbol string, start, end time.Time) ([]*AssetPrice, error)
 	GetLatestCurrencyRate(baseCurrency, targetCurrency string) (*CurrencyRate, error)
+	GetHistoricalCurrencyRates(baseCurrency, targetCurrency string, start, end time.Time) ([]*CurrencyRate, error)
 }

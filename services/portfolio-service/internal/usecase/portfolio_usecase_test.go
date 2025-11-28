@@ -106,6 +106,26 @@ func (m *mockMarketDataGateway) GetAssetName(ctx context.Context, symbol string)
 	return symbol + " Name", nil
 }
 
+func (m *mockMarketDataGateway) GetPriceOnDate(ctx context.Context, symbol string, date time.Time) (float64, error) {
+	if m.err != nil {
+		return 0, m.err
+	}
+	// For testing, return same price as current price
+	price, exists := m.prices[symbol]
+	if !exists {
+		return 0, errors.New("price not found")
+	}
+	return price, nil
+}
+
+func (m *mockMarketDataGateway) GetCurrencyRateOnDate(ctx context.Context, baseCurrency, targetCurrency string, date time.Time) (float64, error) {
+	if m.err != nil {
+		return 0, m.err
+	}
+	// For testing, return 1.0 (no conversion)
+	return 1.0, nil
+}
+
 func TestGetHoldings_Success(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()

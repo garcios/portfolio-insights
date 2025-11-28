@@ -3,7 +3,9 @@ package grpc
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
@@ -32,6 +34,39 @@ func (m *mockPortfolioUsecase) GetPortfolioSummary(ctx context.Context, userID s
 	return m.summary, nil
 }
 
+func (m *mockPortfolioUsecase) GetHistoricalPortfolioSummary(ctx context.Context, userID string, date time.Time) (*domain.PortfolioSummary, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.summary, nil
+}
+
+// Mock PortfolioHistoryRepository
+type mockHistoryRepo struct {
+	snapshots []*domain.PortfolioSnapshot
+	err       error
+}
+
+func (m *mockHistoryRepo) CreateSnapshot(ctx context.Context, snapshot *domain.PortfolioSnapshot) error {
+	return m.err
+}
+
+func (m *mockHistoryRepo) GetHistory(ctx context.Context, userID string, from, to time.Time) ([]*domain.PortfolioSnapshot, error) {
+	return m.snapshots, m.err
+}
+
+func (m *mockHistoryRepo) GetHistoryByPeriod(ctx context.Context, userID string, period string) ([]*domain.PortfolioSnapshot, error) {
+	return m.snapshots, m.err
+}
+
+func (m *mockHistoryRepo) SnapshotExists(ctx context.Context, userID string, date time.Time) (bool, error) {
+	return false, m.err
+}
+
+func (m *mockHistoryRepo) GetAllUserIDs(ctx context.Context) ([]string, error) {
+	return []string{"user-123"}, m.err
+}
+
 func TestGetHoldings_Success(t *testing.T) {
 	// Setup
 	mockUC := &mockPortfolioUsecase{
@@ -53,7 +88,8 @@ func TestGetHoldings_Success(t *testing.T) {
 		},
 	}
 
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetHoldingsRequest{
@@ -107,8 +143,10 @@ func TestGetHoldings_Success(t *testing.T) {
 
 func TestGetHoldings_EmptyUserId(t *testing.T) {
 	// Setup
+	// Setup
 	mockUC := &mockPortfolioUsecase{}
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetHoldingsRequest{
@@ -140,7 +178,8 @@ func TestGetHoldings_UsecaseError(t *testing.T) {
 	mockUC := &mockPortfolioUsecase{
 		err: errors.New("database connection failed"),
 	}
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetHoldingsRequest{
@@ -168,7 +207,8 @@ func TestGetHoldings_EmptyHoldings(t *testing.T) {
 	mockUC := &mockPortfolioUsecase{
 		holdings: []*domain.Holding{},
 	}
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetHoldingsRequest{
@@ -197,7 +237,8 @@ func TestGetPortfolioSummary_Success(t *testing.T) {
 			GainLossPct: 6.48,
 		},
 	}
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetPortfolioSummaryRequest{
@@ -237,8 +278,10 @@ func TestGetPortfolioSummary_Success(t *testing.T) {
 
 func TestGetPortfolioSummary_EmptyUserId(t *testing.T) {
 	// Setup
+	// Setup
 	mockUC := &mockPortfolioUsecase{}
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetPortfolioSummaryRequest{
@@ -266,7 +309,8 @@ func TestGetPortfolioSummary_UsecaseError(t *testing.T) {
 	mockUC := &mockPortfolioUsecase{
 		err: errors.New("failed to calculate summary"),
 	}
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetPortfolioSummaryRequest{
@@ -291,8 +335,10 @@ func TestGetPortfolioSummary_UsecaseError(t *testing.T) {
 
 func TestGetPortfolioPerformance_EmptyUserId(t *testing.T) {
 	// Setup
+	// Setup
 	mockUC := &mockPortfolioUsecase{}
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetPortfolioPerformanceRequest{
@@ -318,8 +364,10 @@ func TestGetPortfolioPerformance_EmptyUserId(t *testing.T) {
 
 func TestGetPortfolioPerformance_Stub(t *testing.T) {
 	// Setup
+	// Setup
 	mockUC := &mockPortfolioUsecase{}
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetPortfolioPerformanceRequest{
@@ -352,7 +400,8 @@ func TestGetHoldings_CalculationsWithZeroCost(t *testing.T) {
 			},
 		},
 	}
-	handler := NewPortfolioHandler(mockUC)
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
 	req := &pb.GetHoldingsRequest{
@@ -370,5 +419,44 @@ func TestGetHoldings_CalculationsWithZeroCost(t *testing.T) {
 	// Should not panic with division by zero
 	if holding.GainLossPercentage != 0 {
 		t.Errorf("Expected gain/loss pct 0 (avoid division by zero), got %f", holding.GainLossPercentage)
+	}
+}
+
+func TestBackfillHistory_Success(t *testing.T) {
+	// Setup
+	os.Setenv("ADMIN_TOKEN", "secret-token")
+	defer os.Unsetenv("ADMIN_TOKEN")
+
+	mockUC := &mockPortfolioUsecase{
+		summary: &domain.PortfolioSummary{
+			UserID:     "user-123",
+			TotalValue: 10000.0,
+			TotalCost:  9000.0,
+		},
+	}
+	mockRepo := &mockHistoryRepo{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
+
+	// Execute
+	req := &pb.BackfillHistoryRequest{
+		AdminToken: "secret-token",
+		StartDate:  "2023-01-01",
+		EndDate:    "2023-01-02",
+		UserId:     "user-123",
+	}
+	resp, err := handler.BackfillHistory(context.Background(), req)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if resp.Status != "success" {
+		t.Errorf("Expected status success, got %s", resp.Status)
+	}
+
+	// Should create 2 snapshots (Jan 1 and Jan 2)
+	if resp.SnapshotsCreated != 2 {
+		t.Errorf("Expected 2 snapshots created, got %d", resp.SnapshotsCreated)
 	}
 }

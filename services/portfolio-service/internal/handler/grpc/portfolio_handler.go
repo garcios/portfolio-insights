@@ -2,8 +2,11 @@ package grpc
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"time"
 
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
 	"google.golang.org/grpc/codes"
@@ -14,11 +17,16 @@ import (
 type PortfolioHandler struct {
 	pb.UnimplementedPortfolioServiceServer
 	portfolioUsecase usecase.PortfolioUsecase
+	historyRepo      domain.PortfolioHistoryRepository
 }
 
-func NewPortfolioHandler(portfolioUsecase usecase.PortfolioUsecase) *PortfolioHandler {
+func NewPortfolioHandler(
+	portfolioUsecase usecase.PortfolioUsecase,
+	historyRepo domain.PortfolioHistoryRepository,
+) *PortfolioHandler {
 	return &PortfolioHandler{
 		portfolioUsecase: portfolioUsecase,
+		historyRepo:      historyRepo,
 	}
 }
 
@@ -102,4 +110,153 @@ func (h *PortfolioHandler) GetPortfolioPerformance(ctx context.Context, req *pb.
 	return &pb.GetPortfolioPerformanceResponse{
 		DataPoints: []*pb.PortfolioPerformancePoint{},
 	}, nil
+}
+
+// BackfillHistory implements the admin endpoint for backfilling portfolio history
+func (h *PortfolioHandler) BackfillHistory(
+	ctx context.Context,
+	req *pb.BackfillHistoryRequest,
+) (*pb.BackfillHistoryResponse, error) {
+	// 1. Validate admin token
+	if !h.validateAdminToken(req.AdminToken) {
+		return nil, status.Error(codes.Unauthenticated, "invalid admin token")
+	}
+
+	// 2. Parse dates
+	startDate, err := time.Parse("2006-01-02", req.StartDate)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid start_date: %v", err)
+	}
+
+	endDate := time.Now()
+	if req.EndDate != "" {
+		endDate, err = time.Parse("2006-01-02", req.EndDate)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid end_date: %v", err)
+		}
+	}
+
+	// 3. Determine users to backfill
+	var userIDs []string
+	if req.UserId != "" {
+		userIDs = []string{req.UserId}
+	} else {
+		// Get all users with holdings
+		userIDs, err = h.historyRepo.GetAllUserIDs(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to get users: %v", err)
+		}
+	}
+
+	// 4. Run backfill
+	result := h.runBackfill(ctx, userIDs, startDate, endDate, req.DryRun)
+
+	return &pb.BackfillHistoryResponse{
+		SnapshotsCreated: int32(result.Created),
+		SnapshotsSkipped: int32(result.Skipped),
+		Errors:           int32(result.Errors),
+		ErrorMessages:    result.ErrorMessages,
+		Status:           result.Status,
+	}, nil
+}
+
+type BackfillResult struct {
+	Created       int
+	Skipped       int
+	Errors        int
+	ErrorMessages []string
+	Status        string
+}
+
+func (h *PortfolioHandler) runBackfill(
+	ctx context.Context,
+	userIDs []string,
+	startDate, endDate time.Time,
+	dryRun bool,
+) BackfillResult {
+	result := BackfillResult{
+		ErrorMessages: []string{},
+	}
+
+	for _, userID := range userIDs {
+		// Backfill for each day in range
+		for date := startDate; !date.After(endDate); date = date.AddDate(0, 0, 1) {
+			// Check if snapshot already exists
+			exists, _ := h.historyRepo.SnapshotExists(ctx, userID, date)
+			if exists {
+				result.Skipped++
+				continue
+			}
+
+			if dryRun {
+				// In a real logger we would log this
+				// h.logger.Info("DRY RUN: Would create snapshot", "user_id", userID, "date", date.Format("2006-01-02"))
+				result.Created++
+				continue
+			}
+
+			// Create snapshot for this date
+			created, err := h.createHistoricalSnapshot(ctx, userID, date)
+			if err != nil {
+				result.Errors++
+				result.ErrorMessages = append(result.ErrorMessages,
+					fmt.Sprintf("user=%s date=%s: %v", userID, date.Format("2006-01-02"), err),
+				)
+				continue
+			}
+
+			if created {
+				result.Created++
+			}
+		}
+	}
+
+	// Determine overall status
+	if result.Errors == 0 {
+		result.Status = "success"
+	} else if result.Created > 0 {
+		result.Status = "partial"
+	} else {
+		result.Status = "failed"
+	}
+
+	return result
+}
+
+func (h *PortfolioHandler) createHistoricalSnapshot(
+	ctx context.Context,
+	userID string,
+	date time.Time,
+) (bool, error) {
+	// Get historical portfolio summary for this user
+	summary, err := h.portfolioUsecase.GetHistoricalPortfolioSummary(ctx, userID, date)
+	if err != nil {
+		return false, fmt.Errorf("failed to get historical summary: %w", err)
+	}
+
+	// Skip if total value is 0 (likely missing price data)
+	if summary.TotalValue == 0 {
+		return false, nil
+	}
+
+	// Create snapshot with the specified date
+	snapshot := &domain.PortfolioSnapshot{
+		UserID:         userID,
+		TotalValue:     summary.TotalValue,
+		TotalCostBasis: summary.TotalCost,
+		Timestamp:      date,
+	}
+
+	return true, h.historyRepo.CreateSnapshot(ctx, snapshot)
+}
+
+func (h *PortfolioHandler) validateAdminToken(token string) bool {
+	// Simple token validation
+	// In production, use proper authentication (JWT, OAuth, etc.)
+	adminToken := os.Getenv("ADMIN_TOKEN")
+	// If ADMIN_TOKEN is not set, deny all requests for security
+	if adminToken == "" {
+		return false
+	}
+	return token != "" && token == adminToken
 }

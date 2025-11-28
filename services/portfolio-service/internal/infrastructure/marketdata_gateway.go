@@ -10,6 +10,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type MarketDataGateway struct {
@@ -268,4 +269,93 @@ func (g *MarketDataGateway) GetAssetName(ctx context.Context, symbol string) (st
 		return "", err
 	}
 	return asset.Name, nil
+}
+
+// GetPriceOnDate fetches the closing price of an asset on a specific date,
+// or attempts to find the price on the previous 6 days if the specific date has no data.
+func (g *MarketDataGateway) GetPriceOnDate(ctx context.Context, symbol string, date time.Time) (float64, error) {
+	// The maximum number of days to check, including the original date.
+	const maxDaysToTry = 7
+
+	currentDate := date.In(time.UTC) // Start with the original date, converting to UTC for consistency
+
+	for i := 0; i < maxDaysToTry; i++ {
+		// Define start and end of the day for the current attempt date
+		// Use UTC to avoid timezone issues, assuming market data is stored/queried in UTC or date-based
+		startOfDay := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, time.UTC)
+		endOfDay := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 23, 59, 59, 999999999, time.UTC)
+
+		req := &pb.GetHistoricalPricesRequest{
+			Symbol:    symbol,
+			StartTime: timestamppb.New(startOfDay),
+			EndTime:   timestamppb.New(endOfDay),
+			Interval:  "1d",
+		}
+
+		resp, err := g.client.GetHistoricalPrices(ctx, req)
+		if err != nil {
+			// If the gRPC call fails, return the error immediately
+			return 0, fmt.Errorf("failed to get historical prices for %s on %s: %w", symbol, currentDate.Format("2006-01-02"), err)
+		}
+
+		if len(resp.Prices) > 0 {
+			// **Success:** Price found for the current date attempt
+			return resp.Prices[0].Price, nil
+		}
+
+		// **Failure for this day:** Move to the previous day for the next iteration
+		// Subtract 24 hours to get to the day before
+		currentDate = currentDate.AddDate(0, 0, -1)
+	}
+
+	// If the loop completes, no price was found within the maximum number of days checked (7 days total).
+	return 0, fmt.Errorf("no price found for %s after checking %d days, starting from %s", symbol, maxDaysToTry, date.Format("2006-01-02"))
+}
+
+// GetCurrencyRateOnDate fetches the currency exchange rate on a specific date,
+// or attempts to find the rate on the previous 6 days if the specific date has no data.
+func (g *MarketDataGateway) GetCurrencyRateOnDate(ctx context.Context, baseCurrency, targetCurrency string, date time.Time) (float64, error) {
+	// If currencies are the same, rate is 1.0 (This logic remains the same)
+	if baseCurrency == targetCurrency {
+		return 1.0, nil
+	}
+
+	// The maximum number of days to check, including the original date.
+	const maxDaysToTry = 7
+
+	// Start with the original date, converting to UTC for consistency
+	currentDate := date.In(time.UTC)
+
+	for i := 0; i < maxDaysToTry; i++ {
+		// Define start and end of the day for the current attempt date
+		// Use UTC to avoid timezone issues
+		startOfDay := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, time.UTC)
+		endOfDay := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 23, 59, 59, 999999999, time.UTC)
+
+		req := &pb.GetHistoricalCurrencyRatesRequest{
+			BaseCurrency:   baseCurrency,
+			TargetCurrency: targetCurrency,
+			StartTime:      timestamppb.New(startOfDay),
+			EndTime:        timestamppb.New(endOfDay),
+		}
+
+		resp, err := g.client.GetHistoricalCurrencyRates(ctx, req)
+		if err != nil {
+			// If the gRPC call fails, return the error immediately, but include the failing date
+			return 0, fmt.Errorf("failed to get historical currency rates for %s/%s on %s: %w", baseCurrency, targetCurrency, currentDate.Format("2006-01-02"), err)
+		}
+
+		if len(resp.Rates) > 0 {
+			// **Success:** Rate found for the current date attempt
+			// Return the first rate found
+			return resp.Rates[0].Rate, nil
+		}
+
+		// **Failure for this day:** Move to the previous day for the next iteration
+		// Subtract 24 hours to get to the day before
+		currentDate = currentDate.AddDate(0, 0, -1)
+	}
+
+	// If the loop completes, no rate was found within the maximum number of days checked (7 days total).
+	return 0, fmt.Errorf("no currency rate found for %s/%s after checking %d days, starting from %s", baseCurrency, targetCurrency, maxDaysToTry, date.Format("2006-01-02"))
 }

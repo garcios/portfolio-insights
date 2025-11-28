@@ -10,6 +10,9 @@ service PortfolioService {
   rpc GetPortfolioSummary(GetPortfolioSummaryRequest) returns (GetPortfolioSummaryResponse);
   rpc GetPortfolioPerformance(GetPortfolioPerformanceRequest) returns (GetPortfolioPerformanceResponse);
   rpc GetHoldings(GetHoldingsRequest) returns (GetHoldingsResponse);
+  
+  // Admin endpoint for backfilling portfolio history
+  rpc BackfillHistory(BackfillHistoryRequest) returns (BackfillHistoryResponse);
 }
 
 message PortfolioSummary {
@@ -61,4 +64,21 @@ message GetHoldingsRequest {
 
 message GetHoldingsResponse {
   repeated Holding holdings = 1;
+}
+
+// Backfill History Messages
+message BackfillHistoryRequest {
+  string user_id = 1;           // Empty = all users
+  string start_date = 2;        // YYYY-MM-DD format
+  string end_date = 3;          // YYYY-MM-DD format (optional, defaults to today)
+  bool dry_run = 4;             // Preview without writing
+  string admin_token = 5;       // Authentication token
+}
+
+message BackfillHistoryResponse {
+  int32 snapshots_created = 1;
+  int32 snapshots_skipped = 2;
+  int32 errors = 3;
+  repeated string error_messages = 4;
+  string status = 5;            // "success", "partial", "failed"
 }
