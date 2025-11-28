@@ -1,0 +1,77 @@
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    wait_for_ci: yes
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 5%
+        if_ci_failed: error
+    
+    patch:
+      default:
+        target: 70%
+        threshold: 5%
+
+comment:
+  layout: "reach,diff,flags,tree,footer"
+  behavior: default
+  require_changes: no
+  require_base: no
+  require_head: yes
+
+flags:
+  user-service:
+    paths:
+      - services/user-service/
+    carryforward: true
+  
+  transaction-service:
+    paths:
+      - services/transaction-service/
+    carryforward: true
+  
+  portfolio-service:
+    paths:
+      - services/portfolio-service/
+    carryforward: true
+  
+  marketdata-service:
+    paths:
+      - services/marketdata-service/
+    carryforward: true
+  
+  gateway:
+    paths:
+      - apps/gateway/
+    carryforward: true
+  
+  frontend:
+    paths:
+      - apps/frontend/
+    carryforward: true
+
+ignore:
+  - "**/*_test.go"
+  - "**/*.pb.go"
+  - "**/*_grpc.pb.go"
+  - "**/generated/**"
+  - "**/proto/**"
+  - "**/mocks/**"
+  - "**/testdata/**"
+  - "**/*.mock.go"
+  - "apps/frontend/node_modules/**"
+  - "apps/frontend/dist/**"
+  - "apps/frontend/coverage/**"
+  - "tools/**"
+  - "scripts/**"
+  - "docs/**"
+  - "infra/**"
+  - "deployments/**"
