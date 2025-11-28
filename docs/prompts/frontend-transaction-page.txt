@@ -1,0 +1,66 @@
+Goal:
+Build a Transactions Page for a portfolio-insight application. The page should allow users to list, search, and add new stock transactions.
+
+
+⸻
+
+Functional Requirements
+
+1. Transactions List
+	•	Display all transactions in a table or card list.
+	•	Each transaction record must include:
+	•	date
+	•	ticker (e.g., AAPL, MSFT, ASX:CSL)
+	•	type (Buy / Sell)
+	•	quantity
+	•	price
+	•	total (quantity × price)
+	•	Support sorting by date (newest first), and filtering by:
+	•	ticker symbol
+	•	transaction type (Buy/Sell)
+
+2. Search
+	•	Provide a search input that filters by ticker symbol in real time.
+	•	Should handle partial matches (e.g., searching “A” matches AAPL, AMZN, ASX:ANZ).
+
+3. Add New Transaction
+	•	Include a button “Add Transaction” that opens a modal or side panel.
+	
+    Form fields:
+	•	Ticker (search input)
+    •   Trade Date (date picker)
+	•	Trade Type (Buy/Sell/Split/Dividend dropdown)
+	•	Quantity (number)
+	•	Unit/share Price (number)
+    •	Brokerage (number)
+    •	Total (number), this is quantity * unit/share price + brokerage and should be calculated automatically.
+	
+    Validate:
+	•	required fields
+	•	quantity > 0
+	•	price > 0
+	
+    After submission:
+	•	Add the new transaction to the list
+	•	Recalculate totals
+	•	Close modal
+
+⸻
+
+UX Requirements
+	•	Clean, minimal layout 
+	•	Responsive for mobile and desktop
+	•	Use shadcn/ui components where appropriate (modal, inputs, buttons)
+	•	Optional: Light animation using Framer Motion
+
+⸻
+
+Output Requirements
+
+Produce the following:
+	1.	Components:
+        •	TransactionsPage.tsx
+        •	TransactionsTable.tsx
+        •	AddTransactionModal.tsx
+        •	Any hooks (e.g., useTransactions)
+ 	2.	Mock data for initial transactions (do not fetch from GraphQL API yet)

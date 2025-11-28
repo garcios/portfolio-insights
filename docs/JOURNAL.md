@@ -371,6 +371,7 @@ ON investments.portfolio_history(user_id, timestamp DESC);
 2. ⏳ Fix test mocks for GetHistoricalCurrencyRates
 3. ⏳ Implement automated daily snapshot job
 4. ⏳ Add performance metrics calculations
+5. ⏳ Implement Transaction Search Page
 
 ### Short-term Goals
 1. Implement custom date range selection

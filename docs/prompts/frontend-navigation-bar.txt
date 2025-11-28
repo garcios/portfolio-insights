@@ -1,0 +1,51 @@
+Goal:
+Build a responsive menu header for a portfolio-insights application. The header should include navigation links, a logo/title, and mobile-friendly behavior.
+
+
+Functional Requirements
+
+1. Header Layout
+
+Create a top navigation bar with:
+	•	App logo or title on the left (e.g., “Portfolio Tracker”).
+	•	Navigation menu on the right with links such as:
+	•	Overview
+	•	Transactions
+	•	Asset Fundamentals
+
+2. Mobile Support
+	•	On small screens, navigation should collapse into a hamburger menu.
+	•	Clicking the hamburger should open a mobile slide-over menu or dropdown.
+	•	Menu items should be selectable and close the mobile menu automatically.
+
+3. Active State Highlighting
+	•	Highlight the currently active page.
+	•	Active link styling should be clear but minimal (bold text, underline, or accent color).
+
+4. Accessibility
+	•	Use proper ARIA attributes for:
+	•	nav
+	•	buttons
+	•	expanded/collapsed states
+	•	Ensure keyboard navigation works correctly.
+
+⸻
+
+UX/UI Requirements
+	•	Subtle hover states for links.
+	•	Optional:
+	•	Add a light/dark mode toggle (using shadcn/ui Switch).
+	•	Add a user avatar/menu component.
+	•	Animate mobile menu with Framer Motion.
+
+⸻
+
+Output Requirements
+
+Generate:
+	1.	Header component code: Header.tsx 
+	2.	Optional child components:
+	•	MobileMenu.tsx
+	•	NavLink.tsx
+	3.	Fully styled Tailwind layout
+	4.	Responsive breakpoints implemented
