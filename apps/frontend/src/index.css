@@ -288,3 +288,32 @@ body {
     transform: rotate(360deg);
   }
 }
+
+/* Header Navigation Responsive Styles */
+.desktop-nav {
+  display: flex;
+}
+
+.mobile-menu-toggle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none;
+  }
+  
+  .mobile-menu-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Ensure mobile menu links take full width */
+@media (max-width: 768px) {
+  .mobile-menu-toggle:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-light);
+  }
+}

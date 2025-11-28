@@ -7,7 +7,7 @@ Functional Requirements
 1. Header Layout
 
 Create a top navigation bar with:
-	•	App logo or title on the left (e.g., “Portfolio Tracker”).
+	•	App logo or title on the left (e.g., “Portfolio Insights").
 	•	Navigation menu on the right with links such as:
 	•	Overview
 	•	Transactions

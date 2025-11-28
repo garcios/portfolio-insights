@@ -1,0 +1,87 @@
+Task:
+Build a complete OAuth2/OpenID Connect integration for a Go-based gqlgen GraphQL Gateway using Ory Hydra as the authorization server. The goal is to authenticate users via Hydra and enforce token validation at the GraphQL gateway level.
+
+⸻
+
+Requirements
+
+1. Ory Hydra Setup
+	•	Provide full instructions & code to deploy Ory Hydra:
+	•	Docker Compose with Hydra Admin + Public services
+	•	PostgreSQL persistence
+	•	Example environment variables
+	•	Include:
+	•	OAuth2 client registration example
+	•	Config for Authorization Code + PKCE
+	•	JWKS discovery URL for token validation
+
+⸻
+
+2. Login + Consent Provider
+
+Implement a standalone Login/Consent app (prefer Go or Node.js).
+It must:
+	•	Handle Hydra’s login_challenge and consent_challenge
+	•	Expose:
+	•	GET /login
+	•	POST /login
+	•	GET /consent
+	•	POST /consent
+	•	Create a user session on login
+	•	Return accept_login & accept_consent responses to Hydra Admin API
+
+This is the user-facing identity layer.
+
+⸻
+
+3. gqlgen GraphQL Gateway Integration
+
+Implement OAuth2/OIDC security inside the gqlgen gateway:
+
+3.1 Middleware for Access Token Validation
+	•	Add an HTTP middleware (chi or echo preferred) that:
+	•	Extracts Authorization: Bearer <token>
+	•	Fetches Hydra JWKS (/oauth2/jwks)
+	•	Validates JWT signature, audience, issuer, expiration
+	•	Injects user identity into GraphQL context
+
+3.2 GraphQL Context Population
+	•	Extend gqlgen context with:
+
+    type AuthContext struct {
+        UserID    string
+        Email     string
+        Scopes    []string
+        Claims    map[string]any
+    }
+
+    	•	Populate context from token claims
+
+3.3 Schema-level Authorization
+	•	Show an example of custom gqlgen directives:
+
+    directive @auth(requiredScopes: [String!]) on FIELD_DEFINITION
+
+    Generate resolver middleware enforcing:
+	•	Role/scopes from Hydra tokens
+	•	Example resolver using @auth
+
+4. Frontend Integration
+
+Modify the public-facing SPA that:
+	•	Redirects to Hydra /oauth2/auth
+	•	Handles code callback
+	•	Exchanges code for tokens (Auth Code + PKCE)
+	•	Stores access token (cookie/storage)
+	•	Calls the GraphQL gateway with Authorization: Bearer <token>
+
+⸻
+
+5. End-to-End Flow Description
+
+Include diagram + step-by-step explanation:
+	1.	Client → GraphQL Gateway
+	2.	Gateway checks JWT via Hydra JWKS
+	3.	If missing/invalid → return authentication error
+	4.	Valid → inject claims → resolvers
+	5.	Resolver access protected resources

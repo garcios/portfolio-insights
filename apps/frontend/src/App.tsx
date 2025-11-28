@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { ApolloProvider, useQuery, gql } from '@apollo/client';
 import {
-    Wallet,
     TrendingUp,
     DollarSign,
     PieChart,
-    RefreshCw,
-    Settings,
-    Bell,
-    User,
+    Wallet,
 } from 'lucide-react';
 import { apolloClient } from './utils/apolloClient';
 import StatsCard from './components/StatsCard';
 import PortfolioChart from './components/PortfolioChart';
 import HoldingsTable from './components/HoldingsTable';
 import LoadingSpinner from './components/LoadingSpinner';
+import Header from './components/Header';
 import { PortfolioPerformance } from './types/portfolio';
 
 const GET_PORTFOLIO = gql`
@@ -60,7 +57,6 @@ function AppContent() {
     // Hardcoded user ID for demo purposes
     const userId = "02b28ee7-9ba2-427a-b918-a3d8e2cc00dc";
     const [selectedPeriod, setSelectedPeriod] = useState('1m');
-    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const { loading, error, data, refetch } = useQuery(GET_PORTFOLIO, {
         variables: { id: userId },
@@ -76,12 +72,6 @@ function AppContent() {
         variables: { userId, period: selectedPeriod },
         pollInterval: 60000, // Refresh every 60 seconds
     });
-
-    const handleRefresh = async () => {
-        setIsRefreshing(true);
-        await Promise.all([refetch(), refetchPerformance()]);
-        setIsRefreshing(false);
-    };
 
     const handlePeriodChange = (period: string) => {
         setSelectedPeriod(period);
@@ -162,145 +152,7 @@ function AppContent() {
             background: 'var(--color-bg-primary)',
         }}>
             {/* Header */}
-            <header style={{
-                background: 'var(--color-bg-secondary)',
-                borderBottom: '1px solid var(--color-border)',
-                position: 'sticky',
-                top: 0,
-                zIndex: 100,
-                backdropFilter: 'blur(10px)',
-            }}>
-                <div style={{
-                    maxWidth: '1400px',
-                    margin: '0 auto',
-                    padding: '16px 24px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '10px',
-                            background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}>
-                            <Wallet size={24} color="white" />
-                        </div>
-                        <div>
-                            <h1 style={{
-                                fontSize: '1.5rem',
-                                fontWeight: '700',
-                                color: 'var(--color-text-primary)',
-                                lineHeight: '1',
-                            }}>
-                                Portfolio Insights
-                            </h1>
-                            <p style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--color-text-tertiary)',
-                                marginTop: '4px',
-                            }}>
-                                Real-time portfolio tracking
-                            </p>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <button
-                            onClick={handleRefresh}
-                            disabled={isRefreshing || loading}
-                            style={{
-                                padding: '10px',
-                                borderRadius: '8px',
-                                background: 'var(--color-bg-tertiary)',
-                                border: '1px solid var(--color-border)',
-                                color: 'var(--color-text-secondary)',
-                                cursor: (isRefreshing || loading) ? 'not-allowed' : 'pointer',
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!isRefreshing && !loading) {
-                                    e.currentTarget.style.background = 'var(--color-bg-hover)';
-                                    e.currentTarget.style.borderColor = 'var(--color-border-light)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'var(--color-bg-tertiary)';
-                                e.currentTarget.style.borderColor = 'var(--color-border)';
-                            }}
-                        >
-                            <RefreshCw
-                                size={18}
-                                style={{
-                                    animation: (isRefreshing || loading) ? 'spin 1s linear infinite' : 'none',
-                                }}
-                            />
-                        </button>
-                        <button
-                            style={{
-                                padding: '10px',
-                                borderRadius: '8px',
-                                background: 'var(--color-bg-tertiary)',
-                                border: '1px solid var(--color-border)',
-                                color: 'var(--color-text-secondary)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--color-bg-hover)';
-                                e.currentTarget.style.borderColor = 'var(--color-border-light)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'var(--color-bg-tertiary)';
-                                e.currentTarget.style.borderColor = 'var(--color-border)';
-                            }}
-                        >
-                            <Bell size={18} />
-                        </button>
-                        <button
-                            style={{
-                                padding: '10px',
-                                borderRadius: '8px',
-                                background: 'var(--color-bg-tertiary)',
-                                border: '1px solid var(--color-border)',
-                                color: 'var(--color-text-secondary)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--color-bg-hover)';
-                                e.currentTarget.style.borderColor = 'var(--color-border-light)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'var(--color-bg-tertiary)';
-                                e.currentTarget.style.borderColor = 'var(--color-border)';
-                            }}
-                        >
-                            <Settings size={18} />
-                        </button>
-                        <div style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '50%',
-                            background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-primary) 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            border: '2px solid var(--color-border)',
-                        }}>
-                            <User size={18} color="white" />
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <Header currentPage="overview" />
 
             {/* Main Content */}
             <main style={{
