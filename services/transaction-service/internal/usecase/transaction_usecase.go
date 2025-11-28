@@ -32,6 +32,17 @@ func (uc *transactionUsecase) CreateTransaction(ctx context.Context, userID, sym
 		metrics.TransactionProcessingDuration.Observe(time.Since(start).Seconds())
 	}()
 
+	// Validate input
+	if txType != "BUY" && txType != "SELL" {
+		return nil, fmt.Errorf("invalid transaction type: %s", txType)
+	}
+	if quantity <= 0 {
+		return nil, fmt.Errorf("quantity must be positive")
+	}
+	if price < 0 {
+		return nil, fmt.Errorf("price must be non-negative")
+	}
+
 	// Validate User
 	userValidationStart := time.Now()
 	exists, err := uc.userGateway.Exists(ctx, userID)
