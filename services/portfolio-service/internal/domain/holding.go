@@ -16,13 +16,15 @@ type Holding struct {
 
 // PortfolioSummary represents the overall portfolio metrics
 type PortfolioSummary struct {
-	UserID      string
-	TotalValue  float64
-	TotalCost   float64
-	GainLoss    float64
-	GainLossPct float64
-	Currency    string // Currency of the summary (e.g., USD, AUD)
-	LastUpdated time.Time
+	UserID       string
+	TotalValue   float64
+	TotalCost    float64
+	GainLoss     float64
+	GainLossPct  float64
+	DayChange    float64
+	DayChangePct float64
+	Currency     string // Currency of the summary (e.g., USD, AUD)
+	LastUpdated  time.Time
 }
 
 // HoldingRepository defines the interface for holding persistence

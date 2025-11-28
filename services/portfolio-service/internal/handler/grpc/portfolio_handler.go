@@ -87,6 +87,8 @@ func (h *PortfolioHandler) GetPortfolioSummary(ctx context.Context, req *pb.GetP
 			TotalValue:              summary.TotalValue,
 			TotalGainLoss:           summary.GainLoss,
 			TotalGainLossPercentage: summary.GainLossPct,
+			DayChange:               summary.DayChange,
+			DayChangePercentage:     summary.DayChangePct,
 			Currency:                summary.Currency,
 			LastUpdated:             timestamppb.New(time.Now()),
 		},

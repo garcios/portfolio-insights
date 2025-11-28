@@ -27,6 +27,8 @@ const GET_PORTFOLIO = gql`
         totalValue
         totalGainLoss
         totalGainLossPercentage
+        dayChange
+        dayChangePercentage
         currency
         lastUpdated
       }
@@ -139,6 +141,8 @@ function AppContent() {
         totalValue: 0,
         totalGainLoss: 0,
         totalGainLossPercentage: 0,
+        dayChange: 0,
+        dayChangePercentage: 0,
         currency: 'USD'
     };
 
@@ -150,8 +154,7 @@ function AppContent() {
 
     const isPositive = summary.totalGainLoss >= 0;
 
-    // Calculate day change (mocked as 1/10th of total change for demo)
-    const dayChange = summary.totalGainLoss / 10;
+
 
     return (
         <div style={{
@@ -317,8 +320,8 @@ function AppContent() {
                     />
                     <StatsCard
                         title="Day Change"
-                        value={formatCurrency(dayChange, summary.currency)}
-                        change={summary.totalGainLossPercentage / 10} // Mocked day change %
+                        value={formatCurrency(summary.dayChange, summary.currency)}
+                        change={summary.dayChangePercentage}
                         changeLabel="Today"
                         icon={TrendingUp}
                         iconColor="var(--color-success)"

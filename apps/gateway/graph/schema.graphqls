@@ -27,6 +27,8 @@ type PortfolioSummary {
   totalValue: Float!
   totalGainLoss: Float!
   totalGainLossPercentage: Float!
+  dayChange: Float!
+  dayChangePercentage: Float!
   currency: String!
   lastUpdated: String!
 }

@@ -8,6 +8,8 @@ export interface PortfolioSummary {
     totalValue: number;
     totalGainLoss: number;
     totalGainLossPercentage: number;
+    dayChange: number;
+    dayChangePercentage: number;
     currency: string;
     lastUpdated: string;
 }

@@ -78,6 +78,8 @@ type ComplexityRoot struct {
 
 	PortfolioSummary struct {
 		Currency                func(childComplexity int) int
+		DayChange               func(childComplexity int) int
+		DayChangePercentage     func(childComplexity int) int
 		LastUpdated             func(childComplexity int) int
 		TotalGainLoss           func(childComplexity int) int
 		TotalGainLossPercentage func(childComplexity int) int
@@ -261,6 +263,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.PortfolioSummary.Currency(childComplexity), true
+
+	case "PortfolioSummary.dayChange":
+		if e.complexity.PortfolioSummary.DayChange == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.DayChange(childComplexity), true
+
+	case "PortfolioSummary.dayChangePercentage":
+		if e.complexity.PortfolioSummary.DayChangePercentage == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.DayChangePercentage(childComplexity), true
 
 	case "PortfolioSummary.lastUpdated":
 		if e.complexity.PortfolioSummary.LastUpdated == nil {
@@ -489,6 +505,8 @@ type PortfolioSummary {
   totalValue: Float!
   totalGainLoss: Float!
   totalGainLossPercentage: Float!
+  dayChange: Float!
+  dayChangePercentage: Float!
   currency: String!
   lastUpdated: String!
 }
@@ -1277,6 +1295,10 @@ func (ec *executionContext) fieldContext_Portfolio_summary(ctx context.Context, 
 				return ec.fieldContext_PortfolioSummary_totalGainLoss(ctx, field)
 			case "totalGainLossPercentage":
 				return ec.fieldContext_PortfolioSummary_totalGainLossPercentage(ctx, field)
+			case "dayChange":
+				return ec.fieldContext_PortfolioSummary_dayChange(ctx, field)
+			case "dayChangePercentage":
+				return ec.fieldContext_PortfolioSummary_dayChangePercentage(ctx, field)
 			case "currency":
 				return ec.fieldContext_PortfolioSummary_currency(ctx, field)
 			case "lastUpdated":
@@ -1560,6 +1582,94 @@ func (ec *executionContext) _PortfolioSummary_totalGainLossPercentage(ctx contex
 }
 
 func (ec *executionContext) fieldContext_PortfolioSummary_totalGainLossPercentage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_dayChange(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_dayChange(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DayChange, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_dayChange(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_dayChangePercentage(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_dayChangePercentage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DayChangePercentage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_dayChangePercentage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "PortfolioSummary",
 		Field:      field,
@@ -4283,6 +4393,16 @@ func (ec *executionContext) _PortfolioSummary(ctx context.Context, sel ast.Selec
 			}
 		case "totalGainLossPercentage":
 			out.Values[i] = ec._PortfolioSummary_totalGainLossPercentage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dayChange":
+			out.Values[i] = ec._PortfolioSummary_dayChange(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dayChangePercentage":
+			out.Values[i] = ec._PortfolioSummary_dayChangePercentage(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

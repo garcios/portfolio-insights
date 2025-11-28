@@ -362,11 +362,26 @@ func TestGetPortfolioPerformance_EmptyUserId(t *testing.T) {
 	}
 }
 
-func TestGetPortfolioPerformance_Stub(t *testing.T) {
+func TestGetPortfolioPerformance_Success(t *testing.T) {
 	// Setup
-	// Setup
+	now := time.Now()
+	mockRepo := &mockHistoryRepo{
+		snapshots: []*domain.PortfolioSnapshot{
+			{
+				UserID:         "user-123",
+				TotalValue:     10000.0,
+				TotalCostBasis: 9000.0,
+				Timestamp:      now.Add(-24 * time.Hour),
+			},
+			{
+				UserID:         "user-123",
+				TotalValue:     10500.0,
+				TotalCostBasis: 9000.0,
+				Timestamp:      now,
+			},
+		},
+	}
 	mockUC := &mockPortfolioUsecase{}
-	mockRepo := &mockHistoryRepo{}
 	handler := NewPortfolioHandler(mockUC, mockRepo)
 
 	// Execute
@@ -381,9 +396,48 @@ func TestGetPortfolioPerformance_Stub(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	// Currently returns empty data points (stub implementation)
-	if len(resp.DataPoints) != 0 {
-		t.Errorf("Expected 0 data points (stub), got %d", len(resp.DataPoints))
+	if len(resp.DataPoints) != 2 {
+		t.Errorf("Expected 2 data points, got %d", len(resp.DataPoints))
+	}
+
+	// Verify first point
+	if resp.DataPoints[0].Value != 10000.0 {
+		t.Errorf("Expected first point value 10000.0, got %f", resp.DataPoints[0].Value)
+	}
+
+	// Verify second point
+	if resp.DataPoints[1].Value != 10500.0 {
+		t.Errorf("Expected second point value 10500.0, got %f", resp.DataPoints[1].Value)
+	}
+}
+
+func TestGetPortfolioPerformance_RepoError(t *testing.T) {
+	// Setup
+	mockRepo := &mockHistoryRepo{
+		err: errors.New("database error"),
+	}
+	mockUC := &mockPortfolioUsecase{}
+	handler := NewPortfolioHandler(mockUC, mockRepo)
+
+	// Execute
+	req := &pb.GetPortfolioPerformanceRequest{
+		UserId: "user-123",
+		Period: "1m",
+	}
+	_, err := handler.GetPortfolioPerformance(context.Background(), req)
+
+	// Assert
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatal("Expected gRPC status error")
+	}
+
+	if st.Code() != codes.Internal {
+		t.Errorf("Expected code Internal, got %v", st.Code())
 	}
 }
 

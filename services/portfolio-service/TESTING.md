@@ -12,12 +12,12 @@ Successfully implemented comprehensive unit tests for the portfolio-service with
 
 | Package | Coverage | Tests | Status |
 |---------|----------|-------|--------|
-| **handler/grpc** | **100.0%** | 10 tests | ✅ PASS |
+| **handler/grpc** | **100.0%** | 11 tests | ✅ PASS |
 | **usecase** | **100.0%** | 8 tests | ✅ PASS |
 | **repository** | **58.3%** | 10 tests | ✅ PASS |
 | **infrastructure** | 0.0% | 0 tests | ⏳ TODO |
 
-### Total: **28 Unit Tests** - All Passing ✅
+### Total: **29 Unit Tests** - All Passing ✅
 
 ---
 
@@ -52,7 +52,8 @@ Successfully implemented comprehensive unit tests for the portfolio-service with
 - ✅ `TestGetPortfolioSummary_EmptyUserId` - Validation: missing user_id
 - ✅ `TestGetPortfolioSummary_UsecaseError` - Internal error handling
 - ✅ `TestGetPortfolioPerformance_EmptyUserId` - Validation: missing user_id
-- ✅ `TestGetPortfolioPerformance_Stub` - Stub implementation returns empty
+- ✅ `TestGetPortfolioPerformance_Success` - Successful performance history retrieval
+- ✅ `TestGetPortfolioPerformance_RepoError` - Database error handling
 - ✅ `TestGetHoldings_CalculationsWithZeroCost` - Edge case: zero cost calculations
 
 **Mock Implementations:**
@@ -383,6 +384,6 @@ go get github.com/DATA-DOG/go-sqlmock
 
 ---
 
-**Status**: ✅ **28 Unit Tests Implemented - All Passing!**
+**Status**: ✅ **29 Unit Tests Implemented - All Passing!**
 
 The portfolio-service now has comprehensive test coverage with 100% coverage on critical business logic (handler and usecase layers). All tests are passing and ready for CI/CD integration.

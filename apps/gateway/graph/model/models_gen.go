@@ -39,6 +39,8 @@ type PortfolioSummary struct {
 	TotalValue              float64 `json:"totalValue"`
 	TotalGainLoss           float64 `json:"totalGainLoss"`
 	TotalGainLossPercentage float64 `json:"totalGainLossPercentage"`
+	DayChange               float64 `json:"dayChange"`
+	DayChangePercentage     float64 `json:"dayChangePercentage"`
 	Currency                string  `json:"currency"`
 	LastUpdated             string  `json:"lastUpdated"`
 }

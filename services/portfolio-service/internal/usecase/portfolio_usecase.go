@@ -130,6 +130,20 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		summary.GainLossPct = (summary.GainLoss / summary.TotalCost) * 100
 	}
 
+	// Calculate Day Change
+	// Get portfolio value from 24 hours ago
+	yesterday := time.Now().Add(-24 * time.Hour)
+	prevSummary, err := uc.GetHistoricalPortfolioSummary(ctx, userID, yesterday)
+	if err != nil {
+		// Log warning but don't fail the request
+		fmt.Printf("Warning: Failed to get historical summary for day change calculation: %v\n", err)
+	} else {
+		summary.DayChange = summary.TotalValue - prevSummary.TotalValue
+		if prevSummary.TotalValue > 0 {
+			summary.DayChangePct = (summary.DayChange / prevSummary.TotalValue) * 100
+		}
+	}
+
 	// Set the currency of the summary (default currency)
 	summary.Currency = defaultCurrency
 	return summary, nil
