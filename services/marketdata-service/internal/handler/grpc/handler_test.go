@@ -50,6 +50,10 @@ func (m *MockMarketDataUsecase) GetLatestCurrencyRate(baseCurrency, targetCurren
 	return nil, errors.New("not implemented")
 }
 
+func (m *MockMarketDataUsecase) GetHistoricalCurrencyRates(baseCurrency, targetCurrency string, start, end time.Time) ([]*domain.CurrencyRate, error) {
+	return nil, nil
+}
+
 func TestGetAssetHandler(t *testing.T) {
 	mockUC := &MockMarketDataUsecase{
 		assets: map[string]*domain.Asset{

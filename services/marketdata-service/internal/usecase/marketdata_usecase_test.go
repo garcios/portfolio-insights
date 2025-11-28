@@ -108,6 +108,10 @@ func (m *MockMarketDataRepository) GetLatestCurrencyRate(baseCurrency, targetCur
 	return nil, errors.New("not implemented")
 }
 
+func (m *MockMarketDataRepository) GetHistoricalCurrencyRates(baseCurrency, targetCurrency string, start, end time.Time) ([]*domain.CurrencyRate, error) {
+	return nil, nil
+}
+
 func TestGetAsset(t *testing.T) {
 	repo := NewMockRepo()
 	repo.assets["AAPL"] = &domain.Asset{Symbol: "AAPL", Name: "Apple"}
