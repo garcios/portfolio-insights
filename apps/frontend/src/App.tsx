@@ -4,6 +4,8 @@ import { apolloClient } from './utils/apolloClient';
 import OverviewPage from './pages/OverviewPage';
 import TransactionsPage from './pages/TransactionsPage';
 import AuthPage from './pages/AuthPage';
+import FundamentalsScreenerPage from './pages/FundamentalsScreenerPage';
+import FundamentalsPage from './pages/FundamentalsPage';
 
 function App() {
     return (
@@ -13,6 +15,8 @@ function App() {
                     <Route path="/login" element={<AuthPage />} />
                     <Route path="/" element={<OverviewPage />} />
                     <Route path="/transactions" element={<TransactionsPage />} />
+                    <Route path="/fundamentals" element={<FundamentalsScreenerPage />} />
+                    <Route path="/fundamentals/:ticker" element={<FundamentalsPage />} />
                     {/* Add other routes as needed */}
                 </Routes>
             </Router>

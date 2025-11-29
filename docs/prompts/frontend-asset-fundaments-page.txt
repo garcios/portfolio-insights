@@ -1,0 +1,127 @@
+Goal: Create a modern, scannable, and comprehensive web page displaying the fundamental financial data for a selected public company ([COMPANY TICKER/NAME]).
+
+Navigation: 
+The asset Fundamentals page should be accessible when the user clicks on the "Ticker" link in the asset list table, it redirects to /fundamentals/TICKER]. 
+
+
+I. Structure & Layout
+The page should be divided into clear, collapsible or tabbed sections for easy navigation, using a clean, professional design (e.g., using card components and data tables).
+
+II. Core Company Information (Header)
+Company Name and Logo
+
+Ticker Symbol (e.g., AAPL)
+
+Current Stock Price
+
+Today's Change (in $ and %)
+
+Market Cap
+
+Industry & Sector
+
+Brief Business Overview: A one-to-two sentence summary of the company's primary business and products.
+
+III. 📊 Key Valuation Ratios
+Create a summary card or table displaying the following ratios, with current figures and the industry average for comparison:
+
+Metric	Calculation	Current Value	Industry Avg.
+P/E Ratio	Stock Price / EPS	[Value]	[Value]
+Forward P/E	Current Price / Forward EPS	[Value]	[Value]
+PEG Ratio	P/E Ratio / Annual EPS Growth	[Value]	[Value]
+Price-to-Book (P/B)	Stock Price / Book Value Per Share	[Value]	[Value]
+EV/EBITDA	Enterprise Value / EBITDA	[Value]	[Value]
+
+Export to Sheets
+
+IV. 📈 Profitability & Growth
+Display key metrics and, crucially, include a 5-year historical trend (line or bar chart) for Revenue and EPS.
+
+Earnings Per Share (EPS): Trailing 12 Months (TTM) and Annual.
+
+Revenue/Sales: TTM and Annual.
+
+Net Income/Profit: TTM.
+
+Margins (TTM):
+
+Gross Margin
+
+Operating Margin
+
+Net Profit Margin
+
+Return Metrics (TTM):
+
+Return on Equity (ROE)
+
+Return on Assets (ROA)
+
+V. 💰 Financial Health (Balance Sheet & Cash Flow)
+Focus on stability and liquidity data.
+
+Liquidity Ratios:
+
+Current Ratio (Current Assets / Current Liabilities)
+
+Quick Ratio
+
+Debt Metrics:
+
+Debt-to-Equity (D/E) Ratio
+
+Total Long-Term Debt
+
+Cash Flow:
+
+Free Cash Flow (FCF) (TTM)
+
+Cash from Operations (TTM)
+
+Total Cash and Equivalents
+
+VI. 💵 Dividend & Share Data
+Include this section if the company pays a dividend.
+
+Dividend Yield: Current %
+
+Annual Dividend Per Share (DPS)
+
+Payout Ratio: (Dividends Paid / Net Income)
+
+Ex-Dividend Date (Next scheduled date)
+
+Shares Outstanding (Latest reported count)
+
+VII. 📄 Qualitative Context & Filings
+Competitive Moat: A brief description of the company's competitive advantage (e.g., brand strength, cost leadership, patents).
+
+Management Team: Names and titles of key executives (CEO, CFO).
+
+Latest Financial Reports: Links to the most recent 10-Q (Quarterly) and 10-K (Annual) SEC Filings.
+
+Recent News: A feed of the three most recent, relevant financial news articles or press releases.
+
+VIII. Data Requirement
+Do not implement the data fetching functionality yet, just the UI with mock data.
+Build mock data for the following for ticker AMZN:
+    - Company Information
+    - Valuation Ratios
+    - Profitability & Growth
+    - Financial Health
+    - Dividend & Share Data
+    - Qualitative Context & Filings
+
+e.g. /fundamentals/AMZN should display the fundamentals for AMZN
+
+IX. Output Requirements
+Produce the following:
+    1. Components:
+        •   FundamentalsPage.tsx
+        •   CompanyInfo.tsx
+        •   ValuationRatios.tsx
+        •   ProfitabilityGrowth.tsx
+        •   FinancialHealth.tsx
+        •   DividendShareData.tsx
+        •   QualitativeContext.tsx
+    2. Mock data for initial transactions (do not fetch from GraphQL API yet)

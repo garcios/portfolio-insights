@@ -54,7 +54,21 @@ Focused on building out the core frontend pages, improving navigation, and estab
 - **Feedback:** Loading states and error messaging.
 - **Design:** Modern, clean aesthetic consistent with the rest of the app.
 
-#### 4. Frontend Testing Suite
+#### 4. Asset Fundamentals Feature
+**Status:** ✅ Complete (Mock Data)
+
+**Components:**
+- **Screener:** `FundamentalsScreenerPage.tsx`
+- **Detail Page:** `FundamentalsPage.tsx`
+- **Sub-components:** `CompanyInfo`, `ValuationRatios`, `ProfitabilityGrowth`, `FinancialHealth`, `DividendShareData`, `QualitativeContext`
+- **Data:** `mocks/fundamentals.ts`
+
+**Features:**
+- **Screener:** Sortable/filterable table of companies with key metrics (P/E, Market Cap, Yield, etc.).
+- **Details:** Comprehensive view of valuation, profitability, health, and news for a specific company, refactored into modular components.
+- **Navigation:** Deep linking from screener to details page.
+
+#### 5. Frontend Testing Suite
 **Status:** ✅ Complete
 
 **Coverage:**

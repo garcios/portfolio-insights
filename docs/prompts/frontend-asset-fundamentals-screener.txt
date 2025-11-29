@@ -1,0 +1,46 @@
+
+**Goal:** Create a clean, high-performance web page that serves as a **Asset Fundamentals Page** by displaying a sortable, filtered list of multiple public companies, focusing on the most critical fundamental metrics for comparative analysis.
+
+Navigation: 
+The asset Fundamentals page should be accessible when the user clicks on the "Asset Fundamentals" tab in the navigation bar. 
+
+### I. Structure & Layout
+
+The page must feature a large, interactive **data table** as the main element.
+
+* **Search/Filter Bar:** Allow users to search by Company Name/Ticker and filter by Sector/Industry.
+* **Column Customization:** Allow users to select which fundamental columns are visible (with a default set).
+* **Sorting:** All data columns must be sortable (ascending/descending).
+
+### II. Asset List Table - Required Columns (Default View)
+
+The primary asset list table must include the following columns for each company listed. These metrics are the most crucial for quick fundamental comparison:
+
+| Column Header | Data Type | Description |
+| :--- | :--- | :--- |
+| **Company Name** | Text/Link | Full name of the company. **(Must link to the individual fundamental page)** |
+| **Ticker** | Text | Stock Ticker Symbol. |
+| **Industry/Sector** | Text | The primary operational sector (e.g., Technology, Healthcare). |
+| **Stock Price** | Currency | Latest closing or real-time price. |
+| **Market Cap** | Currency | Total Market Capitalization. |
+| **P/E Ratio (TTM)** | Ratio | Trailing 12 Months Price-to-Earnings Ratio. |
+| **Forward P/E** | Ratio | Projected Price-to-Earnings Ratio. |
+| **Revenue Growth (YOY)** | Percentage | Year-over-Year Revenue Growth Rate (most recent quarter). |
+| **Net Profit Margin** | Percentage | Net Income / Revenue (TTM). |
+| **Return on Equity (ROE)** | Percentage | Measure of profitability relative to shareholder equity (TTM). |
+| **Debt-to-Equity (D/E)** | Ratio | Measure of financial leverage. |
+| **Dividend Yield** | Percentage | Current dividend yield (if applicable, display N/A otherwise). |
+
+### III. Interactivity & Navigation
+
+* **Linkage:** Clicking on the **Company Name** or **Ticker** must navigate the user to the **Individual Asset Fundamentals Page** (as defined in the original, detailed prompt).
+* **Screening/Filtering:** Implement basic filters for:
+    * Minimum/Maximum **Market Cap**
+    * Sector/Industry selection
+    * Minimum **Dividend Yield**
+    * Maximum **P/E Ratio**
+* **Data Latency:** Indicate the time/date the data was last updated (e.g., "Data as of [Date/Time]").
+
+### IV. Data Requirement
+
+Do not implement the data fetching functionality yet, just the UI with mock data.
