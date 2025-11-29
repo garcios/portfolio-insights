@@ -37,8 +37,8 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	}, nil
 }
 
-// AddTransaction is the resolver for the addTransaction field.
-func (r *mutationResolver) AddTransaction(ctx context.Context, input model.NewTransaction) (*model.Transaction, error) {
+// CreateTransaction is the resolver for the createTransaction field.
+func (r *mutationResolver) CreateTransaction(ctx context.Context, input model.NewTransaction) (*model.Transaction, error) {
 	// For now, hardcode user ID until JWT is implemented
 	// In production, extract from JWT token in context
 	userID := "02b28ee7-9ba2-427a-b918-a3d8e2cc00dc"

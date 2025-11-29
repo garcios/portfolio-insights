@@ -7,7 +7,7 @@ The UI is already complete and currently works using mock data. Your job is to r
 Requirements
 
 1. Create a GraphQL Mutation
-Define a addTransaction mutation that accepts:
+Define a createTransaction mutation that accepts:
 	•	symbol: String!
 	•	userID: String!
 	•	quantity: Float!

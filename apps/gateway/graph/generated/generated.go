@@ -60,8 +60,8 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddTransaction func(childComplexity int, input model.NewTransaction) int
-		CreateUser     func(childComplexity int, input model.NewUser) int
+		CreateTransaction func(childComplexity int, input model.NewTransaction) int
+		CreateUser        func(childComplexity int, input model.NewUser) int
 	}
 
 	Portfolio struct {
@@ -119,7 +119,7 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input model.NewUser) (*model.User, error)
-	AddTransaction(ctx context.Context, input model.NewTransaction) (*model.Transaction, error)
+	CreateTransaction(ctx context.Context, input model.NewTransaction) (*model.Transaction, error)
 }
 type PortfolioResolver interface {
 	Summary(ctx context.Context, obj *model.Portfolio) (*model.PortfolioSummary, error)
@@ -214,17 +214,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Holding.Symbol(childComplexity), true
 
-	case "Mutation.addTransaction":
-		if e.complexity.Mutation.AddTransaction == nil {
+	case "Mutation.createTransaction":
+		if e.complexity.Mutation.CreateTransaction == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_addTransaction_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_createTransaction_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddTransaction(childComplexity, args["input"].(model.NewTransaction)), true
+		return e.complexity.Mutation.CreateTransaction(childComplexity, args["input"].(model.NewTransaction)), true
 
 	case "Mutation.createUser":
 		if e.complexity.Mutation.CreateUser == nil {
@@ -607,7 +607,7 @@ var sources = []*ast.Source{
 
 type Mutation {
   createUser(input: NewUser!): User!
-  addTransaction(input: NewTransaction!): Transaction!
+  createTransaction(input: NewTransaction!): Transaction!
 }
 
 type User {
@@ -698,7 +698,7 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) field_Mutation_addTransaction_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_createTransaction_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 model.NewTransaction
@@ -1294,8 +1294,8 @@ func (ec *executionContext) fieldContext_Mutation_createUser(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_addTransaction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_addTransaction(ctx, field)
+func (ec *executionContext) _Mutation_createTransaction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createTransaction(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1308,7 +1308,7 @@ func (ec *executionContext) _Mutation_addTransaction(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddTransaction(rctx, fc.Args["input"].(model.NewTransaction))
+		return ec.resolvers.Mutation().CreateTransaction(rctx, fc.Args["input"].(model.NewTransaction))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1325,7 +1325,7 @@ func (ec *executionContext) _Mutation_addTransaction(ctx context.Context, field 
 	return ec.marshalNTransaction2ᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐTransaction(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_addTransaction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_createTransaction(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -1370,7 +1370,7 @@ func (ec *executionContext) fieldContext_Mutation_addTransaction(ctx context.Con
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_addTransaction_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_createTransaction_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5084,9 +5084,9 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "addTransaction":
+		case "createTransaction":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_addTransaction(ctx, field)
+				return ec._Mutation_createTransaction(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

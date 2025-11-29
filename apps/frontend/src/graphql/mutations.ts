@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
-export const ADD_TRANSACTION = gql`
-  mutation AddTransaction($input: NewTransaction!) {
-    addTransaction(input: $input) {
+export const CREATE_TRANSACTION = gql`
+  mutation CreateTransaction($input: NewTransaction!) {
+    createTransaction(input: $input) {
       symbol
       type
       quantity

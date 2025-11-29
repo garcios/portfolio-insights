@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useMutation } from '@apollo/client';
 import { X } from 'lucide-react';
 import { TransactionType } from '../../types/transaction';
-import { ADD_TRANSACTION } from '../../graphql/mutations';
+import { CREATE_TRANSACTION } from '../../graphql/mutations';
 
 interface AddTransactionModalProps {
     isOpen: boolean;
@@ -24,7 +24,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess }: AddTransactionModal
     });
 
     const [total, setTotal] = useState(0);
-    const [addTransaction, { loading, error }] = useMutation(ADD_TRANSACTION);
+    const [addTransaction, { loading, error }] = useMutation(CREATE_TRANSACTION);
 
     // Calculate total automatically
     useEffect(() => {
