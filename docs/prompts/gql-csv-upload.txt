@@ -10,7 +10,8 @@ The Resolver Function (Go): Provide the detailed Go implementation for the mutat
 
 Accept the graphql.Upload object.
 
-Stream the uploaded file content directly to an internal HTTP endpoint (transaction-service:8081/upload-csv?user_id=02b28ee7-9ba2-427a-b918-a3d8e2cc00dc).
+Stream the uploaded file content directly to an internal HTTP endpoint at port 8081 passing user_id as a query parameter.
+(transaction-service:8081/upload-csv?user_id=02b28ee7-9ba2-427a-b918-a3d8e2cc00dc).
 
 Preserve the multipart/form-data structure or stream the file contents in the request body to the backend. (The key is to avoid buffering the entire file in the GraphQL service's memory).
 

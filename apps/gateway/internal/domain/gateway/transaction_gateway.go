@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
@@ -25,4 +26,10 @@ type CreateTransactionInput struct {
 type TransactionGateway interface {
 	// CreateTransaction creates a new transaction
 	CreateTransaction(ctx context.Context, input CreateTransactionInput) (*entity.Transaction, error)
+}
+
+// TransactionFileGateway defines the interface for uploading transaction files
+type TransactionFileGateway interface {
+	// UploadCSV uploads a CSV file for processing
+	UploadCSV(ctx context.Context, userID string, file io.Reader, filename string) error
 }

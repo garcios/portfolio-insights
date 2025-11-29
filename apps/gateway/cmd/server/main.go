@@ -72,8 +72,14 @@ func main() {
 
 	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
+	// Transaction service HTTP URL
+	transactionServiceHTTPAddr := os.Getenv("TRANSACTION_SERVICE_HTTP_ADDR")
+	if transactionServiceHTTPAddr == "" {
+		transactionServiceHTTPAddr = "http://localhost:8081"
+	}
+
 	// Initialize dependency injection container
-	c := container.NewContainer(userClient, portfolioClient, transactionClient)
+	c := container.NewContainer(userClient, portfolioClient, transactionClient, transactionServiceHTTPAddr)
 
 	// Create GraphQL server with clean architecture
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{

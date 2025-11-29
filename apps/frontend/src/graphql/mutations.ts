@@ -15,3 +15,9 @@ export const CREATE_TRANSACTION = gql`
     }
   }
 `;
+
+export const UPLOAD_TRANSACTION_CSV = gql`
+  mutation UploadTransactionCSV($file: Upload!) {
+    uploadTransactionCSV(file: $file)
+  }
+`;

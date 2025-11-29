@@ -8,7 +8,10 @@ type Query {
 type Mutation {
   createUser(input: NewUser!): User!
   createTransaction(input: NewTransaction!): Transaction!
+  uploadTransactionCSV(file: Upload!): Boolean!
 }
+
+scalar Upload
 
 type User {
   id: ID!

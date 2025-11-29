@@ -37,6 +37,7 @@ services:
       - PORTFOLIO_SERVICE_ADDR=portfolio-service:50052
       - USER_SERVICE_ADDR=user-service:50051
       - TRANSACTION_SERVICE_ADDR=transaction-service:50053
+      - TRANSACTION_SERVICE_HTTP_ADDR=http://transaction-service:8081
     depends_on:
       - user-service
       - portfolio-service

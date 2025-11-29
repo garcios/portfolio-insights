@@ -47,8 +47,8 @@ func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions [
 	defer tx.Rollback()
 
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO txn.transactions (id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`)
 	if err != nil {
 		return err
@@ -57,7 +57,6 @@ func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions [
 
 	for _, txn := range transactions {
 		_, err = stmt.ExecContext(ctx,
-			txn.ID,
 			txn.UserID,
 			txn.Symbol,
 			txn.Type,

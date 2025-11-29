@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/mapper"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
@@ -45,6 +46,20 @@ func (r *mutationResolver) CreateTransaction(ctx context.Context, input model.Ne
 	}
 
 	return mapper.TransactionEntityToGraphQL(tx), nil
+}
+
+// UploadTransactionCSV is the resolver for the uploadTransactionCSV field.
+func (r *mutationResolver) UploadTransactionCSV(ctx context.Context, file graphql.Upload) (bool, error) {
+	userID, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to get user ID from context: %w", err)
+	}
+
+	if err := r.Container.TransactionUseCase.UploadCSV(ctx, userID, file.File, file.Filename); err != nil {
+		return false, fmt.Errorf("failed to upload CSV: %w", err)
+	}
+
+	return true, nil
 }
 
 // Summary is the resolver for the summary field.

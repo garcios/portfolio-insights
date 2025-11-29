@@ -83,7 +83,7 @@ func TestQueryResolver_User(t *testing.T) {
 	mockPortfolioClient := &MockPortfolioServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -118,7 +118,7 @@ func TestMutationResolver_CreateUser(t *testing.T) {
 	mockPortfolioClient := &MockPortfolioServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -164,7 +164,7 @@ func TestPortfolioResolver_Summary(t *testing.T) {
 	mockUserClient := &MockUserServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -227,7 +227,7 @@ func TestPortfolioResolver_Holdings(t *testing.T) {
 	mockUserClient := &MockUserServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -285,7 +285,7 @@ func TestQueryResolver_PortfolioPerformance(t *testing.T) {
 	mockUserClient := &MockUserServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -314,7 +314,7 @@ func TestQueryResolver_Portfolio(t *testing.T) {
 	mockPortfolioClient := &MockPortfolioServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
 	resolver := &Resolver{
 		Container: c,
 	}

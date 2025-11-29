@@ -56,7 +56,7 @@ func (uc *csvUploadUsecase) UploadCSV(userID string, csvData []byte) (*domain.CS
 	}
 
 	// Validate required columns
-	requiredColumns := []string{"symbol", "executed_at", "quantity", "price_per_share", "type"}
+	requiredColumns := []string{"symbol", "executed_at", "quantity", "price_per_share", "type", "brokerage", "notes", "price_currency", "brokerage_currency"}
 	headerMap := make(map[string]int)
 	for i, header := range headers {
 		headerMap[strings.ToLower(strings.TrimSpace(header))] = i
@@ -232,13 +232,49 @@ func (uc *csvUploadUsecase) parseCSVRow(record []string, headerMap map[string]in
 		}
 	}
 
+	// Parse brokerage
+	brokerageStr, err := getValue("brokerage")
+	if err != nil {
+		return nil, err
+	}
+
+	var brokerage float64
+	if brokerageStr != "" {
+		brokerage, err = strconv.ParseFloat(brokerageStr, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid brokerage: %w", err)
+		}
+	}
+
+	// Parse notes
+	notes, err := getValue("notes")
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse price_currency
+	priceCurrency, err := getValue("price_currency")
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse brokerage_currency
+	brokerageCurrency, err := getValue("brokerage_currency")
+	if err != nil {
+		return nil, err
+	}
+
 	return &domain.Transaction{
-		UserID:        userID,
-		Symbol:        strings.ToUpper(symbol),
-		Type:          txType,
-		Quantity:      quantity,
-		PricePerShare: price,
-		ExecutedAt:    executedAt,
+		UserID:            userID,
+		Symbol:            strings.ToUpper(symbol),
+		Type:              txType,
+		Quantity:          quantity,
+		PricePerShare:     price,
+		ExecutedAt:        executedAt,
+		Brokerage:         brokerage,
+		Notes:             notes,
+		PriceCurrency:     priceCurrency,
+		BrokerageCurrency: brokerageCurrency,
 	}, nil
 }
 

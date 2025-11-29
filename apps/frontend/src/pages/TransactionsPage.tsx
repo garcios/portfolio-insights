@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
+import { useMutation } from '@apollo/client';
 import { Plus, Upload, Search, Filter, Download } from 'lucide-react';
 import Header from '../components/Header';
 import TransactionsTable from '../components/transactions/TransactionsTable';
 import AddTransactionModal from '../components/transactions/AddTransactionModal';
 import { mockTransactions } from '../mocks/transactions';
 import { Transaction } from '../types/transaction';
+import { UPLOAD_TRANSACTION_CSV } from '../graphql/mutations';
 
 const TransactionsPage = () => {
     // Using mock data for now - will be replaced with GraphQL query
@@ -60,15 +62,27 @@ const TransactionsPage = () => {
         setSortConfig({ key, direction });
     };
 
+    const [uploadTransactionCSV] = useMutation(UPLOAD_TRANSACTION_CSV);
+
     const handleFileUpload = () => {
-        // Mock file upload
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.csv';
-        input.onchange = (e) => {
+        input.onchange = async (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (file) {
-                alert(`File selected: ${file.name}. CSV parsing not implemented yet.`);
+                try {
+                    const { data } = await uploadTransactionCSV({
+                        variables: { file }
+                    });
+                    if (data?.uploadTransactionCSV) {
+                        alert('File uploaded successfully!');
+                        // Optionally refetch transactions
+                    }
+                } catch (error) {
+                    console.error('Error uploading file:', error);
+                    alert('Failed to upload file.');
+                }
             }
         };
         input.click();

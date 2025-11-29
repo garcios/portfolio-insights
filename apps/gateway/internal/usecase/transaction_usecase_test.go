@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,18 @@ func (m *MockTransactionGateway) CreateTransaction(ctx context.Context, input ga
 	return nil, nil
 }
 
+// MockTransactionFileGateway is a manual mock for TransactionFileGateway
+type MockTransactionFileGateway struct {
+	UploadCSVFunc func(ctx context.Context, userID string, file io.Reader, filename string) error
+}
+
+func (m *MockTransactionFileGateway) UploadCSV(ctx context.Context, userID string, file io.Reader, filename string) error {
+	if m.UploadCSVFunc != nil {
+		return m.UploadCSVFunc(ctx, userID, file, filename)
+	}
+	return nil
+}
+
 func TestTransactionUseCase_CreateTransaction(t *testing.T) {
 	mockGateway := &MockTransactionGateway{
 		CreateTransactionFunc: func(ctx context.Context, input gateway.CreateTransactionInput) (*entity.Transaction, error) {
@@ -38,7 +51,9 @@ func TestTransactionUseCase_CreateTransaction(t *testing.T) {
 		},
 	}
 
-	uc := NewTransactionUseCase(mockGateway)
+	mockFileGateway := &MockTransactionFileGateway{}
+
+	uc := NewTransactionUseCase(mockGateway, mockFileGateway)
 
 	validInput := CreateTransactionInput{
 		Symbol:        "AAPL",

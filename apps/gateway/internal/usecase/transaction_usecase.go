@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
@@ -24,13 +25,18 @@ type CreateTransactionInput struct {
 
 // TransactionUseCase handles transaction-related business logic
 type TransactionUseCase struct {
-	transactionGateway gateway.TransactionGateway
+	transactionGateway     gateway.TransactionGateway
+	transactionFileGateway gateway.TransactionFileGateway
 }
 
 // NewTransactionUseCase creates a new TransactionUseCase
-func NewTransactionUseCase(transactionGateway gateway.TransactionGateway) *TransactionUseCase {
+func NewTransactionUseCase(
+	transactionGateway gateway.TransactionGateway,
+	transactionFileGateway gateway.TransactionFileGateway,
+) *TransactionUseCase {
 	return &TransactionUseCase{
-		transactionGateway: transactionGateway,
+		transactionGateway:     transactionGateway,
+		transactionFileGateway: transactionFileGateway,
 	}
 }
 
@@ -56,6 +62,18 @@ func (uc *TransactionUseCase) CreateTransaction(ctx context.Context, userID stri
 	}
 
 	return uc.transactionGateway.CreateTransaction(ctx, gatewayInput)
+}
+
+// UploadCSV uploads a CSV file for processing
+func (uc *TransactionUseCase) UploadCSV(ctx context.Context, userID string, file io.Reader, filename string) error {
+	if file == nil {
+		return fmt.Errorf("file is required")
+	}
+	if filename == "" {
+		return fmt.Errorf("filename is required")
+	}
+
+	return uc.transactionFileGateway.UploadCSV(ctx, userID, file, filename)
 }
 
 // validateCreateTransactionInput validates the transaction input
