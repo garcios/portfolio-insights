@@ -9,6 +9,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/service"
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
@@ -71,10 +72,13 @@ func main() {
 
 	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
+	services := service.NewServices(transactionClient)
+
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{
 		PortfolioClient:   portfolioClient,
 		UserClient:        userClient,
 		TransactionClient: transactionClient,
+		Service:           services,
 	}}))
 
 	// CORS middleware

@@ -11,8 +11,8 @@ import (
 
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
 	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -39,62 +39,17 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 
 // CreateTransaction is the resolver for the createTransaction field.
 func (r *mutationResolver) CreateTransaction(ctx context.Context, input model.NewTransaction) (*model.Transaction, error) {
-	// For now, hardcode user ID until JWT is implemented
-	// In production, extract from JWT token in context
-	userID := "02b28ee7-9ba2-427a-b918-a3d8e2cc00dc"
-
-	// Parse executedAt timestamp
-	executedAt, err := parseTimestamp(input.ExecutedAt)
+	userID, err := auth.UserIDFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("invalid executedAt timestamp: %w", err)
+		return nil, fmt.Errorf("failed to get user ID from context: %w", err)
 	}
-
-	// Create transaction request
-	req := &transactionpb.CreateTransactionRequest{
-		UserId:        userID,
-		Symbol:        input.Symbol,
-		Type:          string(input.Type),
-		Quantity:      input.Quantity,
-		PricePerShare: input.PricePerShare,
-		ExecutedAt:    executedAt,
-	}
-
-	// Add optional fields
-	if input.Notes != nil {
-		req.Notes = *input.Notes
-	}
-	if input.Brokerage != nil {
-		req.Brokerage = *input.Brokerage
-	}
-	if input.PriceCurrency != nil {
-		req.PriceCurrency = *input.PriceCurrency
-	}
-	if input.BrokerageCurrency != nil {
-		req.BrokerageCurrency = *input.BrokerageCurrency
-	}
-
-	// Call transaction service
-	resp, err := r.TransactionClient.CreateTransaction(ctx, req)
+	// 💡 Delegation to Service Layer
+	tx, err := r.Resolver.Service.Transaction.Create(ctx, userID, input)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create transaction: %w", err)
+		return nil, err
 	}
 
-	// Map response to GraphQL model
-	return &model.Transaction{
-		ID:                resp.Transaction.Id,
-		UserID:            resp.Transaction.UserId,
-		Symbol:            resp.Transaction.Symbol,
-		Type:              model.TransactionType(resp.Transaction.Type),
-		Quantity:          resp.Transaction.Quantity,
-		PricePerShare:     resp.Transaction.PricePerShare,
-		PriceCurrency:     &resp.Transaction.PriceCurrency,
-		ExecutedAt:        resp.Transaction.ExecutedAt.AsTime().Format("2006-01-02T15:04:05Z07:00"),
-		Notes:             &resp.Transaction.Notes,
-		Brokerage:         &resp.Transaction.Brokerage,
-		BrokerageCurrency: &resp.Transaction.BrokerageCurrency,
-		CreatedAt:         resp.Transaction.CreatedAt.AsTime().Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:         resp.Transaction.UpdatedAt.AsTime().Format("2006-01-02T15:04:05Z07:00"),
-	}, nil
+	return tx, nil
 }
 
 // Summary is the resolver for the summary field.
