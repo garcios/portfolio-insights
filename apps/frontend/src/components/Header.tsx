@@ -1,15 +1,24 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Wallet, Menu, X } from 'lucide-react';
 import NavLink from './NavLink';
 import MobileMenu from './MobileMenu';
 import UserMenu from './UserMenu';
 
-interface HeaderProps {
-    currentPage?: 'overview' | 'transactions' | 'fundamentals';
-}
-
-const Header = ({ currentPage = 'overview' }: HeaderProps) => {
+const Header = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const location = useLocation();
+
+    // Determine current page ID based on path
+    const getCurrentPageId = () => {
+        const path = location.pathname;
+        if (path === '/') return 'overview';
+        if (path.startsWith('/transactions')) return 'transactions';
+        if (path.startsWith('/fundamentals')) return 'fundamentals';
+        return 'overview';
+    };
+
+    const currentPage = getCurrentPageId();
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);

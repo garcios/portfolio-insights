@@ -1,0 +1,35 @@
+Build a fully responsive Login & Register page for the Portfolio Insights application.
+
+Requirements:
+	•	Use a clean modern UI design.
+	•	Include two tabs or toggles: Login and Register.
+	
+    Login Form:
+	•	Fields: Email, Password
+	•	“Remember me” checkbox
+	•	“Forgot password?” link
+	•	Submit button (do not integrate with the backend yet, just validate the form and redirect to /overview)
+	
+    
+    Register Form:
+	•	Fields: Name, Email, Password, Confirm Password
+	•	Password strength hint
+	•	Submit button
+	•	Validate form fields (client-side).
+	•	Provide loading states, error messages, and success states.
+	•	Integrate with authentication API endpoints:
+	•	POST /auth/login
+	•	POST /auth/register
+	•	Use a reusable input component.
+	•	After successful login, redirect to: /overview
+	•	After successful registration, automatically log the user in or redirect to login.
+	•	Include basic branding for Portfolio Insight:
+	•	App logo placeholder
+	•	App name in header
+	•	Ensure accessibility (labels, aria attributes).
+	•	Make the UI mobile-first.
+
+Output:
+	•	Complete React/TypeScript code for the page
+	•	Any necessary helper components
+	•	

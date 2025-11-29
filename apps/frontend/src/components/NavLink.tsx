@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 interface NavLinkProps {
     href: string;
@@ -8,19 +9,10 @@ interface NavLinkProps {
 }
 
 const NavLink = ({ href, isActive = false, children, onClick }: NavLinkProps) => {
-    const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-        e.preventDefault();
-        if (onClick) {
-            onClick();
-        }
-        // In a real app with routing, you'd navigate here
-        // For now, we'll just prevent default
-    };
-
     return (
-        <a
-            href={href}
-            onClick={handleClick}
+        <Link
+            to={href}
+            onClick={onClick}
             aria-current={isActive ? 'page' : undefined}
             style={{
                 padding: '10px 16px',
@@ -66,7 +58,7 @@ const NavLink = ({ href, isActive = false, children, onClick }: NavLinkProps) =>
                     }}
                 />
             )}
-        </a>
+        </Link>
     );
 };
 

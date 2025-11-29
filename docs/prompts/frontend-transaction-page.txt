@@ -1,12 +1,13 @@
 Goal:
-Build a Transactions Page for a portfolio-insight application. The page should allow users to list, search, and add new stock transactions.
+Build a Transactions Page for a portfolio-insight application. The page should allow users to list, search, and add new transaction.
 
 
 ⸻
 
 Functional Requirements
 
-1. Transactions List and Search Page
+1. The transaction page should be accessible when the user clicks on the "Transactions" tab in the navigation bar. 
+2. Transactions List and Search Page
 	•	Display all transactions in a table or card list.
 	•	Each transaction record must include:
 		- date
@@ -27,7 +28,7 @@ Functional Requirements
 	•	Support sorting by date (newest first).
 	•	Support pagination (e.g., 10 items per page).
 
-2. Add New Transaction
+3. Add New Transaction
 	•	Include a button “Add Transaction” that opens a modal or side panel.
 	
     Form fields:
@@ -39,6 +40,10 @@ Functional Requirements
     •	Brokerage (number)
     •	Total (number), this is quantity * unit/share price + brokerage and should be calculated automatically.
 	
+     Save button:
+	•	Save the transaction (do not integrate with the backend yet).
+	•	Close the modal.
+
     Validate:
 	•	required fields
 	•	quantity > 0
@@ -49,7 +54,7 @@ Functional Requirements
 	•	Recalculate totals
 	•	Close modal
 
-3. Upload CSV transactions
+4. Upload CSV transactions
 	•	Include a button “Upload CSV” that opens a file picker.
 	•   Do not integrate with the backend yet.
 

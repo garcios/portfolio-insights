@@ -4,6 +4,104 @@ A chronological record of development progress, features implemented, and techni
 
 ---
 
+## 2025-11-29 - Frontend Implementation & UI Polish
+
+### Overview
+Focused on building out the core frontend pages, improving navigation, and establishing a robust testing foundation. Implemented the Transactions page, Authentication UI, and a responsive Header component, backed by comprehensive unit tests.
+
+### Features Implemented
+
+#### 1. Responsive Navigation & Header
+**Status:** ✅ Complete
+
+**Components:**
+- **Header:** Sticky top navigation with glassmorphism effect.
+- **Mobile Menu:** Slide-over menu for small screens with smooth animations.
+- **User Menu:** Dropdown with avatar, settings, and theme toggle (UI).
+- **Routing:** Client-side routing using `react-router-dom` v6.
+
+**Key Features:**
+- Responsive design adapting to mobile/desktop.
+- Active state highlighting for navigation links.
+- Accessible ARIA attributes for menu interactions.
+- "Click outside" detection for closing menus.
+
+#### 2. Transactions Management UI
+**Status:** ✅ Complete (Mock Data)
+
+**Components:**
+- **Page:** `TransactionsPage.tsx`
+- **Table:** `TransactionsTable.tsx` with sorting and filtering.
+- **Modal:** `AddTransactionModal.tsx` for creating new entries.
+
+**Features:**
+- **List View:** Display transactions with formatted dates, currency, and type-based coloring.
+- **Sorting:** Sort by date, ticker, type, quantity, price, or total.
+- **Filtering:** Real-time search by ticker and filter by transaction type (Buy/Sell/Split/Dividend).
+- **Creation:** Modal form with auto-calculation of totals (Quantity * Price + Brokerage).
+- **Validation:** Client-side validation for required fields and numeric values.
+
+#### 3. Authentication UI
+**Status:** ✅ Complete (UI Only)
+
+**Components:**
+- **Page:** `AuthPage.tsx`
+- **Component:** `Input.tsx` (Reusable UI component)
+
+**Features:**
+- **Dual Mode:** Tabbed interface for Login and Register.
+- **Validation:** Email format, password length, and password matching validation.
+- **Feedback:** Loading states and error messaging.
+- **Design:** Modern, clean aesthetic consistent with the rest of the app.
+
+#### 4. Frontend Testing Suite
+**Status:** ✅ Complete
+
+**Coverage:**
+- **Header:** 100% coverage
+- **MobileMenu:** 100% coverage
+- **StatsCard:** 100% coverage
+- **LoadingSpinner:** 100% coverage
+- **UserMenu:** ~95% coverage
+- **NavLink:** ~71% coverage
+
+**Tooling:**
+- **Framework:** Vitest + React Testing Library
+- **Features Tested:** Rendering, user interactions (clicks, keyboard), accessibility attributes, and conditional styling.
+
+### Technical Decisions
+
+#### 1. Client-Side Routing
+**Decision:** Migrated from conditional rendering to `react-router-dom`.
+
+**Rationale:**
+- Enables deep linking (e.g., `/transactions`).
+- Supports browser history navigation (back/forward).
+- Standard practice for SPA (Single Page Applications).
+
+#### 2. Mock Data Strategy
+**Decision:** Used local mock data for Transactions and Auth.
+
+**Rationale:**
+- Allowed rapid UI development without waiting for backend endpoints.
+- Decoupled frontend progress from backend readiness.
+- Easy to swap with Apollo Client `useQuery` hooks later.
+
+#### 3. Component-First Testing
+**Decision:** Wrote tests for individual UI components before page integration.
+
+**Rationale:**
+- Ensures building blocks are solid.
+- easier to debug isolated components.
+- Provides immediate feedback on accessibility compliance.
+
+### Next Steps
+1. **Backend Integration:** Connect Transactions and Auth pages to real GraphQL endpoints.
+2. **State Management:** Implement global auth state (Context or Redux) to handle login sessions.
+3. **E2E Testing:** Add Cypress or Playwright tests for full user flows.
+
+---
+
 ## 2025-11-28 - Portfolio Performance Feature Complete
 
 ### Overview
