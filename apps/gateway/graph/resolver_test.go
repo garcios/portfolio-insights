@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
 	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -62,6 +64,11 @@ func (m *MockPortfolioServiceClient) GetPortfolioPerformance(ctx context.Context
 	return nil, nil
 }
 
+// Mock TransactionServiceClient
+type MockTransactionServiceClient struct {
+	transactionpb.TransactionServiceClient
+}
+
 func TestQueryResolver_User(t *testing.T) {
 	mockUserClient := &MockUserServiceClient{
 		GetUserFunc: func(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.GetUserResponse, error) {
@@ -73,8 +80,12 @@ func TestQueryResolver_User(t *testing.T) {
 		},
 	}
 
+	mockPortfolioClient := &MockPortfolioServiceClient{}
+	mockTransactionClient := &MockTransactionServiceClient{}
+
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
 	resolver := &Resolver{
-		UserClient: mockUserClient,
+		Container: c,
 	}
 
 	queryResolver := &queryResolver{resolver}
@@ -104,8 +115,12 @@ func TestMutationResolver_CreateUser(t *testing.T) {
 		},
 	}
 
+	mockPortfolioClient := &MockPortfolioServiceClient{}
+	mockTransactionClient := &MockTransactionServiceClient{}
+
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
 	resolver := &Resolver{
-		UserClient: mockUserClient,
+		Container: c,
 	}
 
 	mutationResolver := &mutationResolver{resolver}
@@ -137,6 +152,8 @@ func TestPortfolioResolver_Summary(t *testing.T) {
 					TotalValue:              10000.50,
 					TotalGainLoss:           500.25,
 					TotalGainLossPercentage: 5.25,
+					DayChange:               100.0,
+					DayChangePercentage:     1.0,
 					Currency:                "USD",
 					LastUpdated:             timestamppb.New(now),
 				},
@@ -144,8 +161,12 @@ func TestPortfolioResolver_Summary(t *testing.T) {
 		},
 	}
 
+	mockUserClient := &MockUserServiceClient{}
+	mockTransactionClient := &MockTransactionServiceClient{}
+
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
 	resolver := &Resolver{
-		PortfolioClient: mockPortfolioClient,
+		Container: c,
 	}
 
 	portfolioResolver := &portfolioResolver{resolver}
@@ -203,8 +224,12 @@ func TestPortfolioResolver_Holdings(t *testing.T) {
 		},
 	}
 
+	mockUserClient := &MockUserServiceClient{}
+	mockTransactionClient := &MockTransactionServiceClient{}
+
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
 	resolver := &Resolver{
-		PortfolioClient: mockPortfolioClient,
+		Container: c,
 	}
 
 	portfolioResolver := &portfolioResolver{resolver}
@@ -257,8 +282,12 @@ func TestQueryResolver_PortfolioPerformance(t *testing.T) {
 		},
 	}
 
+	mockUserClient := &MockUserServiceClient{}
+	mockTransactionClient := &MockTransactionServiceClient{}
+
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
 	resolver := &Resolver{
-		PortfolioClient: mockPortfolioClient,
+		Container: c,
 	}
 
 	queryResolver := &queryResolver{resolver}
@@ -281,7 +310,15 @@ func TestQueryResolver_PortfolioPerformance(t *testing.T) {
 }
 
 func TestQueryResolver_Portfolio(t *testing.T) {
-	resolver := &Resolver{}
+	mockUserClient := &MockUserServiceClient{}
+	mockPortfolioClient := &MockPortfolioServiceClient{}
+	mockTransactionClient := &MockTransactionServiceClient{}
+
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient)
+	resolver := &Resolver{
+		Container: c,
+	}
+
 	queryResolver := &queryResolver{resolver}
 
 	portfolio, err := queryResolver.Portfolio(context.Background(), "user-123")

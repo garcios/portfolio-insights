@@ -1,0 +1,19 @@
+I need to implement a GraphQL endpoint using Go and gqlgen to handle CSV file uploads, but the resolver's primary function must be to redirect the file to a separate, internal backend processing service (e.g., a microservice).
+
+Please provide the complete code and configuration details for the following components:
+
+GraphQL Schema Definition Language (SDL): Define the Mutation using the Upload scalar type.
+
+gqlgen Configuration: Show any necessary modifications to the gqlgen.yml file.
+
+The Resolver Function (Go): Provide the detailed Go implementation for the mutation resolver. This function must:
+
+Accept the graphql.Upload object.
+
+Stream the uploaded file content directly to an internal HTTP endpoint (transaction-service:8081/upload-csv?user_id=02b28ee7-9ba2-427a-b918-a3d8e2cc00dc).
+
+Preserve the multipart/form-data structure or stream the file contents in the request body to the backend. (The key is to avoid buffering the entire file in the GraphQL service's memory).
+
+Handle the response (success or error) from the internal backend service and return the appropriate result to the GraphQL client.
+
+The final output should be a structured set of Go and configuration files that demonstrates the end-to-end proxying/redirection of the CSV file upload.

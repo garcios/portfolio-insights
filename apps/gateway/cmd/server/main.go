@@ -9,7 +9,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
-	"github.com/garcios/portfolio-insights/apps/gateway/internal/service"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
@@ -72,14 +72,15 @@ func main() {
 
 	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
-	services := service.NewServices(transactionClient)
+	// Initialize dependency injection container
+	c := container.NewContainer(userClient, portfolioClient, transactionClient)
 
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{
-		PortfolioClient:   portfolioClient,
-		UserClient:        userClient,
-		TransactionClient: transactionClient,
-		Service:           services,
-	}}))
+	// Create GraphQL server with clean architecture
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
+		Resolvers: &graph.Resolver{
+			Container: c,
+		},
+	}))
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {

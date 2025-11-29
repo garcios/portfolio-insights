@@ -7,34 +7,22 @@ package graph
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
+	"github.com/garcios/portfolio-insights/apps/gateway/graph/mapper"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
-	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
-	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
-	req := &userpb.CreateUserRequest{
-		Email:    input.Email,
-		Name:     input.Username,
-		Password: "defaultPassword123", // In production, this should come from input
-	}
-
-	resp, err := r.UserClient.CreateUser(ctx, req)
+	// Default password - in production this should come from input
+	user, err := r.Container.UserUseCase.CreateUser(ctx, input.Email, input.Username, "defaultPassword123")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	return &model.User{
-		ID:       resp.Id,
-		Username: input.Username,
-		Email:    input.Email,
-	}, nil
+	return mapper.UserEntityToGraphQL(user), nil
 }
 
 // CreateTransaction is the resolver for the createTransaction field.
@@ -43,129 +31,88 @@ func (r *mutationResolver) CreateTransaction(ctx context.Context, input model.Ne
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user ID from context: %w", err)
 	}
-	// 💡 Delegation to Service Layer
-	tx, err := r.Resolver.Service.Transaction.Create(ctx, userID, input)
+
+	// Convert GraphQL input to use case input
+	useCaseInput, err := mapper.GraphQLNewTransactionToUseCaseInput(input)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transaction input: %w", err)
+	}
+
+	// Create transaction via use case
+	tx, err := r.Container.TransactionUseCase.CreateTransaction(ctx, userID, useCaseInput)
 	if err != nil {
 		return nil, err
 	}
 
-	return tx, nil
+	return mapper.TransactionEntityToGraphQL(tx), nil
 }
 
 // Summary is the resolver for the summary field.
 func (r *portfolioResolver) Summary(ctx context.Context, obj *model.Portfolio) (*model.PortfolioSummary, error) {
 	// This resolver only executes if the query requests the summary field
-	summaryReq := &portfoliopb.GetPortfolioSummaryRequest{
-		UserId: obj.UserID,
-	}
-
-	summaryResp, err := r.PortfolioClient.GetPortfolioSummary(ctx, summaryReq)
+	summary, err := r.Container.PortfolioUseCase.GetPortfolioSummary(ctx, obj.UserID)
 	if err != nil {
 		// Return nil for optional field if it fails
 		return nil, nil
 	}
 
-	if summaryResp.Summary == nil {
+	if summary == nil {
 		return nil, nil
 	}
 
-	return &model.PortfolioSummary{
-		TotalValue:              summaryResp.Summary.TotalValue,
-		TotalGainLoss:           summaryResp.Summary.TotalGainLoss,
-		TotalGainLossPercentage: summaryResp.Summary.TotalGainLossPercentage,
-		Currency:                summaryResp.Summary.Currency,
-		LastUpdated:             summaryResp.Summary.LastUpdated.AsTime().Format("2006-01-02T15:04:05Z07:00"),
-	}, nil
+	return mapper.PortfolioSummaryEntityToGraphQL(summary), nil
 }
 
 // Holdings is the resolver for the holdings field.
 func (r *portfolioResolver) Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error) {
 	// This resolver only executes if the query requests the holdings field
-	holdingsReq := &portfoliopb.GetHoldingsRequest{
-		UserId: obj.UserID,
-	}
-
-	holdingsResp, err := r.PortfolioClient.GetHoldings(ctx, holdingsReq)
+	holdings, err := r.Container.PortfolioUseCase.GetHoldings(ctx, obj.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get holdings: %w", err)
 	}
 
-	var holdings []*model.Holding
-	for _, h := range holdingsResp.Holdings {
-		holdings = append(holdings, &model.Holding{
-			Symbol:             h.Symbol,
-			Quantity:           h.Quantity,
-			AveragePrice:       h.AveragePrice,
-			CurrentPrice:       h.CurrentPrice,
-			CurrentValue:       h.CurrentValue,
-			GainLoss:           h.GainLoss,
-			GainLossPercentage: h.GainLossPercentage,
-			Currency:           h.Currency,
-			AssetName:          h.AssetName,
-		})
-	}
-
-	return holdings, nil
+	return mapper.HoldingEntitiesToGraphQL(holdings), nil
 }
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
-	// For now, return a hardcoded user ID
-	// In production, this should come from authentication context
-	userID := "02b28ee7-9ba2-427a-b918-a3d8e2cc00dc"
-	return r.User(ctx, userID)
+	user, err := r.Container.UserUseCase.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current user: %w", err)
+	}
+
+	return mapper.UserEntityToGraphQL(user), nil
 }
 
 // User is the resolver for the user field.
 func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error) {
-	req := &userpb.GetUserRequest{
-		Id: id,
-	}
-
-	resp, err := r.UserClient.GetUser(ctx, req)
+	user, err := r.Container.UserUseCase.GetUser(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	return &model.User{
-		ID:       resp.Id,
-		Username: resp.Name,
-		Email:    resp.Email,
-	}, nil
+	return mapper.UserEntityToGraphQL(user), nil
 }
 
 // Portfolio is the resolver for the portfolio field.
 func (r *queryResolver) Portfolio(ctx context.Context, id string) (*model.Portfolio, error) {
-	// Only return basic portfolio info
-	// Holdings and Summary will be resolved by their own field resolvers
-	return &model.Portfolio{
-		ID:     id,
-		UserID: id,
-		Name:   "My Portfolio",
-	}, nil
+	// Get portfolio from use case
+	portfolio, err := r.Container.PortfolioUseCase.GetPortfolio(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get portfolio: %w", err)
+	}
+
+	return mapper.PortfolioEntityToGraphQL(portfolio), nil
 }
 
 // PortfolioPerformance is the resolver for the portfolioPerformance field.
 func (r *queryResolver) PortfolioPerformance(ctx context.Context, userID string, period string) ([]*model.PortfolioPerformancePoint, error) {
-	req := &portfoliopb.GetPortfolioPerformanceRequest{
-		UserId: userID,
-		Period: period,
-	}
-
-	resp, err := r.PortfolioClient.GetPortfolioPerformance(ctx, req)
+	dataPoints, err := r.Container.PortfolioUseCase.GetPortfolioPerformance(ctx, userID, period)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get portfolio performance: %w", err)
 	}
 
-	var dataPoints []*model.PortfolioPerformancePoint
-	for _, dp := range resp.DataPoints {
-		dataPoints = append(dataPoints, &model.PortfolioPerformancePoint{
-			Timestamp: dp.Timestamp.AsTime().Format("2006-01-02T15:04:05Z07:00"),
-			Value:     dp.Value,
-		})
-	}
-
-	return dataPoints, nil
+	return mapper.PortfolioPerformancePointEntitiesToGraphQL(dataPoints), nil
 }
 
 // Mutation returns generated.MutationResolver implementation.
@@ -180,17 +127,3 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 type mutationResolver struct{ *Resolver }
 type portfolioResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func parseTimestamp(s string) (*timestamppb.Timestamp, error) {
-	t, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		return nil, err
-	}
-	return timestamppb.New(t), nil
-}

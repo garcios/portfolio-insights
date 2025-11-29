@@ -5,15 +5,9 @@ package graph
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 import (
-	"github.com/garcios/portfolio-insights/apps/gateway/internal/service"
-	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
-	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
 )
 
 type Resolver struct {
-	PortfolioClient   portfoliopb.PortfolioServiceClient
-	UserClient        userpb.UserServiceClient
-	TransactionClient transactionpb.TransactionServiceClient
-	Service           *service.Services
+	Container *container.Container
 }
