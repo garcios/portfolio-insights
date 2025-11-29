@@ -4,7 +4,218 @@ A chronological record of development progress, features implemented, and techni
 
 ---
 
-## 2025-11-29 - Frontend Implementation & UI Polish
+## 2025-11-29 (Afternoon) - Transaction Schema Extension & GraphQL Mutation
+
+### Overview
+Extended the transaction schema to support brokerage fees and notes fields across all layers (database, gRPC, GraphQL). Implemented a complete GraphQL mutation for adding transactions, replacing the mock data layer with real backend integration.
+
+### Features Implemented
+
+#### 1. Transaction Schema Extension
+**Status:** ✅ Complete
+
+**Database Changes:**
+- **Migration:** Created `000008_add_brokerage_and_notes_to_transactions`
+- **Fields Added:**
+  - `brokerage` (NUMERIC(20, 8) DEFAULT 0) - For transaction fees
+  - `notes` (VARCHAR(100)) - For optional transaction notes
+- **Status:** Migration applied successfully
+
+**Protocol Buffer Updates:**
+- Updated `proto/transaction/transaction.proto`
+- Added `brokerage` (double, field 10) and `notes` (string, field 11) to `Transaction` message
+- Added fields to `CreateTransactionRequest` and `UpdateTransactionRequest`
+- Regenerated gRPC code
+
+**Domain Model Updates:**
+- Updated `Transaction` struct in `services/transaction-service/internal/domain/transaction.go`
+- Refactored `TransactionUsecase` interface to use struct-based parameters instead of individual arguments
+- Improved API design: `CreateTransaction(ctx, *Transaction) error` vs old `CreateTransaction(ctx, userID, symbol, type, qty, price, executedAt) (*Transaction, error)`
+
+**Repository Layer:**
+- Updated all SQL queries in `postgres_repo.go` to handle new fields
+- Implemented proper NULL handling using `sql.NullFloat64` and `sql.NullString`
+- Updated `Create`, `GetByID`, `ListByUserID`, and `Update` methods
+
+**Use Case Layer:**
+- Completely refactored `transaction_usecase.go` to match new interface
+- Added UUID generation for transaction IDs
+- Maintained validation logic (type, quantity, price, user, asset)
+- Preserved event publishing and metrics recording
+
+**Handler Layer:**
+- Updated gRPC handler to validate required fields
+- Added mapping for `brokerage` and `notes` fields
+- Renamed helper function to `mapDomainToProto` for clarity
+
+**Testing:**
+- Updated all unit tests to use new struct-based API
+- All tests passing (handler + usecase)
+- Added `github.com/google/uuid` dependency
+
+#### 2. GraphQL Add Transaction Mutation
+**Status:** ✅ Complete
+
+**Schema Definition:**
+```graphql
+enum TransactionType {
+  BUY
+  SELL
+  SPLIT
+  DIVIDEND
+}
+
+type Transaction {
+  id: ID!
+  userId: ID!
+  symbol: String!
+  type: TransactionType!
+  quantity: Float!
+  pricePerShare: Float!
+  executedAt: String!
+  notes: String
+  brokerage: Float
+  createdAt: String!
+  updatedAt: String!
+}
+
+input NewTransaction {
+  symbol: String!
+  quantity: Float!
+  pricePerShare: Float!
+  executedAt: String!
+  type: TransactionType!
+  notes: String
+  brokerage: Float
+}
+
+extend type Mutation {
+  addTransaction(input: NewTransaction!): Transaction!
+}
+```
+
+**Resolver Implementation:**
+- Implemented `AddTransaction` resolver in `apps/gateway/graph/schema.resolvers.go`
+- Added `parseTimestamp` helper for ISO-8601 date parsing
+- Hardcoded user ID (`3a4b3185-5abb-4899-9835-829ddb91e3a6`) until JWT is implemented
+- Calls transaction-service via gRPC
+- Handles optional fields (notes, brokerage) correctly
+
+**Dependency Injection:**
+- Added `TransactionClient` to Resolver struct
+- Initialized gRPC connection to transaction-service (default: `localhost:50053`)
+- Updated `main.go` to wire up the client
+
+**Frontend Integration:**
+- Created `ADD_TRANSACTION` mutation in `apps/frontend/src/graphql/mutations.ts`
+- Updated `AddTransactionModal.tsx` to use `useMutation` hook
+- Replaced `onSave` callback with GraphQL mutation call
+- Added loading state ("Saving..." button text)
+- Added error display with styled error message
+- Disabled form controls during submission
+- Proper date format conversion to ISO-8601
+
+**Page Updates:**
+- Removed mock `handleAddTransaction` function from `TransactionsPage.tsx`
+- Changed to use `onSuccess` callback
+- Added comment about future GraphQL query integration for listing transactions
+
+### Technical Decisions
+
+#### 1. Struct-Based Use Case API
+**Decision:** Refactored `TransactionUsecase` to accept `*Transaction` structs instead of individual parameters.
+
+**Rationale:**
+- **Cleaner API:** Easier to add new fields without changing method signatures
+- **Better Encapsulation:** Transaction is a cohesive entity
+- **Reduced Boilerplate:** Fewer parameters to pass around
+- **Consistency:** Matches common Go patterns (e.g., HTTP handlers)
+
+**Example:**
+```go
+// Before
+CreateTransaction(ctx, userID, symbol, type, qty, price, executedAt) (*Transaction, error)
+
+// After
+CreateTransaction(ctx, *Transaction) error
+```
+
+#### 2. Data Type Precision
+**Decision:** Used `NUMERIC(20, 8)` for brokerage in PostgreSQL.
+
+**Rationale:**
+- Avoids floating-point precision errors for monetary values
+- Supports large values (up to 20 digits total)
+- 8 decimal places for fractional cents or crypto
+
+#### 3. Hardcoded User ID in GraphQL
+**Decision:** Temporarily hardcode user ID in resolver until JWT is implemented.
+
+**Rationale:**
+- Allows testing of the mutation immediately
+- Clear TODO for future JWT extraction from context
+- Doesn't block frontend development
+
+#### 4. Optional Fields Handling
+**Decision:** Use pointers for optional fields in GraphQL input, NULL in database.
+
+**Rationale:**
+- Distinguishes between "not provided" and "empty string"
+- Database NULL handling via `sql.NullString` and `sql.NullFloat64`
+- GraphQL schema allows omitting optional fields
+
+### Data Flow
+
+```
+Frontend Modal (React)
+    ↓ (useMutation)
+GraphQL Gateway (Go)
+    ↓ (gRPC)
+Transaction Service (Go)
+    ↓ (SQL)
+PostgreSQL
+    ↓ (Response)
+Frontend (Success/Error)
+```
+
+#### 3. Transaction Currency Support
+**Status:** ✅ Complete
+
+**Database Changes:**
+- **Migration:** Created `000009_add_currency_fields_to_transactions`
+- **Fields Added:** `price_currency` (VARCHAR(3)), `brokerage_currency` (VARCHAR(3))
+
+**Protocol Buffer Updates:**
+- Updated `proto/transaction/transaction.proto`
+- Added `price_currency` and `brokerage_currency` strings
+
+**Service Updates:**
+- Updated `Transaction` domain model
+- Updated repository CRUD operations
+- Added validation for 3-letter currency codes in usecase
+- Updated gRPC handler mapping
+
+### Build Status
+- ✅ Transaction service builds and tests pass
+- ✅ Gateway builds successfully (Fixed dependency issue with `transaction-service` import)
+- ✅ Docker Compose configuration updated (Added `TRANSACTION_SERVICE_ADDR` to gateway)
+- ✅ Frontend compiles (main code)
+- ⚠️ Frontend has pre-existing test errors (unrelated to changes)
+
+### Documentation
+- Created `docs/TRANSACTION_SCHEMA_UPDATE.md` - Comprehensive schema update documentation
+- Created `docs/GRAPHQL_ADD_TRANSACTION.md` - GraphQL mutation implementation guide
+
+### Next Steps
+1. **JWT Integration:** Replace hardcoded user ID with JWT token extraction
+2. **List Transactions Query:** Add GraphQL query to fetch transactions
+3. **Refetch Strategy:** Add `refetchQueries` to mutation for auto-update
+4. **Optimistic Updates:** Consider adding optimistic UI updates
+5. **Error Handling:** Implement typed error responses
+
+---
+
+## 2025-11-29 (Morning) - Frontend Implementation & UI Polish
 
 ### Overview
 Focused on building out the core frontend pages, improving navigation, and establishing a robust testing foundation. Implemented the Transactions page, Authentication UI, and a responsive Header component, backed by comprehensive unit tests.

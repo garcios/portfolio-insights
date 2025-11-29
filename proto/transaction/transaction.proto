@@ -24,6 +24,10 @@ message Transaction {
   google.protobuf.Timestamp executed_at = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
+  double brokerage = 10;
+  string notes = 11;
+  string price_currency = 12;
+  string brokerage_currency = 13;
 }
 
 message CreateTransactionRequest {
@@ -33,6 +37,10 @@ message CreateTransactionRequest {
   double quantity = 4;
   double price_per_share = 5;
   google.protobuf.Timestamp executed_at = 6;
+  double brokerage = 7;
+  string notes = 8;
+  string price_currency = 9;
+  string brokerage_currency = 10;
 }
 
 message CreateTransactionResponse {
@@ -65,6 +73,10 @@ message UpdateTransactionRequest {
   double quantity = 4;
   double price_per_share = 5;
   google.protobuf.Timestamp executed_at = 6;
+  double brokerage = 7;
+  string notes = 8;
+  string price_currency = 9;
+  string brokerage_currency = 10;
 }
 
 message UpdateTransactionResponse {

@@ -7,6 +7,7 @@ type Query {
 
 type Mutation {
   createUser(input: NewUser!): User!
+  addTransaction(input: NewTransaction!): Transaction!
 }
 
 type User {
@@ -53,4 +54,39 @@ input NewUser {
 type PortfolioPerformancePoint {
   timestamp: String!
   value: Float!
+}
+
+enum TransactionType {
+  BUY
+  SELL
+  SPLIT
+  DIVIDEND
+}
+
+type Transaction {
+  id: ID!
+  userId: ID!
+  symbol: String!
+  type: TransactionType!
+  quantity: Float!
+  pricePerShare: Float!
+  executedAt: String!
+  notes: String
+  brokerage: Float
+  priceCurrency: String
+  brokerageCurrency: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+input NewTransaction {
+  symbol: String!
+  quantity: Float!
+  pricePerShare: Float!
+  executedAt: String!
+  type: TransactionType!
+  notes: String
+  brokerage: Float
+  priceCurrency: String
+  brokerageCurrency: String
 }

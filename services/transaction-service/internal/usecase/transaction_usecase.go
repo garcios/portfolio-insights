@@ -3,11 +3,11 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/metrics"
+	"github.com/google/uuid"
 )
 
 type transactionUsecase struct {
@@ -26,123 +26,120 @@ func NewTransactionUsecase(repo domain.TransactionRepository, userGateway domain
 	}
 }
 
-func (uc *transactionUsecase) CreateTransaction(ctx context.Context, userID, symbol, txType string, quantity, price float64, executedAt time.Time) (*domain.Transaction, error) {
+func (uc *transactionUsecase) CreateTransaction(ctx context.Context, txn *domain.Transaction) error {
 	start := time.Now()
 	defer func() {
 		metrics.TransactionProcessingDuration.Observe(time.Since(start).Seconds())
 	}()
 
 	// Validate input
-	if txType != "BUY" && txType != "SELL" {
-		return nil, fmt.Errorf("invalid transaction type: %s", txType)
+	if txn.Type != "BUY" && txn.Type != "SELL" {
+		return fmt.Errorf("invalid transaction type: %s", txn.Type)
 	}
-	if quantity <= 0 {
-		return nil, fmt.Errorf("quantity must be positive")
+	if txn.Quantity <= 0 {
+		return fmt.Errorf("quantity must be positive")
 	}
-	if price < 0 {
-		return nil, fmt.Errorf("price must be non-negative")
+	if txn.PricePerShare < 0 {
+		return fmt.Errorf("price must be non-negative")
+	}
+	if txn.PriceCurrency != "" && len(txn.PriceCurrency) != 3 {
+		return fmt.Errorf("price_currency must be a 3-letter code")
+	}
+	if txn.BrokerageCurrency != "" && len(txn.BrokerageCurrency) != 3 {
+		return fmt.Errorf("brokerage_currency must be a 3-letter code")
 	}
 
 	// Validate User
 	userValidationStart := time.Now()
-	exists, err := uc.userGateway.Exists(ctx, userID)
+	exists, err := uc.userGateway.Exists(ctx, txn.UserID)
 	metrics.UserValidationDuration.Observe(time.Since(userValidationStart).Seconds())
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate user: %w", err)
+		return fmt.Errorf("failed to validate user: %w", err)
 	}
 	if !exists {
-		return nil, fmt.Errorf("user %s does not exist", userID)
+		return fmt.Errorf("user not found: %s", txn.UserID)
 	}
 
 	// Validate Asset
 	assetValidationStart := time.Now()
-	exists, err = uc.marketDataGateway.Exists(ctx, symbol)
+	exists, err = uc.marketDataGateway.Exists(ctx, txn.Symbol)
 	metrics.AssetValidationDuration.Observe(time.Since(assetValidationStart).Seconds())
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate asset: %w", err)
+		return fmt.Errorf("failed to validate asset: %w", err)
 	}
 	if !exists {
-		return nil, fmt.Errorf("asset %s does not exist", symbol)
+		return fmt.Errorf("asset %s does not exist", txn.Symbol)
 	}
 
-	tx := &domain.Transaction{
-		UserID:        userID,
-		Symbol:        symbol,
-		Type:          txType,
-		Quantity:      quantity,
-		PricePerShare: price,
-		ExecutedAt:    executedAt,
+	// Set timestamps and ID if not present
+	if txn.ID == "" {
+		txn.ID = uuid.New().String()
 	}
-	if err := uc.repo.Create(ctx, tx); err != nil {
-		return nil, err
+	now := time.Now()
+	if txn.CreatedAt.IsZero() {
+		txn.CreatedAt = now
+	}
+	if txn.UpdatedAt.IsZero() {
+		txn.UpdatedAt = now
+	}
+
+	if err := uc.repo.Create(ctx, txn); err != nil {
+		return err
 	}
 
 	// Record business metrics
-	metrics.TransactionsCreatedTotal.WithLabelValues(txType).Inc()
-	metrics.TransactionValueTotal.WithLabelValues(txType).Add(quantity * price)
+	metrics.TransactionsCreatedTotal.WithLabelValues(txn.Type).Inc()
+	metrics.TransactionValueTotal.WithLabelValues(txn.Type).Add(txn.Quantity * txn.PricePerShare)
 
 	// Publish transaction created event
-	if err := uc.eventPublisher.PublishTransactionCreated(ctx, tx); err != nil {
+	if err := uc.eventPublisher.PublishTransactionCreated(ctx, txn); err != nil {
 		// Log the error but don't fail the transaction creation
-		// In production, you might want to use a more sophisticated error handling strategy
 		fmt.Printf("failed to publish transaction created event: %v\n", err)
 	}
 
-	return tx, nil
+	return nil
 }
 
 func (uc *transactionUsecase) GetTransaction(ctx context.Context, id string) (*domain.Transaction, error) {
 	return uc.repo.GetByID(ctx, id)
 }
 
-func (uc *transactionUsecase) ListTransactions(ctx context.Context, userID string, pageSize int, pageToken string) ([]*domain.Transaction, string, error) {
-	limit := pageSize
-	offset := 0
-	if pageToken != "" {
-		var err error
-		offset, err = strconv.Atoi(pageToken)
-		if err != nil {
-			return nil, "", err
-		}
-	}
-
-	transactions, err := uc.repo.ListByUserID(ctx, userID, limit, offset)
-	if err != nil {
-		return nil, "", err
-	}
-
-	nextPageToken := ""
-	if len(transactions) == limit {
-		nextPageToken = strconv.Itoa(offset + limit)
-	}
-
-	return transactions, nextPageToken, nil
+func (uc *transactionUsecase) ListTransactions(ctx context.Context, userID string, limit, offset int) ([]*domain.Transaction, error) {
+	return uc.repo.ListByUserID(ctx, userID, limit, offset)
 }
 
-func (uc *transactionUsecase) UpdateTransaction(ctx context.Context, id, symbol, txType string, quantity, price float64, executedAt time.Time) (*domain.Transaction, error) {
-	tx, err := uc.repo.GetByID(ctx, id)
+func (uc *transactionUsecase) UpdateTransaction(ctx context.Context, txn *domain.Transaction) error {
+	existing, err := uc.repo.GetByID(ctx, txn.ID)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	if existing == nil {
+		return fmt.Errorf("transaction not found: %s", txn.ID)
 	}
 
-	tx.Symbol = symbol
-	tx.Type = txType
-	tx.Quantity = quantity
-	tx.PricePerShare = price
-	tx.ExecutedAt = executedAt
+	// Update fields
+	existing.Symbol = txn.Symbol
+	existing.Type = txn.Type
+	existing.Quantity = txn.Quantity
+	existing.PricePerShare = txn.PricePerShare
+	existing.ExecutedAt = txn.ExecutedAt
+	existing.Brokerage = txn.Brokerage
+	existing.Notes = txn.Notes
+	existing.PriceCurrency = txn.PriceCurrency
+	existing.BrokerageCurrency = txn.BrokerageCurrency
+	existing.UpdatedAt = time.Now()
 
-	if err := uc.repo.Update(ctx, tx); err != nil {
-		return nil, err
+	if err := uc.repo.Update(ctx, existing); err != nil {
+		return err
 	}
 
-	// TODO: Publish transaction updated event
+	// Update the input struct to reflect the updated state
+	*txn = *existing
 
-	return tx, nil
+	return nil
 }
 
 func (uc *transactionUsecase) DeleteTransaction(ctx context.Context, id string) error {
-
 	// TODO: Publish transaction deleted event
-
 	return uc.repo.Delete(ctx, id)
 }

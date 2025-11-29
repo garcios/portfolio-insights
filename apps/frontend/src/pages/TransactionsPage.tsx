@@ -7,7 +7,8 @@ import { mockTransactions } from '../mocks/transactions';
 import { Transaction } from '../types/transaction';
 
 const TransactionsPage = () => {
-    const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+    // Using mock data for now - will be replaced with GraphQL query
+    const transactions = mockTransactions;
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Transaction; direction: 'asc' | 'desc' } | null>({ key: 'date', direction: 'desc' });
@@ -57,14 +58,6 @@ const TransactionsPage = () => {
             direction = 'desc';
         }
         setSortConfig({ key, direction });
-    };
-
-    const handleAddTransaction = (newTransaction: Omit<Transaction, 'id'>) => {
-        const transaction: Transaction = {
-            ...newTransaction,
-            id: Math.random().toString(36).substr(2, 9), // Generate random ID
-        };
-        setTransactions(prev => [transaction, ...prev]);
     };
 
     const handleFileUpload = () => {
@@ -302,7 +295,10 @@ const TransactionsPage = () => {
             <AddTransactionModal
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
-                onSave={handleAddTransaction}
+                onSuccess={() => {
+                    // Optionally refetch transactions here
+                    // For now, the user can refresh the page
+                }}
             />
         </div>
     );

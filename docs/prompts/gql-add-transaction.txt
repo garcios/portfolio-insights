@@ -1,0 +1,101 @@
+Task:
+You will create a new GraphQL mutation that powers an existing UI component for adding a asset transaction. 
+The UI is already complete and currently works using mock data. Your job is to replace the mock layer with a real GraphQL endpoint.
+
+⸻
+
+Requirements
+
+1. Create a GraphQL Mutation
+Define a addTransaction mutation that accepts:
+	•	symbol: String!
+	•	userID: String!
+	•	quantity: Float!
+	•	price: Float!
+	•	tradeDate: Date! (ISO-8601)
+	•	type: TransactionType! (BUY/SELL/SPLIT/DIVIDEND enum)
+	•	notes: String (optional)
+	•	brokerage: Float (optional)
+
+Expected return type:
+A Transaction object with at least:
+	•	id
+	•	userID
+	•	symbol
+	•	type
+	•	quantity
+	•	price_per_share
+	•	executed_at
+	•	notes
+	•	brokerage
+	•	createdAt
+	•	updatedAt
+
+Include validation errors if needed.
+
+⸻
+
+2. Update the Schema
+
+Add necessary types:
+
+
+enum TransactionType {
+  BUY
+  SELL
+  SPLIT
+  DIVIDEND
+}
+
+type Transaction {
+  id: ID!
+  symbol: String!
+  quantity: Float!
+  price: Float!
+  tradeDate: Date!
+  type: TransactionType!
+  notes: String
+  brokerage: Float	
+  createdAt: Date!
+  updatedAt: Date!
+}
+
+extend type Mutation {
+  addTransaction(
+    symbol: String!
+    userID: String!
+    quantity: Float!
+    price: Float!
+    tradeDate: Date!
+    type: TransactionType!
+    notes: String
+    brokerage: Float
+  ): Transaction!
+}
+
+3. Implement the Resolver
+
+Implement the resolver in Go (using gqlgen) that:
+	•	Extracts the userID from the context (from the JWT), hardcode for now until JWT is implemented
+	•	Parses and validates inputs
+	•	Calls the transaction-service (CreateTransaction) to create the transaction
+	•	Returns the saved object
+	•	If validation fails → return standard GraphQL error structure
+	•	If persistence fails → return internal error
+
+
+4. Integrate With Existing UI Component
+
+Replace the mocked data provider with:
+	•	GraphQL mutation call using the new addTransaction mutation
+	•	Handle loading, error, and success states
+	•	On success, update local list OR refetch transaction list
+
+
+5. Acceptance Criteria
+	•	UI successfully creates transaction against live backend
+	•	Returned data matches the schema
+	•	Error surfaces cleanly in UI
+	•	No mock calls remain
+	•	Code follows project structure and conventions (Go + gqlgen)
+

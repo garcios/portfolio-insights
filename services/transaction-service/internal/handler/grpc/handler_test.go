@@ -14,19 +14,15 @@ type MockTransactionUsecase struct {
 	transactions map[string]*domain.Transaction
 }
 
-func (m *MockTransactionUsecase) CreateTransaction(ctx context.Context, userID, symbol, txType string, quantity, price float64, executedAt time.Time) (*domain.Transaction, error) {
-	if userID == "invalid-user" {
-		return nil, errors.New("user not found")
+func (m *MockTransactionUsecase) CreateTransaction(ctx context.Context, txn *domain.Transaction) error {
+	if txn.UserID == "invalid-user" {
+		return errors.New("user not found")
 	}
-	return &domain.Transaction{
-		ID:            "test-id",
-		UserID:        userID,
-		Symbol:        symbol,
-		Type:          txType,
-		Quantity:      quantity,
-		PricePerShare: price,
-		ExecutedAt:    executedAt,
-	}, nil
+	txn.ID = "test-id"
+	txn.CreatedAt = time.Now()
+	txn.UpdatedAt = time.Now()
+	m.transactions[txn.ID] = txn
+	return nil
 }
 
 func (m *MockTransactionUsecase) GetTransaction(ctx context.Context, id string) (*domain.Transaction, error) {
@@ -36,12 +32,17 @@ func (m *MockTransactionUsecase) GetTransaction(ctx context.Context, id string) 
 	return nil, errors.New("not found")
 }
 
-func (m *MockTransactionUsecase) ListTransactions(ctx context.Context, userID string, pageSize int, pageToken string) ([]*domain.Transaction, string, error) {
-	return nil, "", nil
+func (m *MockTransactionUsecase) ListTransactions(ctx context.Context, userID string, limit, offset int) ([]*domain.Transaction, error) {
+	return nil, nil
 }
 
-func (m *MockTransactionUsecase) UpdateTransaction(ctx context.Context, id, symbol, txType string, quantity, price float64, executedAt time.Time) (*domain.Transaction, error) {
-	return nil, nil
+func (m *MockTransactionUsecase) UpdateTransaction(ctx context.Context, txn *domain.Transaction) error {
+	if _, ok := m.transactions[txn.ID]; !ok {
+		return errors.New("not found")
+	}
+	txn.UpdatedAt = time.Now()
+	m.transactions[txn.ID] = txn
+	return nil
 }
 
 func (m *MockTransactionUsecase) DeleteTransaction(ctx context.Context, id string) error {

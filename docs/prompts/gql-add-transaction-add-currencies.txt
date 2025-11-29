@@ -1,0 +1,3 @@
+Task:
+You will update the addTransaction GraphQL mutation to accept price_currency and brokerage_currency fields.
+

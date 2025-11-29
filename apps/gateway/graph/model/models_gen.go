@@ -2,6 +2,12 @@
 
 package model
 
+import (
+	"fmt"
+	"io"
+	"strconv"
+)
+
 type Holding struct {
 	Symbol             string  `json:"symbol"`
 	Quantity           float64 `json:"quantity"`
@@ -15,6 +21,18 @@ type Holding struct {
 }
 
 type Mutation struct {
+}
+
+type NewTransaction struct {
+	Symbol            string          `json:"symbol"`
+	Quantity          float64         `json:"quantity"`
+	PricePerShare     float64         `json:"pricePerShare"`
+	ExecutedAt        string          `json:"executedAt"`
+	Type              TransactionType `json:"type"`
+	Notes             *string         `json:"notes,omitempty"`
+	Brokerage         *float64        `json:"brokerage,omitempty"`
+	PriceCurrency     *string         `json:"priceCurrency,omitempty"`
+	BrokerageCurrency *string         `json:"brokerageCurrency,omitempty"`
 }
 
 type NewUser struct {
@@ -48,8 +66,69 @@ type PortfolioSummary struct {
 type Query struct {
 }
 
+type Transaction struct {
+	ID                string          `json:"id"`
+	UserID            string          `json:"userId"`
+	Symbol            string          `json:"symbol"`
+	Type              TransactionType `json:"type"`
+	Quantity          float64         `json:"quantity"`
+	PricePerShare     float64         `json:"pricePerShare"`
+	ExecutedAt        string          `json:"executedAt"`
+	Notes             *string         `json:"notes,omitempty"`
+	Brokerage         *float64        `json:"brokerage,omitempty"`
+	PriceCurrency     *string         `json:"priceCurrency,omitempty"`
+	BrokerageCurrency *string         `json:"brokerageCurrency,omitempty"`
+	CreatedAt         string          `json:"createdAt"`
+	UpdatedAt         string          `json:"updatedAt"`
+}
+
 type User struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
+}
+
+type TransactionType string
+
+const (
+	TransactionTypeBuy      TransactionType = "BUY"
+	TransactionTypeSell     TransactionType = "SELL"
+	TransactionTypeSplit    TransactionType = "SPLIT"
+	TransactionTypeDividend TransactionType = "DIVIDEND"
+)
+
+var AllTransactionType = []TransactionType{
+	TransactionTypeBuy,
+	TransactionTypeSell,
+	TransactionTypeSplit,
+	TransactionTypeDividend,
+}
+
+func (e TransactionType) IsValid() bool {
+	switch e {
+	case TransactionTypeBuy, TransactionTypeSell, TransactionTypeSplit, TransactionTypeDividend:
+		return true
+	}
+	return false
+}
+
+func (e TransactionType) String() string {
+	return string(e)
+}
+
+func (e *TransactionType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TransactionType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TransactionType", str)
+	}
+	return nil
+}
+
+func (e TransactionType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }

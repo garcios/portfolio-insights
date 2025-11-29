@@ -11,6 +11,7 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
 	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -55,9 +56,25 @@ func main() {
 
 	userClient := userpb.NewUserServiceClient(userConn)
 
+	// Connect to transaction service
+	transactionServiceAddr := os.Getenv("TRANSACTION_SERVICE_ADDR")
+	if transactionServiceAddr == "" {
+		transactionServiceAddr = "localhost:50053"
+	}
+
+	transactionConn, err := grpc.NewClient(transactionServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		l.Error("Failed to connect to transaction service", "error", err)
+		os.Exit(1)
+	}
+	defer transactionConn.Close()
+
+	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
+
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{
-		PortfolioClient: portfolioClient,
-		UserClient:      userClient,
+		PortfolioClient:   portfolioClient,
+		UserClient:        userClient,
+		TransactionClient: transactionClient,
 	}}))
 
 	// CORS middleware

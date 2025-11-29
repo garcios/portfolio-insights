@@ -36,9 +36,11 @@ services:
     environment:
       - PORTFOLIO_SERVICE_ADDR=portfolio-service:50052
       - USER_SERVICE_ADDR=user-service:50051
+      - TRANSACTION_SERVICE_ADDR=transaction-service:50053
     depends_on:
       - user-service
       - portfolio-service
+      - transaction-service
 
   user-service:
     build:

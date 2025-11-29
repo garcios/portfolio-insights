@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useMutation } from '@apollo/client';
 import { X } from 'lucide-react';
-import { Transaction, TransactionType } from '../../types/transaction';
+import { TransactionType } from '../../types/transaction';
+import { ADD_TRANSACTION } from '../../graphql/mutations';
 
 interface AddTransactionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (transaction: Omit<Transaction, 'id'>) => void;
+    onSuccess?: () => void;
 }
 
-const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalProps) => {
+const AddTransactionModal = ({ isOpen, onClose, onSuccess }: AddTransactionModalProps) => {
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
         ticker: '',
@@ -16,11 +18,13 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
         quantity: 0,
         price: 0,
         brokerage: 0,
-        currency: 'USD',
-        notes: ''
+        priceCurrency: 'USD',
+        notes: '',
+        brokerageCurrency: ''
     });
 
     const [total, setTotal] = useState(0);
+    const [addTransaction, { loading, error }] = useMutation(ADD_TRANSACTION);
 
     // Calculate total automatically
     useEffect(() => {
@@ -53,7 +57,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Basic validation
@@ -62,26 +66,49 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
             return;
         }
 
-        onSave({
-            ...formData,
-            quantity: Number(formData.quantity),
-            price: Number(formData.price),
-            brokerage: Number(formData.brokerage),
-            total
-        });
+        try {
+            // Convert date to ISO-8601 format with time
+            const executedAt = new Date(formData.date + 'T00:00:00Z').toISOString();
 
-        // Reset form
-        setFormData({
-            date: new Date().toISOString().split('T')[0],
-            ticker: '',
-            type: 'BUY',
-            quantity: 0,
-            price: 0,
-            brokerage: 0,
-            currency: 'USD',
-            notes: ''
-        });
-        onClose();
+            await addTransaction({
+                variables: {
+                    input: {
+                        symbol: formData.ticker,
+                        type: formData.type,
+                        quantity: Number(formData.quantity),
+                        pricePerShare: Number(formData.price),
+                        priceCurrency: formData.priceCurrency || null,
+                        executedAt: executedAt,
+                        notes: formData.notes || null,
+                        brokerage: Number(formData.brokerage) || null,
+                        brokerageCurrency: formData.brokerageCurrency || null,
+                    }
+                }
+            });
+
+            // Reset form
+            setFormData({
+                date: new Date().toISOString().split('T')[0],
+                ticker: '',
+                type: 'BUY',
+                quantity: 0,
+                price: 0,
+                brokerage: 0,
+                priceCurrency: 'USD',
+                brokerageCurrency: '',
+                notes: ''
+            });
+
+            // Call success callback if provided
+            if (onSuccess) {
+                onSuccess();
+            }
+
+            onClose();
+        } catch (err) {
+            console.error('Failed to add transaction:', err);
+            alert('Failed to add transaction. Please try again.');
+        }
     };
 
     if (!isOpen) return null;
@@ -187,7 +214,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                             </div>
                         </div>
 
-                        {/* Type & Currency */}
+                        {/* Type & Quantity */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
@@ -212,33 +239,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                                     <option value="DIVIDEND">Dividend</option>
                                 </select>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
-                                    Currency
-                                </label>
-                                <select
-                                    name="currency"
-                                    value={formData.currency}
-                                    onChange={handleChange}
-                                    style={{
-                                        padding: '8px 12px',
-                                        borderRadius: '6px',
-                                        border: '1px solid var(--color-border)',
-                                        background: 'var(--color-bg-primary)',
-                                        color: 'var(--color-text-primary)',
-                                        fontSize: '0.875rem'
-                                    }}
-                                >
-                                    <option value="USD">USD</option>
-                                    <option value="AUD">AUD</option>
-                                    <option value="EUR">EUR</option>
-                                    <option value="GBP">GBP</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        {/* Quantity & Price */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
                                     Quantity *
@@ -261,6 +262,10 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                                     }}
                                 />
                             </div>
+                        </div>
+
+                        {/* Price & Currency */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
                                     Price per Share *
@@ -283,9 +288,34 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                                     }}
                                 />
                             </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
+                                    Currency
+                                </label>
+                                <select
+                                    name="priceCurrency"
+                                    value={formData.priceCurrency}
+                                    onChange={handleChange}
+                                    style={{
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        border: '1px solid var(--color-border)',
+                                        background: 'var(--color-bg-primary)',
+                                        color: 'var(--color-text-primary)',
+                                        fontSize: '0.875rem'
+                                    }}
+                                >
+                                    <option value="USD">USD</option>
+                                    <option value="AUD">AUD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
+                            </div>
+
                         </div>
 
-                        {/* Brokerage & Total */}
+                        {/* Brokerage & Currency */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
@@ -310,6 +340,32 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
+                                    Brokerage Currency
+                                </label>
+                                <select
+                                    name="currency"
+                                    value={formData.priceCurrency}
+                                    onChange={handleChange}
+                                    style={{
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        border: '1px solid var(--color-border)',
+                                        background: 'var(--color-bg-primary)',
+                                        color: 'var(--color-text-primary)',
+                                        fontSize: '0.875rem'
+                                    }}
+                                >
+                                    <option value="USD">USD</option>
+                                    <option value="AUD">AUD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)' }}>
                                     Total Amount
                                 </label>
                                 <div style={{
@@ -321,7 +377,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                                     fontWeight: '600',
                                     border: '1px solid transparent'
                                 }}>
-                                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: formData.currency }).format(total)}
+                                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: formData.priceCurrency }).format(total)}
                                 </div>
                             </div>
                         </div>
@@ -349,6 +405,20 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                         </div>
                     </div>
 
+                    {error && (
+                        <div style={{
+                            marginTop: '16px',
+                            padding: '12px',
+                            borderRadius: '6px',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            color: '#ef4444',
+                            fontSize: '0.875rem'
+                        }}>
+                            Error: {error.message}
+                        </div>
+                    )}
+
                     <div style={{
                         marginTop: '24px',
                         display: 'flex',
@@ -358,6 +428,7 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                         <button
                             type="button"
                             onClick={onClose}
+                            disabled={loading}
                             style={{
                                 padding: '8px 16px',
                                 borderRadius: '6px',
@@ -366,13 +437,15 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                                 color: 'var(--color-text-primary)',
                                 fontSize: '0.875rem',
                                 fontWeight: '500',
-                                cursor: 'pointer'
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                opacity: loading ? 0.5 : 1
                             }}
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
+                            disabled={loading}
                             style={{
                                 padding: '8px 16px',
                                 borderRadius: '6px',
@@ -381,10 +454,11 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: AddTransactionModalPro
                                 color: 'white',
                                 fontSize: '0.875rem',
                                 fontWeight: '500',
-                                cursor: 'pointer'
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                opacity: loading ? 0.7 : 1
                             }}
                         >
-                            Save Transaction
+                            {loading ? 'Saving...' : 'Save Transaction'}
                         </button>
                     </div>
                 </form>

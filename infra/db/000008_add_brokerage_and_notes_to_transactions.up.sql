@@ -1,0 +1,3 @@
+ALTER TABLE txn.transactions
+ADD COLUMN brokerage NUMERIC(20, 8) DEFAULT 0,
+ADD COLUMN notes VARCHAR(100);

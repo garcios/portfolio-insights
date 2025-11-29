@@ -1,0 +1,39 @@
+
+### **Task: Implement New Fields in Transaction Schema**
+
+You need to update the **database table**, the **Protocol Buffer schema**, and the **service model** to introduce two new fields for tracking transaction details.
+
+#### **1. Database Schema Update**
+
+In the txn.transaction table, add the following columns. Note the constraints:
+
+* brokerage: **`NUMERIC(20, 8)`**
+    * *Reason for Change:* Use a precise fixed-point number type for currency/monetary values instead of `FLOAT` to avoid floating-point precision errors.
+* notes: **`VARCHAR(100)`**
+    * *Note:* This column must accept text up to 100 characters.
+
+#### **2. Protocol Buffer Schema Update**
+
+In the transaction.proto file, add the corresponding fields:
+
+* brokerage: **`double`**
+    * *Note:* double is the standard type for representing DECIMAL/NUMERIC values from the database in Protocol Buffers.
+* notes: **`string`**
+
+#### **3. Application Service Update**
+
+In the transaction-service application:
+
+* Adjust the **Transaction model** (e.g., in Python/Java/Go) to include the new fields: brokerage and notes.
+* Ensure **data type mapping** is correct: DECIMAL/NUMERIC (DB) -> double (Proto) -> appropriate numeric type (Service Model).
+* Update any relevant **CRUD** (Create, Read, Update, Delete) or **mapping logic** to handle the storage and retrieval of these new fields.
+
+---
+
+### **Key Improvements**
+
+1.  **Corrected Data Type for Monetary Values:** Changed `float` to **`DECIMAL(20, 8)`** in the database to prevent financial calculation errors. This is a critical best practice.
+2.  **Explicit Database Type:** Used the more common `VARCHAR(100)` instead of generic `text` for the 100-character note.
+3.  **Actionable Structure:** Clearly separated the tasks into Database, Protocol Buffers, and Service updates.
+4.  **Included Mapping Note:** Added a reminder about ensuring correct data type mapping across the three layers (DB, Proto, Service).
+

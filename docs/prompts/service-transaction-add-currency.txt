@@ -1,0 +1,28 @@
+
+### **Task: Implement New Fields in Transaction Schema**
+
+You need to update the **database table**, the **Protocol Buffer schema**, and the **service model** to introduce two new fields for tracking transaction details.
+
+#### **1. Database Schema Update**
+
+In the txn.transaction table, add the following columns. Note the constraints:
+
+* price_currency: **`VARCHAR(3)`**
+* brokerage_currency: **`VARCHAR(3)`**
+
+#### **2. Protocol Buffer Schema Update**
+
+In the transaction.proto file, add the corresponding fields:
+
+* price_currency: **`string`**
+* brokerage_currency: **`string`**
+
+#### **3. Application Service Update**
+
+In the transaction-service application:
+
+* Adjust the **Transaction model**  to include the new fields: price_currency and brokerage_currency.
+* Update any relevant **CRUD** (Create, Read, Update, Delete) or **mapping logic** to handle the storage and retrieval of these new fields.
+
+---
+

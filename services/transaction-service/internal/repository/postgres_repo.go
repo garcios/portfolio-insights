@@ -17,8 +17,8 @@ func NewPostgresTransactionRepository(db *sql.DB) domain.TransactionRepository {
 
 func (r *postgresTransactionRepo) Create(ctx context.Context, transaction *domain.Transaction) error {
 	query := `
-		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at, brokerage, notes, price_currency, brokerage_currency)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRowContext(ctx, query,
@@ -28,6 +28,10 @@ func (r *postgresTransactionRepo) Create(ctx context.Context, transaction *domai
 		transaction.Quantity,
 		transaction.PricePerShare,
 		transaction.ExecutedAt,
+		transaction.Brokerage,
+		transaction.Notes,
+		transaction.PriceCurrency,
+		transaction.BrokerageCurrency,
 	).Scan(&transaction.ID, &transaction.CreatedAt, &transaction.UpdatedAt)
 }
 
@@ -43,24 +47,30 @@ func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions [
 	defer tx.Rollback()
 
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, created_at, updated_at
+		INSERT INTO txn.transactions (id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	for _, transaction := range transactions {
-		err = stmt.QueryRowContext(ctx,
-			transaction.UserID,
-			transaction.Symbol,
-			transaction.Type,
-			transaction.Quantity,
-			transaction.PricePerShare,
-			transaction.ExecutedAt,
-		).Scan(&transaction.ID, &transaction.CreatedAt, &transaction.UpdatedAt)
+	for _, txn := range transactions {
+		_, err = stmt.ExecContext(ctx,
+			txn.ID,
+			txn.UserID,
+			txn.Symbol,
+			txn.Type,
+			txn.Quantity,
+			txn.PricePerShare,
+			txn.ExecutedAt,
+			txn.CreatedAt,
+			txn.UpdatedAt,
+			txn.Brokerage,
+			txn.Notes,
+			txn.PriceCurrency,
+			txn.BrokerageCurrency,
+		)
 		if err != nil {
 			return err
 		}
@@ -71,23 +81,59 @@ func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions [
 
 func (r *postgresTransactionRepo) GetByID(ctx context.Context, id string) (*domain.Transaction, error) {
 	query := `
-		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at
+		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
 		FROM txn.transactions
 		WHERE id = $1
 	`
-	var t domain.Transaction
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&t.ID, &t.UserID, &t.Symbol, &t.Type, &t.Quantity, &t.PricePerShare, &t.ExecutedAt, &t.CreatedAt, &t.UpdatedAt,
+	row := r.db.QueryRowContext(ctx, query, id)
+
+	var txn domain.Transaction
+	var brokerage sql.NullFloat64
+	var notes sql.NullString
+	var priceCurrency sql.NullString
+	var brokerageCurrency sql.NullString
+
+	err := row.Scan(
+		&txn.ID,
+		&txn.UserID,
+		&txn.Symbol,
+		&txn.Type,
+		&txn.Quantity,
+		&txn.PricePerShare,
+		&txn.ExecutedAt,
+		&txn.CreatedAt,
+		&txn.UpdatedAt,
+		&brokerage,
+		&notes,
+		&priceCurrency,
+		&brokerageCurrency,
 	)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
-	return &t, nil
+
+	if brokerage.Valid {
+		txn.Brokerage = brokerage.Float64
+	}
+	if notes.Valid {
+		txn.Notes = notes.String
+	}
+	if priceCurrency.Valid {
+		txn.PriceCurrency = priceCurrency.String
+	}
+	if brokerageCurrency.Valid {
+		txn.BrokerageCurrency = brokerageCurrency.String
+	}
+
+	return &txn, nil
 }
 
 func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID string, limit, offset int) ([]*domain.Transaction, error) {
 	query := `
-		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at
+		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
 		FROM txn.transactions
 		WHERE user_id = $1
 		ORDER BY executed_at DESC
@@ -101,30 +147,68 @@ func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID strin
 
 	var transactions []*domain.Transaction
 	for rows.Next() {
-		var t domain.Transaction
-		if err := rows.Scan(&t.ID, &t.UserID, &t.Symbol, &t.Type, &t.Quantity, &t.PricePerShare, &t.ExecutedAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		var txn domain.Transaction
+		var brokerage sql.NullFloat64
+		var notes sql.NullString
+		var priceCurrency sql.NullString
+		var brokerageCurrency sql.NullString
+
+		if err := rows.Scan(
+			&txn.ID,
+			&txn.UserID,
+			&txn.Symbol,
+			&txn.Type,
+			&txn.Quantity,
+			&txn.PricePerShare,
+			&txn.ExecutedAt,
+			&txn.CreatedAt,
+			&txn.UpdatedAt,
+			&brokerage,
+			&notes,
+			&priceCurrency,
+			&brokerageCurrency,
+		); err != nil {
 			return nil, err
 		}
-		transactions = append(transactions, &t)
+
+		if brokerage.Valid {
+			txn.Brokerage = brokerage.Float64
+		}
+		if notes.Valid {
+			txn.Notes = notes.String
+		}
+		if priceCurrency.Valid {
+			txn.PriceCurrency = priceCurrency.String
+		}
+		if brokerageCurrency.Valid {
+			txn.BrokerageCurrency = brokerageCurrency.String
+		}
+
+		transactions = append(transactions, &txn)
 	}
 	return transactions, nil
 }
 
-func (r *postgresTransactionRepo) Update(ctx context.Context, transaction *domain.Transaction) error {
+func (r *postgresTransactionRepo) Update(ctx context.Context, txn *domain.Transaction) error {
 	query := `
 		UPDATE txn.transactions
-		SET symbol = $1, type = $2, quantity = $3, price_per_share = $4, executed_at = $5, updated_at = NOW()
-		WHERE id = $6
-		RETURNING updated_at
+		SET symbol = $1, type = $2, quantity = $3, price_per_share = $4, executed_at = $5, updated_at = $6, brokerage = $7, notes = $8, price_currency = $9, brokerage_currency = $10
+		WHERE id = $11
 	`
-	return r.db.QueryRowContext(ctx, query,
-		transaction.Symbol,
-		transaction.Type,
-		transaction.Quantity,
-		transaction.PricePerShare,
-		transaction.ExecutedAt,
-		transaction.ID,
-	).Scan(&transaction.UpdatedAt)
+	_, err := r.db.ExecContext(ctx, query,
+		txn.Symbol,
+		txn.Type,
+		txn.Quantity,
+		txn.PricePerShare,
+		txn.ExecutedAt,
+		txn.UpdatedAt,
+		txn.Brokerage,
+		txn.Notes,
+		txn.PriceCurrency,
+		txn.BrokerageCurrency,
+		txn.ID,
+	)
+	return err
 }
 
 func (r *postgresTransactionRepo) Delete(ctx context.Context, id string) error {

@@ -6,15 +6,19 @@ import (
 )
 
 type Transaction struct {
-	ID            string
-	UserID        string
-	Symbol        string
-	Type          string // BUY or SELL
-	Quantity      float64
-	PricePerShare float64
-	ExecutedAt    time.Time
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID                string    `json:"id"`
+	UserID            string    `json:"user_id"`
+	Symbol            string    `json:"symbol"`
+	Type              string    `json:"type"` // BUY or SELL
+	Quantity          float64   `json:"quantity"`
+	PricePerShare     float64   `json:"price_per_share"`
+	ExecutedAt        time.Time `json:"executed_at"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+	Brokerage         float64   `json:"brokerage"`
+	Notes             string    `json:"notes"`
+	PriceCurrency     string    `json:"price_currency"`
+	BrokerageCurrency string    `json:"brokerage_currency"`
 }
 
 type TransactionRepository interface {
@@ -39,9 +43,9 @@ type EventPublisher interface {
 }
 
 type TransactionUsecase interface {
-	CreateTransaction(ctx context.Context, userID, symbol, txType string, quantity, price float64, executedAt time.Time) (*Transaction, error)
+	CreateTransaction(ctx context.Context, txn *Transaction) error
 	GetTransaction(ctx context.Context, id string) (*Transaction, error)
-	ListTransactions(ctx context.Context, userID string, pageSize int, pageToken string) ([]*Transaction, string, error)
-	UpdateTransaction(ctx context.Context, id, symbol, txType string, quantity, price float64, executedAt time.Time) (*Transaction, error)
+	ListTransactions(ctx context.Context, userID string, limit, offset int) ([]*Transaction, error)
+	UpdateTransaction(ctx context.Context, txn *Transaction) error
 	DeleteTransaction(ctx context.Context, id string) error
 }
