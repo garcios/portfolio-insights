@@ -189,12 +189,24 @@ export async function refreshAccessToken(refreshToken: string): Promise<AuthToke
  * Initiate logout
  */
 export function logout(): void {
+    // Get tokens before clearing storage
+    const tokens = getStoredTokens();
+    const idToken = tokens?.idToken;
+
     // Clear tokens from storage
     localStorage.removeItem('auth_tokens');
     sessionStorage.clear();
 
     // Redirect to Hydra logout
-    window.location.href = `${HYDRA_LOGOUT_URL}?post_logout_redirect_uri=${encodeURIComponent(window.location.origin)}`;
+    const params = new URLSearchParams({
+        post_logout_redirect_uri: `${window.location.origin}/`,
+    });
+
+    if (idToken) {
+        params.append('id_token_hint', idToken);
+    }
+
+    window.location.href = `${HYDRA_LOGOUT_URL}?${params.toString()}`;
 }
 
 /**
