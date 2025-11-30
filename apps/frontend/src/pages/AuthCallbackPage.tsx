@@ -27,8 +27,8 @@ const AuthCallbackPage = () => {
 
             try {
                 await handleCallback(code, state);
-                // Redirect to home page after successful authentication
-                navigate('/', { replace: true });
+                // Redirect to dashboard after successful authentication
+                navigate('/dashboard', { replace: true });
             } catch (err) {
                 console.error('Callback error:', err);
                 setError(err instanceof Error ? err.message : 'Authentication failed');

@@ -29,7 +29,7 @@ const Header = () => {
     };
 
     const navLinks = [
-        { label: 'Overview', href: '/', id: 'overview' as const },
+        { label: 'Overview', href: '/dashboard', id: 'overview' as const },
         { label: 'Transactions', href: '/transactions', id: 'transactions' as const },
         { label: 'Asset Fundamentals', href: '/fundamentals', id: 'fundamentals' as const },
     ];

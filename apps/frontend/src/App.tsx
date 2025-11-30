@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { apolloClient } from './utils/apolloClient';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import HomePage from './pages/HomePage';
+import RegisterPage from './pages/RegisterPage';
 import OverviewPage from './pages/OverviewPage';
 import TransactionsPage from './pages/TransactionsPage';
 import AuthPage from './pages/AuthPage';
@@ -17,11 +19,13 @@ function App() {
                 <Router>
                     <Routes>
                         {/* Public routes */}
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/register" element={<RegisterPage />} />
                         <Route path="/login" element={<AuthPage />} />
                         <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
                         {/* Protected routes */}
-                        <Route path="/" element={
+                        <Route path="/dashboard" element={
                             <ProtectedRoute>
                                 <OverviewPage />
                             </ProtectedRoute>

@@ -1,0 +1,8 @@
+Goal: Develop the complete front-end structure and initial styling for the "Portfolio Insights" application homepage. The page must be visually appealing, clearly convey the application's purpose, and provide immediate, easy access to user registration and login functionalities.
+
+1. 🎯 Core Objectives & Content
+Application Name & Identity: Prominently feature the application name, "Portfolio Insights," and a concise, compelling tagline (e.g., "Smarter Investing. Clearer Decisions.").
+
+Value Proposition: Include a brief, compelling summary (2-3 bullet points or short paragraph) outlining the application's primary benefits (e.g., real-time performance tracking, risk analysis, historical data visualization).
+
+Call-to-Action (CTA) Focus: The page's primary goal is to convert visitors into registered users or log them in if they are returning.
