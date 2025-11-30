@@ -73,9 +73,9 @@ func TestQueryResolver_User(t *testing.T) {
 	mockUserClient := &MockUserServiceClient{
 		GetUserFunc: func(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.GetUserResponse, error) {
 			return &userpb.GetUserResponse{
-				Id:    "user-123",
-				Name:  "John Doe",
-				Email: "john@example.com",
+				Id:       "user-123",
+				Username: "John Doe",
+				Email:    "john@example.com",
 			}, nil
 		},
 	}
