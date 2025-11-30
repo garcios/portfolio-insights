@@ -39,6 +39,7 @@ graph TD
 
     Gateway -->|gRPC| UserService
     Gateway -->|gRPC| PortfolioService
+    MarketData -->|Fetches Prices| ExternalAPI["External API"]
     
     subgraph "Infrastructure"
         DB[(PostgreSQL)]
