@@ -11,34 +11,47 @@ The system follows a microservices architecture pattern, utilizing **gRPC** for 
 ```mermaid
 graph TD
     User[User] -->|HTTPS| Frontend["Frontend App (React)"]
-    Frontend -->|GraphQL| Gateway["API Gateway (Go/gqlgen)"]
+    
+    subgraph "API Layer"
+        Gateway["API Gateway (Go/gqlgen)"]
+    end
+
+    Frontend -->|GraphQL| Gateway
     Frontend -->|OAuth2 Flow| HydraPublic["Hydra Public API :4444"]
     Gateway -->|Validate JWT via JWKS| HydraPublic
     
     subgraph "Authentication (OAuth2/OIDC)"
         HydraPublic -->|Redirect to Login| LoginConsent["Login & Consent Provider :3002"]
-        LoginConsent -->|Verify Credentials| DB[(PostgreSQL)]
+        LoginConsent -->|Verify Credentials| DB
         LoginConsent -->|Accept/Reject| HydraAdmin["Hydra Admin API :4445"]
         HydraAdmin -->|SQL| HydraDB[(Hydra PostgreSQL)]
         HydraPublic -->|SQL| HydraDB
     end
     
     subgraph "Backend Services (Go)"
-        Gateway -->|gRPC| UserService[User Service]
-        Gateway -->|gRPC| PortfolioService[Portfolio Service]
+        UserService[User Service]
+        PortfolioService[Portfolio Service]
+        MarketData[Market Data Service]
+        TransactionService[Transaction Service]
         
-        PortfolioService -->|gRPC| MarketData[Market Data Service]
-        
-        TransactionService[Transaction Service] -->|Publishes Event| NATS[NATS Message Broker]
-        NATS -->|Consumes Event| PortfolioService
+        PortfolioService -->|gRPC| MarketData
     end
+
+    Gateway -->|gRPC| UserService
+    Gateway -->|gRPC| PortfolioService
     
     subgraph "Infrastructure"
-        UserService -->|SQL| DB
-        PortfolioService -->|SQL| DB
-        TransactionService -->|SQL| DB
-        PortfolioService -->|Cache| Redis[(Redis)]
+        DB[(PostgreSQL)]
+        NATS[NATS Message Broker]
+        Redis[(Redis)]
     end
+
+    UserService -->|SQL| DB
+    PortfolioService -->|SQL| DB
+    TransactionService -->|SQL| DB
+    PortfolioService -->|Cache| Redis
+    TransactionService -->|Publishes Event| NATS
+    NATS -->|Consumes Event| PortfolioService
     
     subgraph "Observability"
         UserService -->|Metrics| Prometheus[Prometheus]
