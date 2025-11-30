@@ -83,7 +83,7 @@ graph TD
     - CORS support for frontend integration.
 
 - **Login & Consent Provider**:
-  - **Tech Stack**: Node.js/Express.
+  - **Tech Stack**: Go, HTML.
   - **Responsibility**: Provides the login and consent UI for the OAuth2 flow.
   - **Features**:
     - User authentication against the main PostgreSQL database (`customers.users` table).
