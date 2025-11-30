@@ -18,6 +18,9 @@ podman-down:
 podman-logs:
 	podman-compose -f deployments/docker-compose/docker-compose.yml logs -f
 
+podman-build-gateway:
+	podman-compose -f deployments/docker-compose/docker-compose.yml up -d --build gateway
+
 monitoring-up:
 	./deployments/monitoring/start-monitoring.sh
 
@@ -26,6 +29,9 @@ monitoring-down:
 
 monitoring-logs:
 	podman logs -f prometheus
+
+hydra-build:
+	podman-compose -f deployments/docker-compose/docker-compose.hydra.yml build --no-cache login-consent-provider
 
 hydra-up:
 	podman-compose -f deployments/docker-compose/docker-compose.hydra.yml up -d
@@ -69,3 +75,6 @@ test-all:
 	cd services/user-service && go test ./internal/... -v
 	cd services/transaction-service && go test ./internal/... -v
 	cd services/portfolio-service && go test ./internal/... -v
+
+podman-prune:
+	podman system prune -a --volumes

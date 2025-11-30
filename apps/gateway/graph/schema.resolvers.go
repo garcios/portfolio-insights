@@ -18,7 +18,7 @@ import (
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
 	// Default password - in production this should come from input
-	user, err := r.Container.UserUseCase.CreateUser(ctx, input.Email, input.Username, "defaultPassword123")
+	user, err := r.Container.UserUseCase.CreateUser(ctx, input.Email, input.Username, input.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}

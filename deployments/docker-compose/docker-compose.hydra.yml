@@ -116,7 +116,7 @@ services:
     environment:
       DSN: postgres://hydra:hydra_secret@hydra-postgres:5432/hydra?sslmode=disable
 
-      URLS_SELF_ISSUER: http://localhost:4444
+      URLS_SELF_ISSUER: http://hydra-public:4444
       URLS_LOGIN: http://localhost:3002/login
       URLS_CONSENT: http://localhost:3002/consent
       URLS_LOGOUT: http://localhost:3002/logout
@@ -145,6 +145,7 @@ services:
 
     networks:
       - hydra-network
+      - default
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "wget", "--spider", "-q", "http://localhost:4444/health/ready" ]

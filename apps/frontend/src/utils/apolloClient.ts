@@ -13,10 +13,10 @@ const authLink = new ApolloLink((operation, forward) => {
     const tokens = getStoredTokens();
 
     // Add authorization header if token exists
-    if (tokens?.accessToken) {
+    if (tokens?.idToken) {
         operation.setContext({
             headers: {
-                authorization: `Bearer ${tokens.accessToken}`,
+                authorization: `Bearer ${tokens.idToken}`,
             },
         });
     }

@@ -33,6 +33,7 @@ func Middleware(config *Config) func(http.Handler) http.Handler {
 			// Extract token from Authorization header
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
+				fmt.Println("***Missing authorization header")
 				http.Error(w, "Missing authorization header", http.StatusUnauthorized)
 				return
 			}
@@ -40,6 +41,7 @@ func Middleware(config *Config) func(http.Handler) http.Handler {
 			// Check Bearer prefix
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || parts[0] != "Bearer" {
+				fmt.Println("***Invalid authorization header format")
 				http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
 				return
 			}
@@ -49,6 +51,7 @@ func Middleware(config *Config) func(http.Handler) http.Handler {
 			// Validate token
 			authCtx, err := validateToken(r.Context(), tokenString, config)
 			if err != nil {
+				fmt.Println("***Invalid token: ", err)
 				http.Error(w, fmt.Sprintf("Invalid token: %v", err), http.StatusUnauthorized)
 				return
 			}
@@ -137,6 +140,8 @@ func OptionalMiddleware(config *Config) func(http.Handler) http.Handler {
 				return
 			}
 
+			fmt.Println("***auth header: ", authHeader)
+
 			// Check Bearer prefix
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || parts[0] != "Bearer" {
@@ -151,6 +156,7 @@ func OptionalMiddleware(config *Config) func(http.Handler) http.Handler {
 			authCtx, err := validateToken(r.Context(), tokenString, config)
 			if err != nil {
 				// Invalid token, continue without auth context
+				fmt.Println("***Invalid token in optional middleware: ", err)
 				next.ServeHTTP(w, r)
 				return
 			}

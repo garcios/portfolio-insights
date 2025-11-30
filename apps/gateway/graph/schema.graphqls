@@ -1,16 +1,16 @@
 directive @auth(scopes: [String!]) on FIELD_DEFINITION
 
 type Query {
-  me: User @auth(scopes: ["openid"])
-  user(id: ID!): User
-  portfolio(id: ID!): Portfolio
-  portfolioPerformance(userId: ID!, period: String!): [PortfolioPerformancePoint!]!
+  me: User @auth
+  user(id: ID!): User @auth
+  portfolio(id: ID!): Portfolio @auth
+  portfolioPerformance(userId: ID!, period: String!): [PortfolioPerformancePoint!]! @auth
 }
 
 type Mutation {
   createUser(input: NewUser!): User!
-  createTransaction(input: NewTransaction!): Transaction!
-  uploadTransactionCSV(file: Upload!): Boolean!
+  createTransaction(input: NewTransaction!): Transaction! @auth
+  uploadTransactionCSV(file: Upload!): Boolean! @auth
 }
 
 scalar Upload
@@ -54,6 +54,7 @@ type Holding {
 input NewUser {
   username: String!
   email: String!
+  password: String!
 }
 
 type PortfolioPerformancePoint {

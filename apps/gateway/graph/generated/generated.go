@@ -616,16 +616,16 @@ var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `directive @auth(scopes: [String!]) on FIELD_DEFINITION
 
 type Query {
-  me: User @auth(scopes: ["openid"])
-  user(id: ID!): User
-  portfolio(id: ID!): Portfolio
-  portfolioPerformance(userId: ID!, period: String!): [PortfolioPerformancePoint!]!
+  me: User @auth
+  user(id: ID!): User @auth
+  portfolio(id: ID!): Portfolio @auth
+  portfolioPerformance(userId: ID!, period: String!): [PortfolioPerformancePoint!]! @auth
 }
 
 type Mutation {
   createUser(input: NewUser!): User!
-  createTransaction(input: NewTransaction!): Transaction!
-  uploadTransactionCSV(file: Upload!): Boolean!
+  createTransaction(input: NewTransaction!): Transaction! @auth
+  uploadTransactionCSV(file: Upload!): Boolean! @auth
 }
 
 scalar Upload
@@ -669,6 +669,7 @@ type Holding {
 input NewUser {
   username: String!
   email: String!
+  password: String!
 }
 
 type PortfolioPerformancePoint {
@@ -1357,8 +1358,28 @@ func (ec *executionContext) _Mutation_createTransaction(ctx context.Context, fie
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateTransaction(rctx, fc.Args["input"].(model.NewTransaction))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().CreateTransaction(rctx, fc.Args["input"].(model.NewTransaction))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0, nil)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Transaction); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/garcios/portfolio-insights/apps/gateway/graph/model.Transaction`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1440,8 +1461,28 @@ func (ec *executionContext) _Mutation_uploadTransactionCSV(ctx context.Context, 
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UploadTransactionCSV(rctx, fc.Args["file"].(graphql.Upload))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Mutation().UploadTransactionCSV(rctx, fc.Args["file"].(graphql.Upload))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0, nil)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(bool); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be bool`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2149,14 +2190,10 @@ func (ec *executionContext) _Query_me(ctx context.Context, field graphql.Collect
 			return ec.resolvers.Query().Me(rctx)
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
-			scopes, err := ec.unmarshalOString2ᚕstringᚄ(ctx, []interface{}{"openid"})
-			if err != nil {
-				return nil, err
-			}
 			if ec.directives.Auth == nil {
 				return nil, errors.New("directive auth is not implemented")
 			}
-			return ec.directives.Auth(ctx, nil, directive0, scopes)
+			return ec.directives.Auth(ctx, nil, directive0, nil)
 		}
 
 		tmp, err := directive1(rctx)
@@ -2217,8 +2254,28 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().User(rctx, fc.Args["id"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().User(rctx, fc.Args["id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0, nil)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.User); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/garcios/portfolio-insights/apps/gateway/graph/model.User`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2277,8 +2334,28 @@ func (ec *executionContext) _Query_portfolio(ctx context.Context, field graphql.
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Portfolio(rctx, fc.Args["id"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().Portfolio(rctx, fc.Args["id"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0, nil)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Portfolio); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/garcios/portfolio-insights/apps/gateway/graph/model.Portfolio`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2341,8 +2418,28 @@ func (ec *executionContext) _Query_portfolioPerformance(ctx context.Context, fie
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().PortfolioPerformance(rctx, fc.Args["userId"].(string), fc.Args["period"].(string))
+		directive0 := func(rctx context.Context) (interface{}, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().PortfolioPerformance(rctx, fc.Args["userId"].(string), fc.Args["period"].(string))
+		}
+		directive1 := func(ctx context.Context) (interface{}, error) {
+			if ec.directives.Auth == nil {
+				return nil, errors.New("directive auth is not implemented")
+			}
+			return ec.directives.Auth(ctx, nil, directive0, nil)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.([]*model.PortfolioPerformancePoint); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/garcios/portfolio-insights/apps/gateway/graph/model.PortfolioPerformancePoint`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5073,7 +5170,7 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"username", "email"}
+	fieldsInOrder := [...]string{"username", "email", "password"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -5094,6 +5191,13 @@ func (ec *executionContext) unmarshalInputNewUser(ctx context.Context, obj inter
 				return it, err
 			}
 			it.Email = data
+		case "password":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("password"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Password = data
 		}
 	}
 
