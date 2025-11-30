@@ -13,6 +13,16 @@ graph TD
     User[User] -->|HTTPS| Frontend["Frontend App (React)"]
     Frontend -->|GraphQL| Gateway["API Gateway (Go/gqlgen)"]
     
+    subgraph "Authentication (OAuth2/OIDC)"
+        Frontend -->|OAuth2 Flow| HydraPublic["Hydra Public API :4444"]
+        HydraPublic -->|Redirect to Login| LoginConsent["Login & Consent Provider :3002"]
+        LoginConsent -->|Verify Credentials| DB[(PostgreSQL)]
+        LoginConsent -->|Accept/Reject| HydraAdmin["Hydra Admin API :4445"]
+        HydraAdmin -->|SQL| HydraDB[(Hydra PostgreSQL)]
+        HydraPublic -->|SQL| HydraDB
+        Gateway -->|Validate JWT via JWKS| HydraPublic
+    end
+    
     subgraph "Backend Services (Go)"
         Gateway -->|gRPC| UserService[User Service]
         Gateway -->|gRPC| PortfolioService[Portfolio Service]
@@ -24,7 +34,7 @@ graph TD
     end
     
     subgraph "Infrastructure"
-        UserService -->|SQL| DB[(PostgreSQL)]
+        UserService -->|SQL| DB
         PortfolioService -->|SQL| DB
         TransactionService -->|SQL| DB
         PortfolioService -->|Cache| Redis[(Redis)]
@@ -46,7 +56,29 @@ graph TD
 
 ## 🧩 Components
 
-### 1. Frontend Layer (`apps/frontend`)
+### 1. Authentication Layer
+
+- **Hydra OAuth2/OIDC Server**:
+  - **Tech Stack**: Ory Hydra v2.2.0, PostgreSQL.
+  - **Responsibility**: Provides OAuth2 and OpenID Connect authentication.
+  - **Components**:
+    - **Hydra Public API** (`:4444`): Handles OAuth2 flows, token issuance, and JWKS endpoint.
+    - **Hydra Admin API** (`:4445`): Internal API for managing OAuth2 clients, accepting login/consent requests.
+  - **Features**:
+    - JWT-based access tokens.
+    - Configurable token TTLs (15m access, 720h refresh).
+    - CORS support for frontend integration.
+
+- **Login & Consent Provider**:
+  - **Tech Stack**: Node.js/Express.
+  - **Responsibility**: Provides the login and consent UI for the OAuth2 flow.
+  - **Features**:
+    - User authentication against the main PostgreSQL database (`customers.users` table).
+    - Consent management for OAuth2 scopes.
+    - Session management with secure cookies.
+    - Integration with Hydra Admin API for login/consent acceptance.
+
+### 2. Frontend Layer (`apps/frontend`)
 - **Tech Stack**: React, TypeScript, Vite, Apollo Client.
 - **Responsibility**: Provides the user interface for portfolio management.
 - **Features**:
@@ -55,16 +87,16 @@ graph TD
   - Interactive charts (recharts).
   - GraphQL integration for efficient data fetching.
 
-### 2. API Gateway (`apps/gateway`)
+### 3. API Gateway (`apps/gateway`)
 - **Tech Stack**: Go, gqlgen.
 - **Responsibility**: Acts as the single entry point (BFF) for the frontend.
 - **Features**:
   - Exposes a unified GraphQL Schema.
-  - Handles Authentication & Authorization (planned).
+  - Handles Authentication & Authorization via Hydra OAuth2/OIDC (JWT validation).
   - Orchestrates calls to backend microservices via gRPC.
   - CORS configuration for secure frontend access.
 
-### 3. Microservices (`services/`)
+### 4. Microservices (`services/`)
 All services follow **Clean Architecture** principles (Domain, Usecase, Repository/Adapter layers).
 
 - **User Service**:
@@ -85,12 +117,12 @@ All services follow **Clean Architecture** principles (Domain, Usecase, Reposito
   - Provides stock price information.
   - **Tech**: Go, gRPC.
 
-### 4. Infrastructure
+### 5. Infrastructure
 - **NATS**: Cloud-native messaging system used for the event bus.
 - **PostgreSQL**: Relational database for persistent storage.
 - **Redis**: In-memory cache for market data prices (reduces API calls to external providers).
 
-### 5. Observability
+### 6. Observability
 - **Prometheus**: Metrics collection and time-series database. Scrapes metrics from all services.
 - **Grafana**: Visualization and dashboarding platform. Provides real-time insights into system health and performance.
 - **Alertmanager**: Handles alerts from Prometheus and routes them to appropriate channels (e.g., email, Slack).
