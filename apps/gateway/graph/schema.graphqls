@@ -3,8 +3,8 @@ directive @auth(scopes: [String!]) on FIELD_DEFINITION
 type Query {
   me: User @auth
   user(id: ID!): User @auth
-  portfolio(id: ID!): Portfolio @auth
-  portfolioPerformance(userId: ID!, period: String!): [PortfolioPerformancePoint!]! @auth
+  portfolio: Portfolio @auth
+  portfolioPerformance(period: String!): [PortfolioPerformancePoint!]! @auth
 }
 
 type Mutation {

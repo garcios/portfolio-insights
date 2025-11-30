@@ -110,9 +110,14 @@ func (r *queryResolver) User(ctx context.Context, id string) (*model.User, error
 }
 
 // Portfolio is the resolver for the portfolio field.
-func (r *queryResolver) Portfolio(ctx context.Context, id string) (*model.Portfolio, error) {
+func (r *queryResolver) Portfolio(ctx context.Context) (*model.Portfolio, error) {
+	userID, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user ID from context: %w", err)
+	}
+
 	// Get portfolio from use case
-	portfolio, err := r.Container.PortfolioUseCase.GetPortfolio(ctx, id)
+	portfolio, err := r.Container.PortfolioUseCase.GetPortfolio(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get portfolio: %w", err)
 	}
@@ -121,7 +126,12 @@ func (r *queryResolver) Portfolio(ctx context.Context, id string) (*model.Portfo
 }
 
 // PortfolioPerformance is the resolver for the portfolioPerformance field.
-func (r *queryResolver) PortfolioPerformance(ctx context.Context, userID string, period string) ([]*model.PortfolioPerformancePoint, error) {
+func (r *queryResolver) PortfolioPerformance(ctx context.Context, period string) ([]*model.PortfolioPerformancePoint, error) {
+	userID, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user ID from context: %w", err)
+	}
+
 	dataPoints, err := r.Container.PortfolioUseCase.GetPortfolioPerformance(ctx, userID, period)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get portfolio performance: %w", err)

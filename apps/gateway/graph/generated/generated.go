@@ -91,8 +91,8 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Me                   func(childComplexity int) int
-		Portfolio            func(childComplexity int, id string) int
-		PortfolioPerformance func(childComplexity int, userID string, period string) int
+		Portfolio            func(childComplexity int) int
+		PortfolioPerformance func(childComplexity int, period string) int
 		User                 func(childComplexity int, id string) int
 	}
 
@@ -131,8 +131,8 @@ type PortfolioResolver interface {
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	User(ctx context.Context, id string) (*model.User, error)
-	Portfolio(ctx context.Context, id string) (*model.Portfolio, error)
-	PortfolioPerformance(ctx context.Context, userID string, period string) ([]*model.PortfolioPerformancePoint, error)
+	Portfolio(ctx context.Context) (*model.Portfolio, error)
+	PortfolioPerformance(ctx context.Context, period string) ([]*model.PortfolioPerformancePoint, error)
 }
 
 type executableSchema struct {
@@ -363,12 +363,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		args, err := ec.field_Query_portfolio_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Portfolio(childComplexity, args["id"].(string)), true
+		return e.complexity.Query.Portfolio(childComplexity), true
 
 	case "Query.portfolioPerformance":
 		if e.complexity.Query.PortfolioPerformance == nil {
@@ -380,7 +375,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.PortfolioPerformance(childComplexity, args["userId"].(string), args["period"].(string)), true
+		return e.complexity.Query.PortfolioPerformance(childComplexity, args["period"].(string)), true
 
 	case "Query.user":
 		if e.complexity.Query.User == nil {
@@ -618,8 +613,8 @@ var sources = []*ast.Source{
 type Query {
   me: User @auth
   user(id: ID!): User @auth
-  portfolio(id: ID!): Portfolio @auth
-  portfolioPerformance(userId: ID!, period: String!): [PortfolioPerformancePoint!]! @auth
+  portfolio: Portfolio @auth
+  portfolioPerformance(period: String!): [PortfolioPerformancePoint!]! @auth
 }
 
 type Mutation {
@@ -798,38 +793,14 @@ func (ec *executionContext) field_Query_portfolioPerformance_args(ctx context.Co
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["userId"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["userId"] = arg0
-	var arg1 string
 	if tmp, ok := rawArgs["period"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("period"))
-		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["period"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_portfolio_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalNID2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["id"] = arg0
+	args["period"] = arg0
 	return args, nil
 }
 
@@ -2336,7 +2307,7 @@ func (ec *executionContext) _Query_portfolio(ctx context.Context, field graphql.
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Portfolio(rctx, fc.Args["id"].(string))
+			return ec.resolvers.Query().Portfolio(rctx)
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {
@@ -2391,17 +2362,6 @@ func (ec *executionContext) fieldContext_Query_portfolio(ctx context.Context, fi
 			return nil, fmt.Errorf("no field named %q was found under type Portfolio", field.Name)
 		},
 	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_portfolio_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
 	return fc, nil
 }
 
@@ -2420,7 +2380,7 @@ func (ec *executionContext) _Query_portfolioPerformance(ctx context.Context, fie
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		directive0 := func(rctx context.Context) (interface{}, error) {
 			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().PortfolioPerformance(rctx, fc.Args["userId"].(string), fc.Args["period"].(string))
+			return ec.resolvers.Query().PortfolioPerformance(rctx, fc.Args["period"].(string))
 		}
 		directive1 := func(ctx context.Context) (interface{}, error) {
 			if ec.directives.Auth == nil {

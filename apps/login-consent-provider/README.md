@@ -227,6 +227,13 @@ http://localhost:4445/admin/clients/portfolio-insights-spa
 podman-compose -f deployments/docker-compose/docker-compose.hydra.yml build --no-cache login-consent-provider
 ```
 
+### etc/hosts
+
+When testing locally, add the following line to your `/etc/hosts` file:
+
+```sh
+127.0.0.1   hydra-public
+```
 
 
 

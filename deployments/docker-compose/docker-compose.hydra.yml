@@ -148,7 +148,7 @@ services:
       - default
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:4444/health/ready" ]
+      test: [ "CMD", "wget", "--spider", "-q", "http://hydra-public:4444/health/ready" ]
       interval: 10s
       timeout: 5s
       retries: 5

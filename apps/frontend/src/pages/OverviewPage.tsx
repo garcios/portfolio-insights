@@ -14,8 +14,8 @@ import Header from '../components/Header';
 import { PortfolioPerformance } from '../types/portfolio';
 
 const GET_PORTFOLIO = gql`
-  query GetPortfolio($id: ID!) {
-    portfolio(id: $id) {
+  query GetPortfolio {
+    portfolio {
       id
       userId
       name
@@ -44,8 +44,8 @@ const GET_PORTFOLIO = gql`
 `;
 
 const GET_PORTFOLIO_PERFORMANCE = gql`
-  query GetPortfolioPerformance($userId: ID!, $period: String!) {
-    portfolioPerformance(userId: $userId, period: $period) {
+  query GetPortfolioPerformance($period: String!) {
+    portfolioPerformance(period: $period) {
       timestamp
       value
     }
@@ -53,12 +53,9 @@ const GET_PORTFOLIO_PERFORMANCE = gql`
 `;
 
 const OverviewPage = () => {
-    // Hardcoded user ID for demo purposes
-    const userId = "02b28ee7-9ba2-427a-b918-a3d8e2cc00dc";
     const [selectedPeriod, setSelectedPeriod] = useState('1m');
 
     const { loading, error, data } = useQuery(GET_PORTFOLIO, {
-        variables: { id: userId },
         pollInterval: 30000, // Refresh every 30 seconds
     });
 
@@ -66,7 +63,7 @@ const OverviewPage = () => {
         loading: performanceLoading,
         data: performanceData,
     } = useQuery(GET_PORTFOLIO_PERFORMANCE, {
-        variables: { userId, period: selectedPeriod },
+        variables: { period: selectedPeriod },
         pollInterval: 60000, // Refresh every 60 seconds
     });
 
