@@ -12,15 +12,15 @@ The system follows a microservices architecture pattern, utilizing **gRPC** for 
 graph TD
     User[User] -->|HTTPS| Frontend["Frontend App (React)"]
     Frontend -->|GraphQL| Gateway["API Gateway (Go/gqlgen)"]
+    Frontend -->|OAuth2 Flow| HydraPublic["Hydra Public API :4444"]
+    Gateway -->|Validate JWT via JWKS| HydraPublic
     
     subgraph "Authentication (OAuth2/OIDC)"
-        Frontend -->|OAuth2 Flow| HydraPublic["Hydra Public API :4444"]
         HydraPublic -->|Redirect to Login| LoginConsent["Login & Consent Provider :3002"]
         LoginConsent -->|Verify Credentials| DB[(PostgreSQL)]
         LoginConsent -->|Accept/Reject| HydraAdmin["Hydra Admin API :4445"]
         HydraAdmin -->|SQL| HydraDB[(Hydra PostgreSQL)]
         HydraPublic -->|SQL| HydraDB
-        Gateway -->|Validate JWT via JWKS| HydraPublic
     end
     
     subgraph "Backend Services (Go)"
