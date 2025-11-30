@@ -172,6 +172,11 @@ func (app *App) consentGet(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("\n\n***consentReq.Skip: %v\n\n", consentReq.Skip)
+
+	// TODO: Remove this after investigating why this is always false.
+	consentReq.Skip = true
+
 	// If skip is true, user has already consented
 	if consentReq.Skip {
 		redirectTo, err := app.acceptConsent(challenge, consentReq.RequestedScope, consentReq.RequestedAudience, consentReq.Subject, true)

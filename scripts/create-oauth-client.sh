@@ -28,7 +28,8 @@ curl -X POST http://localhost:4445/admin/clients \
     "scope": "openid offline profile email portfolio:read portfolio:write transactions:read transactions:write",
     "redirect_uris": ["http://localhost:5173/auth/callback", "http://localhost:5173/"],
     "post_logout_redirect_uris": ["http://localhost:5173/"],
-    "token_endpoint_auth_method": "none"
+    "token_endpoint_auth_method": "none",
+    "skip_consent": true
   }'
 
 echo ""

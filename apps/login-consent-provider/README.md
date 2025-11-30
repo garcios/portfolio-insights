@@ -216,6 +216,20 @@ The application is designed to work with Ory Hydra. Test the complete flow:
 
 See `deployments/docker-compose/docker-compose.hydra.yml` for production configuration.
 
+
+### Getting the client information
+
+http://localhost:4445/admin/clients/portfolio-insights-spa
+
+### Rebuilld the docker image
+
+```sh
+podman-compose -f deployments/docker-compose/docker-compose.hydra.yml build --no-cache login-consent-provider
+```
+
+
+
+
 ## License
 
 Part of Portfolio Insights project.
