@@ -40,7 +40,7 @@ func (g *UserGRPCGateway) GetUser(ctx context.Context, id string) (*entity.User,
 func (g *UserGRPCGateway) CreateUser(ctx context.Context, email, username, password string) (*entity.User, error) {
 	req := &userpb.CreateUserRequest{
 		Email:    email,
-		Name:     username,
+		Username: username,
 		Password: password,
 	}
 

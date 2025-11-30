@@ -39,11 +39,11 @@ This is the user-facing identity layer.
 Implement OAuth2/OIDC security inside the gqlgen gateway:
 
 3.1 Middleware for Access Token Validation
-	•	Add an HTTP middleware (chi or echo preferred) that:
-	•	Extracts Authorization: Bearer <token>
-	•	Fetches Hydra JWKS (/oauth2/jwks)
-	•	Validates JWT signature, audience, issuer, expiration
-	•	Injects user identity into GraphQL context
+	•	Add an HTTP middleware (gin preferred) that:
+		- Extracts Authorization: Bearer <token>
+		- Fetches Hydra JWKS (/oauth2/jwks)
+		- Validates JWT signature, audience, issuer, expiration
+		- Injects user identity into GraphQL context
 
 3.2 GraphQL Context Population
 	•	Extend gqlgen context with:

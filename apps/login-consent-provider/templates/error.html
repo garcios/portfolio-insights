@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Portfolio Insights</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #c33;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .error-details {
+            background: #fee;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #c33;
+            text-align: left;
+            margin-bottom: 24px;
+        }
+
+        .error-details strong {
+            color: #c33;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .error-details code {
+            color: #666;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .footer {
+            margin-top: 20px;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="error-icon">⚠️</div>
+        <h1>Oops! Something went wrong</h1>
+        <p>We encountered an error while processing your request.</p>
+
+        {{if .error}}
+        <div class="error-details">
+            <strong>Error:</strong>
+            <code>{{.error}}</code>
+            {{if .description}}
+            <br><br>
+            <strong>Description:</strong>
+            <code>{{.description}}</code>
+            {{end}}
+        </div>
+        {{end}}
+
+        <a href="http://localhost:5173" class="btn">Return to Application</a>
+
+        <div class="footer">
+            <p>Portfolio Insights &copy; 2025</p>
+        </div>
+    </div>
+</body>
+
+</html>

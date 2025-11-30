@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { User, Settings, Bell, LogOut, Moon, Sun } from 'lucide-react';
+import { useAuth } from '../auth/AuthContext';
 
 const UserMenu = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark mode
     const menuRef = useRef<HTMLDivElement>(null);
+    const { user, logout } = useAuth();
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -44,11 +46,16 @@ const UserMenu = () => {
         // In a real app, you'd update the theme context/state here
     };
 
+    const handleLogout = () => {
+        logout();
+        setIsOpen(false);
+    };
+
     const menuItems = [
         { icon: Settings, label: 'Settings', onClick: () => console.log('Settings') },
         { icon: Bell, label: 'Notifications', onClick: () => console.log('Notifications') },
         { icon: isDarkMode ? Sun : Moon, label: isDarkMode ? 'Light Mode' : 'Dark Mode', onClick: toggleTheme },
-        { icon: LogOut, label: 'Sign Out', onClick: () => console.log('Sign out'), isDanger: true },
+        { icon: LogOut, label: 'Sign Out', onClick: handleLogout, isDanger: true },
     ];
 
     return (
@@ -118,7 +125,7 @@ const UserMenu = () => {
                                 marginBottom: '4px',
                             }}
                         >
-                            Demo User
+                            {user?.username || user?.email?.split('@')[0] || 'User'}
                         </p>
                         <p
                             style={{
@@ -126,7 +133,7 @@ const UserMenu = () => {
                                 color: 'var(--color-text-tertiary)',
                             }}
                         >
-                            demo@portfolio.com
+                            {user?.email || 'user@portfolio.com'}
                         </p>
                     </div>
 

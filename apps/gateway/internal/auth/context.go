@@ -2,22 +2,73 @@ package auth
 
 import (
 	"context"
+	"errors"
 )
+
+// AuthContext holds authenticated user information
+type AuthContext struct {
+	UserID string
+	Email  string
+	Scopes []string
+	Claims map[string]interface{}
+}
 
 type contextKey string
 
-const userIDKey contextKey = "user_id"
+const authContextKey contextKey = "auth_context"
 
-// UserIDFromContext retrieves the user ID from the context.
-// Resolvers should use this to get the authenticated user.
-func UserIDFromContext(ctx context.Context) (string, error) {
-	if id, ok := ctx.Value(userIDKey).(string); ok {
-		return id, nil
+// WithAuthContext adds auth context to the context
+func WithAuthContext(ctx context.Context, authCtx *AuthContext) context.Context {
+	return context.WithValue(ctx, authContextKey, authCtx)
+}
+
+// AuthContextFromContext retrieves auth context from the context
+func AuthContextFromContext(ctx context.Context) (*AuthContext, error) {
+	authCtx, ok := ctx.Value(authContextKey).(*AuthContext)
+	if !ok || authCtx == nil {
+		return nil, errors.New("no auth context found")
 	}
+	return authCtx, nil
+}
 
-	// For now, hardcode user ID until JWT is implemented
-	// In production, extract from JWT token in context
-	userID := "02b28ee7-9ba2-427a-b918-a3d8e2cc00dc"
+// UserIDFromContext retrieves user ID from the context
+func UserIDFromContext(ctx context.Context) (string, error) {
+	authCtx, err := AuthContextFromContext(ctx)
+	if err != nil {
+		return "", err
+	}
+	if authCtx.UserID == "" {
+		return "", errors.New("user ID not found in auth context")
+	}
+	return authCtx.UserID, nil
+}
 
-	return userID, nil
+// HasScope checks if the auth context has a specific scope
+func (a *AuthContext) HasScope(scope string) bool {
+	for _, s := range a.Scopes {
+		if s == scope {
+			return true
+		}
+	}
+	return false
+}
+
+// HasAnyScope checks if the auth context has any of the specified scopes
+func (a *AuthContext) HasAnyScope(scopes []string) bool {
+	for _, required := range scopes {
+		if a.HasScope(required) {
+			return true
+		}
+	}
+	return false
+}
+
+// HasAllScopes checks if the auth context has all of the specified scopes
+func (a *AuthContext) HasAllScopes(scopes []string) bool {
+	for _, required := range scopes {
+		if !a.HasScope(required) {
+			return false
+		}
+	}
+	return true
 }

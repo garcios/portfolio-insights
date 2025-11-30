@@ -1,5 +1,7 @@
+directive @auth(scopes: [String!]) on FIELD_DEFINITION
+
 type Query {
-  me: User
+  me: User @auth(scopes: ["openid"])
   user(id: ID!): User
   portfolio(id: ID!): Portfolio
   portfolioPerformance(userId: ID!, period: String!): [PortfolioPerformancePoint!]!

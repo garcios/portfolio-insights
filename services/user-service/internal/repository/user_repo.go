@@ -25,7 +25,7 @@ func (r *userRepository) GetByID(id string) (*domain.User, error) {
 	}()
 
 	query := `
-		SELECT id, email, name, password_hash, created_at, updated_at
+		SELECT id, email, username, password_hash, created_at, updated_at
 		FROM customers.users
 		WHERE id = $1
 	`
@@ -34,7 +34,7 @@ func (r *userRepository) GetByID(id string) (*domain.User, error) {
 	err := r.db.QueryRow(query, id).Scan(
 		&user.ID,
 		&user.Email,
-		&user.Name,
+		&user.Username,
 		&user.Password,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -55,7 +55,7 @@ func (r *userRepository) GetByID(id string) (*domain.User, error) {
 func (r *userRepository) Create(user *domain.User) error {
 	start := time.Now()
 	query := `
-		INSERT INTO customers.users (email, name, password_hash, created_at, updated_at)
+		INSERT INTO customers.users (email, username, password_hash, created_at, updated_at)
 		VALUES ($1, $2, $3, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
@@ -63,7 +63,7 @@ func (r *userRepository) Create(user *domain.User) error {
 	err := r.db.QueryRow(
 		query,
 		user.Email,
-		user.Name,
+		user.Username,
 		user.Password,
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
@@ -85,7 +85,7 @@ func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 	}()
 
 	query := `
-		SELECT id, email, name, password_hash, created_at, updated_at
+		SELECT id, email, username, password_hash, created_at, updated_at
 		FROM customers.users
 		WHERE email = $1
 	`
@@ -94,7 +94,7 @@ func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 	err := r.db.QueryRow(query, email).Scan(
 		&user.ID,
 		&user.Email,
-		&user.Name,
+		&user.Username,
 		&user.Password,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -116,7 +116,7 @@ func (r *userRepository) Update(user *domain.User) error {
 	start := time.Now()
 	query := `
 		UPDATE customers.users
-		SET email = $1, name = $2, password_hash = $3, updated_at = NOW()
+		SET email = $1, username = $2, password_hash = $3, updated_at = NOW()
 		WHERE id = $4
 		RETURNING updated_at
 	`
@@ -124,7 +124,7 @@ func (r *userRepository) Update(user *domain.User) error {
 	err := r.db.QueryRow(
 		query,
 		user.Email,
-		user.Name,
+		user.Username,
 		user.Password,
 		user.ID,
 	).Scan(&user.UpdatedAt)

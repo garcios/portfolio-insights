@@ -50,9 +50,9 @@ func TestUserUsecase_GetUser(t *testing.T) {
 		GetByIDFunc: func(id string) (*domain.User, error) {
 			if id == "existing-id" {
 				return &domain.User{
-					ID:    "existing-id",
-					Name:  "Test User",
-					Email: "test@example.com",
+					ID:       "existing-id",
+					Username: "Test User",
+					Email:    "test@example.com",
 				}, nil
 			}
 			return nil, errors.New("user not found")

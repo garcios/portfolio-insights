@@ -14,9 +14,9 @@ import (
 
 func TestProtoToUserEntity(t *testing.T) {
 	pb := &userpb.GetUserResponse{
-		Id:    "user-1",
-		Name:  "testuser",
-		Email: "test@example.com",
+		Id:       "user-1",
+		Username: "testuser",
+		Email:    "test@example.com",
 	}
 
 	user := ProtoToUserEntity(pb)
@@ -24,8 +24,8 @@ func TestProtoToUserEntity(t *testing.T) {
 	if user.ID != pb.Id {
 		t.Errorf("expected ID %s, got %s", pb.Id, user.ID)
 	}
-	if user.Username != pb.Name {
-		t.Errorf("expected Username %s, got %s", pb.Name, user.Username)
+	if user.Username != pb.Username {
+		t.Errorf("expected Username %s, got %s", pb.Username, user.Username)
 	}
 	if user.Email != pb.Email {
 		t.Errorf("expected Email %s, got %s", pb.Email, user.Email)

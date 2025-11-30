@@ -5,7 +5,7 @@ import "time"
 type User struct {
 	ID        string
 	Email     string
-	Name      string
+	Username  string
 	Password  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -22,5 +22,5 @@ type UserRepository interface {
 
 type UserUsecase interface {
 	GetUser(id string) (*User, error)
-	CreateUser(email, name, password string) (*User, error)
+	CreateUser(email, username, password string) (*User, error)
 }

@@ -1,7 +1,7 @@
 .PHONY: run-gateway run-user run-portfolio
 
 run-gateway:
-	cd apps/gateway && go run cmd/server/main.go
+	cd apps/gateway && HYDRA_PUBLIC_URL=http://localhost:4444 go run cmd/server/main.go
 
 run-user:
 	cd services/user-service && go run cmd/server/main.go
@@ -27,6 +27,14 @@ monitoring-down:
 monitoring-logs:
 	podman logs -f prometheus
 
+hydra-up:
+	podman-compose -f deployments/docker-compose/docker-compose.hydra.yml up -d
+
+hydra-down:
+	podman-compose -f deployments/docker-compose/docker-compose.hydra.yml down 
+
+hydra-logs:
+	podman-compose -f deployments/docker-compose/docker-compose.hydra.yml logs -f
 
 proto-gen:
 	@mkdir -p services/user-service/proto/user

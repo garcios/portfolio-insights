@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/garcios/portfolio-insights/services/user-service/internal/domain"
 )
 
@@ -16,14 +18,19 @@ func (uc *UserUsecase) GetUser(id string) (*domain.User, error) {
 	return uc.repo.GetByID(id)
 }
 
-func (uc *UserUsecase) CreateUser(email, name, password string) (*domain.User, error) {
+func (uc *UserUsecase) CreateUser(email, username, password string) (*domain.User, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
 	// Add validation logic here
 	u := &domain.User{
 		Email:    email,
-		Name:     name,
-		Password: password, // Hash this in real impl
+		Username: username,
+		Password: string(hashedPassword),
 	}
-	err := uc.repo.Create(u)
+	err = uc.repo.Create(u)
 	if err != nil {
 		return nil, err
 	}

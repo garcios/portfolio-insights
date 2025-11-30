@@ -4,6 +4,268 @@ A chronological record of development progress, features implemented, and techni
 
 ---
 
+## 2025-11-29 (Evening) - Gateway Clean Architecture Refactoring & CSV Upload
+
+### Overview
+Major refactoring of the GraphQL Gateway to implement Clean Architecture principles, followed by implementation of CSV file upload functionality for bulk transaction imports. This represents a significant architectural improvement that enhances maintainability, testability, and separation of concerns.
+
+### Features Implemented
+
+#### 1. Gateway Clean Architecture Refactoring
+**Status:** ✅ Complete
+
+**Architecture Layers:**
+
+**Domain Layer** (`internal/domain/`)
+- **Entities:** Core business objects
+  - `User` - User domain entity
+  - `Portfolio`, `PortfolioSummary`, `Holding`, `PortfolioPerformancePoint` - Portfolio entities
+  - `Transaction` - Transaction entity with builder methods
+- **Gateway Interfaces:** Abstract contracts for external services
+  - `UserGateway` - User service operations
+  - `PortfolioGateway` - Portfolio service operations
+  - `TransactionGateway` - Transaction service operations
+  - `TransactionFileGateway` - File upload operations
+
+**Use Case Layer** (`internal/usecase/`)
+- `UserUseCase` - User business logic (GetUser, CreateUser, GetCurrentUser)
+- `PortfolioUseCase` - Portfolio operations (GetPortfolio, GetSummary, GetHoldings, GetPerformance)
+- `TransactionUseCase` - Transaction logic with validation (CreateTransaction, UploadCSV)
+
+**Infrastructure Layer** (`internal/infrastructure/`)
+- **gRPC Gateways:**
+  - `UserGRPCGateway` - User service client
+  - `PortfolioGRPCGateway` - Portfolio service client
+  - `TransactionGRPCGateway` - Transaction service client
+- **HTTP Gateway:**
+  - `TransactionHTTPGateway` - Streaming CSV upload to transaction service
+- **Mappers:**
+  - `proto_mapper.go` - Protobuf ↔ Domain conversion
+  - `graphql_mapper.go` - GraphQL ↔ Domain conversion
+
+**Presentation Layer** (`graph/`)
+- Refactored resolvers to be thin, delegating to use cases
+- Removed direct gRPC client dependencies
+- Clean separation of GraphQL concerns from business logic
+
+**Dependency Injection** (`internal/container/`)
+- `Container` struct managing all dependencies
+- Centralized initialization and wiring
+- Updated `main.go` to use container
+
+**Testing:**
+- ✅ Use case tests (`*_usecase_test.go`) - Business logic validation
+- ✅ Infrastructure mapper tests (`proto_mapper_test.go`) - Protobuf conversion
+- ✅ GraphQL mapper tests (`graphql_mapper_test.go`) - GraphQL conversion
+- ✅ Resolver tests (`resolver_test.go`) - Updated for new architecture
+- All tests passing
+
+**Documentation:**
+- `CLEAN_ARCHITECTURE.md` - Comprehensive architecture guide
+- `ARCHITECTURE_DIAGRAMS.md` - Visual diagrams and data flow
+- `REFACTORING_SUMMARY.md` - Detailed refactoring summary
+
+**Cleanup:**
+- Removed `internal/service` directory (replaced by use cases)
+- Removed `internal/util` directory (no longer needed)
+
+#### 2. CSV Upload Feature
+**Status:** ✅ Complete
+
+**Backend (Gateway):**
+
+**GraphQL Schema:**
+```graphql
+scalar Upload
+
+extend type Mutation {
+  uploadTransactionCSV(file: Upload!): Boolean!
+}
+```
+
+**Domain Layer:**
+- Added `TransactionFileGateway` interface with `UploadCSV` method
+- Accepts `io.Reader` for streaming file content
+
+**Infrastructure Layer:**
+- `TransactionHTTPGateway` implementation
+  - Streams file to `transaction-service:8081/upload-csv`
+  - Uses `multipart/form-data` for file transfer
+  - Passes `user_id` as query parameter
+  - No file buffering in gateway memory
+
+**Use Case Layer:**
+- `TransactionUseCase.UploadCSV` method
+  - Validates file and filename
+  - Delegates to file gateway
+
+**Resolver:**
+- `uploadTransactionCSV` mutation implementation
+  - Extracts user ID from auth context
+  - Calls use case with file reader
+  - Returns success/failure boolean
+
+**Configuration:**
+- Added `TRANSACTION_SERVICE_HTTP_ADDR` environment variable
+- Updated `docker-compose.yml` with HTTP endpoint URL
+- Container initialized with transaction service URL
+
+**Frontend:**
+
+**GraphQL Mutation:**
+```typescript
+export const UPLOAD_TRANSACTION_CSV = gql`
+  mutation UploadTransactionCSV($file: Upload!) {
+    uploadTransactionCSV(file: $file)
+  }
+`;
+```
+
+**Custom Upload Link:**
+- Created `createUploadLink.ts` - Custom Apollo Link
+- Detects `File` objects in variables
+- Sends multipart/form-data requests
+- Follows GraphQL multipart request specification
+- No external dependencies required
+
+**Apollo Client:**
+- Updated `apolloClient.ts` to use `createUploadLink`
+- Replaced standard `HttpLink` with upload-capable link
+
+**UI Integration:**
+- Updated `TransactionsPage.tsx`
+- Wired "Upload CSV" button to mutation
+- File selection dialog
+- Success/error handling
+- Alert notifications
+
+**Transaction Service Updates:**
+- Updated CSV parser to handle new fields:
+  - `brokerage`, `notes`, `price_currency`, `brokerage_currency`
+- Updated repository to insert all fields
+- Fixed bulk insert SQL statement
+
+### Technical Decisions
+
+#### 1. Clean Architecture Benefits
+**Decision:** Refactor gateway to Clean Architecture pattern
+
+**Rationale:**
+- **Testability:** Each layer can be tested in isolation with mocks
+- **Maintainability:** Clear separation of concerns
+- **Flexibility:** Easy to swap implementations (e.g., gRPC → REST)
+- **Scalability:** New features fit naturally into existing structure
+
+**Trade-offs:**
+- Initial complexity increase
+- More files and interfaces
+- Learning curve for new developers
+
+#### 2. Streaming File Upload
+**Decision:** Stream files directly without buffering in gateway
+
+**Rationale:**
+- **Memory Efficiency:** Large CSV files don't consume gateway memory
+- **Performance:** Direct streaming to transaction service
+- **Scalability:** Can handle files of any size
+
+**Implementation:**
+- Gateway receives `graphql.Upload` with `io.Reader`
+- Creates multipart request with file stream
+- Transaction service processes stream directly
+
+#### 3. Custom Upload Link
+**Decision:** Implement custom Apollo Link instead of using `apollo-upload-client`
+
+**Rationale:**
+- **No Dependencies:** Avoids external package
+- **Control:** Full control over multipart request format
+- **Simplicity:** Straightforward implementation
+- **Compatibility:** Works with standard Apollo Client
+
+**Implementation:**
+- Detects `File` objects in variables
+- Builds GraphQL multipart request spec
+- Handles both file and non-file requests
+
+#### 4. Dependency Injection Container
+**Decision:** Centralize dependency management in Container
+
+**Rationale:**
+- **Single Source of Truth:** All dependencies initialized in one place
+- **Easier Testing:** Mock entire container or individual components
+- **Clearer Dependencies:** Explicit dependency graph
+- **Reduced Coupling:** Components depend on interfaces, not implementations
+
+### Data Flow
+
+#### Clean Architecture Data Flow:
+```
+GraphQL Request
+    ↓
+Resolver (Presentation)
+    ↓
+Use Case (Business Logic)
+    ↓
+Gateway Interface (Domain)
+    ↓
+gRPC/HTTP Gateway (Infrastructure)
+    ↓
+External Service
+```
+
+#### CSV Upload Flow:
+```
+Frontend File Selection
+    ↓
+GraphQL Mutation (multipart/form-data)
+    ↓
+Gateway Resolver
+    ↓
+TransactionUseCase.UploadCSV
+    ↓
+TransactionHTTPGateway (streaming)
+    ↓
+Transaction Service HTTP Endpoint
+    ↓
+CSV Parser & Bulk Insert
+    ↓
+PostgreSQL
+```
+
+### Build Status
+- ✅ Gateway builds successfully
+- ✅ All tests passing (use cases, mappers, resolvers)
+- ✅ Frontend compiles without errors
+- ✅ Docker Compose configuration updated
+- ✅ Services start successfully
+
+### Documentation Created
+1. **Architecture Documentation:**
+   - `apps/gateway/CLEAN_ARCHITECTURE.md`
+   - `apps/gateway/ARCHITECTURE_DIAGRAMS.md`
+   - `apps/gateway/REFACTORING_SUMMARY.md`
+
+2. **Code Documentation:**
+   - Comprehensive inline comments
+   - Interface documentation
+   - Test documentation
+
+### Testing Coverage
+- **Use Cases:** 100% of public methods tested
+- **Mappers:** All conversion functions tested
+- **Resolvers:** Integration tests with mocked container
+
+### Next Steps
+1. **JWT Integration:** Extract user ID from JWT tokens instead of hardcoding
+2. **File Validation:** Add CSV format validation before upload
+3. **Progress Tracking:** WebSocket for upload progress updates
+4. **Error Details:** Return detailed validation errors from CSV parsing
+5. **Batch Processing:** Support for very large CSV files with chunking
+6. **OAuth2/OIDC:** Implement Ory Hydra integration for authentication
+
+---
+
 ## 2025-11-29 (Afternoon) - Transaction Schema Extension & GraphQL Mutation
 
 ### Overview
@@ -745,4 +1007,42 @@ Portfolio Insights is a personal project for investment tracking and analysis.
 
 ---
 
-*Last Updated: 2025-11-28 15:30 AEDT*
+## OAuth2/OIDC Implementation with Ory Hydra
+**Date:** 2025-11-30
+
+### Overview
+Successfully implemented a complete OAuth2/OpenID Connect authentication system using Ory Hydra. This replaces the previous mock authentication and provides a secure, standards-compliant identity layer for the application.
+
+### Key Components Implemented
+
+#### 1. Infrastructure
+- **Ory Hydra:** Deployed via Docker Compose with PostgreSQL persistence.
+- **Login/Consent Provider:** Created a standalone Go application (`apps/login-consent-provider`) to handle user authentication and consent flows.
+- **OAuth Client:** Automated registration script (`scripts/create-oauth-client.sh`) for the frontend SPA.
+
+#### 2. Backend (Gateway)
+- **JWT Middleware:** Implemented secure token validation using Hydra's JWKS.
+- **Auth Context:** Created mechanism to inject authenticated user info into GraphQL resolvers.
+- **Authorization Directives:** Added `@auth` directive to the GraphQL schema for declarative access control.
+- **JWKS Caching:** Implemented caching to optimize performance and reduce load on Hydra.
+
+#### 3. Frontend (React)
+- **PKCE Flow:** Implemented Proof Key for Code Exchange for secure public client authentication.
+- **Auth Context:** Created React context for managing authentication state and automatic token refresh.
+- **Protected Routes:** Implemented route guards to secure private pages.
+- **UI Integration:** Updated Login page, Header, and User Menu to use real authentication data.
+
+### Documentation Created
+- `docs/AUTH_HYDRA_IMPLEMENTATION.md`: Comprehensive architecture and implementation guide.
+- `docs/AUTH_HYDRA_QUICKSTART.md`: Step-by-step setup guide.
+- `docs/run_instructions.md`: Instructions for running the complete stack.
+- `apps/login-consent-provider/README.md`: Documentation for the provider app.
+
+### Next Steps
+- Verify end-to-end flow in development environment.
+- Add more granular scopes for fine-grained access control.
+- Implement user registration flow in the Login Provider.
+
+---
+
+*Last Updated: 2025-11-30 10:00 AEDT*

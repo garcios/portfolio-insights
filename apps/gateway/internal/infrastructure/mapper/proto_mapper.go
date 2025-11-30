@@ -11,7 +11,7 @@ import (
 
 // ProtoToUserEntity converts a protobuf GetUserResponse to a User entity
 func ProtoToUserEntity(resp *userpb.GetUserResponse) *entity.User {
-	return entity.NewUser(resp.Id, resp.Name, resp.Email)
+	return entity.NewUser(resp.Id, resp.Username, resp.Email)
 }
 
 // ProtoToPortfolioSummaryEntity converts a protobuf PortfolioSummary to a PortfolioSummary entity

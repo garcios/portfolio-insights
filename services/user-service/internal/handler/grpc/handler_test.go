@@ -19,8 +19,8 @@ func (m *MockUserUsecase) GetUser(id string) (*domain.User, error) {
 	return m.GetUserFunc(id)
 }
 
-func (m *MockUserUsecase) CreateUser(email, name, password string) (*domain.User, error) {
-	return m.CreateUserFunc(email, name, password)
+func (m *MockUserUsecase) CreateUser(email, username, password string) (*domain.User, error) {
+	return m.CreateUserFunc(email, username, password)
 }
 
 func TestUserHandler_GetUser(t *testing.T) {
@@ -28,9 +28,9 @@ func TestUserHandler_GetUser(t *testing.T) {
 		GetUserFunc: func(id string) (*domain.User, error) {
 			if id == "existing-id" {
 				return &domain.User{
-					ID:    "existing-id",
-					Name:  "Test User",
-					Email: "test@example.com",
+					ID:       "existing-id",
+					Username: "Test User",
+					Email:    "test@example.com",
 				}, nil
 			}
 			return nil, errors.New("user not found")
@@ -72,14 +72,14 @@ func TestUserHandler_GetUser(t *testing.T) {
 
 func TestUserHandler_CreateUser(t *testing.T) {
 	mockUC := &MockUserUsecase{
-		CreateUserFunc: func(email, name, password string) (*domain.User, error) {
+		CreateUserFunc: func(email, username, password string) (*domain.User, error) {
 			if email == "error@example.com" {
 				return nil, errors.New("creation failed")
 			}
 			return &domain.User{
-				ID:    "generated-id",
-				Email: email,
-				Name:  name,
+				ID:       "generated-id",
+				Email:    email,
+				Username: username,
 			}, nil
 		},
 	}
@@ -96,7 +96,7 @@ func TestUserHandler_CreateUser(t *testing.T) {
 			name: "Success",
 			req: &pb.CreateUserRequest{
 				Email:    "test@example.com",
-				Name:     "Test User",
+				Username: "Test User",
 				Password: "password",
 			},
 			wantID:  "generated-id",
@@ -106,7 +106,7 @@ func TestUserHandler_CreateUser(t *testing.T) {
 			name: "Error",
 			req: &pb.CreateUserRequest{
 				Email:    "error@example.com",
-				Name:     "Error User",
+				Username: "Error User",
 				Password: "password",
 			},
 			wantID:  "",

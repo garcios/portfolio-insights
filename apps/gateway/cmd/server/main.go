@@ -4,11 +4,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
@@ -81,12 +83,59 @@ func main() {
 	// Initialize dependency injection container
 	c := container.NewContainer(userClient, portfolioClient, transactionClient, transactionServiceHTTPAddr)
 
+	// Initialize JWT authentication (optional for development)
+	var authMiddleware func(http.Handler) http.Handler
+
+	hydraPublicURL := os.Getenv("HYDRA_PUBLIC_URL")
+	if hydraPublicURL != "" {
+		// JWT authentication enabled
+		jwksURL := os.Getenv("JWKS_URL")
+		if jwksURL == "" {
+			jwksURL = hydraPublicURL + "/.well-known/jwks.json"
+		}
+
+		jwtIssuer := os.Getenv("JWT_ISSUER")
+		if jwtIssuer == "" {
+			jwtIssuer = hydraPublicURL
+		}
+
+		jwtAudience := os.Getenv("JWT_AUDIENCE")
+		if jwtAudience == "" {
+			jwtAudience = "portfolio-insights-spa"
+		}
+
+		// Create JWKS fetcher
+		jwksFetcher := auth.NewJWKSFetcher(jwksURL, 1*time.Hour)
+
+		// Create auth config
+		authConfig := &auth.Config{
+			JWKSFetcher: jwksFetcher,
+			Issuer:      jwtIssuer,
+			Audience:    jwtAudience,
+			SkipPaths:   []string{"/", "/health"},
+		}
+
+		// Use optional middleware for GraphQL (allows introspection)
+		authMiddleware = auth.OptionalMiddleware(authConfig)
+		l.Info("JWT authentication enabled", "issuer", jwtIssuer, "jwks_url", jwksURL)
+	} else {
+		// No authentication (development mode)
+		authMiddleware = func(next http.Handler) http.Handler {
+			return next
+		}
+		l.Info("JWT authentication disabled (development mode)")
+	}
+
 	// Create GraphQL server with clean architecture
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
+	// Create GraphQL server with clean architecture
+	config := generated.Config{
 		Resolvers: &graph.Resolver{
 			Container: c,
 		},
-	}))
+	}
+	config.Directives.Auth = auth.Directive
+
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(config))
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {
@@ -105,7 +154,7 @@ func main() {
 	}
 
 	http.Handle("/", corsMiddleware(playground.Handler("GraphQL playground", "/query")))
-	http.Handle("/query", corsMiddleware(srv))
+	http.Handle("/query", corsMiddleware(authMiddleware(srv)))
 
 	l.Info("connect to http://localhost:" + port + "/ for GraphQL playground")
 	log.Fatal(http.ListenAndServe(":"+port, nil))

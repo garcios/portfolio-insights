@@ -21,11 +21,11 @@ func (h *UserHandler) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 	if err != nil {
 		return nil, err
 	}
-	return &pb.GetUserResponse{Id: u.ID, Name: u.Name, Email: u.Email}, nil
+	return &pb.GetUserResponse{Id: u.ID, Username: u.Username, Email: u.Email}, nil
 }
 
 func (h *UserHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
-	user, err := h.uc.CreateUser(req.Email, req.Name, req.Password)
+	user, err := h.uc.CreateUser(req.Email, req.Username, req.Password)
 	if err != nil {
 		return nil, err
 	}
