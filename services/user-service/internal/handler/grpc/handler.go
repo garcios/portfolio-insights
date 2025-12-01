@@ -31,3 +31,16 @@ func (h *UserHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	}
 	return &pb.CreateUserResponse{Id: user.ID}, nil
 }
+
+func (h *UserHandler) VerifyUser(ctx context.Context, req *pb.VerifyUserRequest) (*pb.VerifyUserResponse, error) {
+	user, err := h.uc.VerifyUser(req.Email, req.Password)
+	if err != nil {
+		return &pb.VerifyUserResponse{Valid: false}, nil
+	}
+	return &pb.VerifyUserResponse{
+		Valid:    true,
+		Id:       user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+	}, nil
+}

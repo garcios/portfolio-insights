@@ -13,6 +13,7 @@ import (
 type MockUserUsecase struct {
 	GetUserFunc    func(id string) (*domain.User, error)
 	CreateUserFunc func(email, name, password string) (*domain.User, error)
+	VerifyUserFunc func(email, password string) (*domain.User, error)
 }
 
 func (m *MockUserUsecase) GetUser(id string) (*domain.User, error) {
@@ -21,6 +22,10 @@ func (m *MockUserUsecase) GetUser(id string) (*domain.User, error) {
 
 func (m *MockUserUsecase) CreateUser(email, username, password string) (*domain.User, error) {
 	return m.CreateUserFunc(email, username, password)
+}
+
+func (m *MockUserUsecase) VerifyUser(email, password string) (*domain.User, error) {
+	return m.VerifyUserFunc(email, password)
 }
 
 func TestUserHandler_GetUser(t *testing.T) {
@@ -123,6 +128,59 @@ func TestUserHandler_CreateUser(t *testing.T) {
 			}
 			if !tt.wantErr && resp.Id != tt.wantID {
 				t.Errorf("UserHandler.CreateUser() ID = %v, want %v", resp.Id, tt.wantID)
+			}
+		})
+	}
+}
+
+func TestUserHandler_VerifyUser(t *testing.T) {
+	mockUC := &MockUserUsecase{
+		VerifyUserFunc: func(email, password string) (*domain.User, error) {
+			if email == "valid@example.com" && password == "password" {
+				return &domain.User{
+					ID:       "user-id",
+					Email:    email,
+					Username: "Valid User",
+				}, nil
+			}
+			return nil, errors.New("invalid credentials")
+		},
+	}
+
+	h := NewUserHandler(mockUC)
+
+	tests := []struct {
+		name      string
+		req       *pb.VerifyUserRequest
+		wantValid bool
+	}{
+		{
+			name: "Valid",
+			req: &pb.VerifyUserRequest{
+				Email:    "valid@example.com",
+				Password: "password",
+			},
+			wantValid: true,
+		},
+		{
+			name: "Invalid",
+			req: &pb.VerifyUserRequest{
+				Email:    "invalid@example.com",
+				Password: "password",
+			},
+			wantValid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := h.VerifyUser(context.Background(), tt.req)
+			if err != nil {
+				t.Errorf("UserHandler.VerifyUser() error = %v", err)
+				return
+			}
+			if resp.Valid != tt.wantValid {
+				t.Errorf("UserHandler.VerifyUser() Valid = %v, want %v", resp.Valid, tt.wantValid)
 			}
 		})
 	}

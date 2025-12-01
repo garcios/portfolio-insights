@@ -13,9 +13,8 @@ spec:
   template:
     metadata:
       annotations:
-        # Note: Kubernetes does not natively support depends_on from docker-compose.
-        # The login-consent-provider should start after hydra-admin is healthy.
-        # Consider using init containers or readiness probes to ensure proper startup ordering.
+        # Service-to-service architecture: login-consent-provider calls user-service via gRPC
+        # No direct database access - improved security and separation of concerns
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
@@ -29,11 +28,14 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "auth-server.serviceAccountName" . }}
-      # Init container to wait for hydra-admin
+      # Init containers to wait for dependencies
       initContainers:
       - name: wait-for-hydra-admin
         image: busybox:1.36
         command: ['sh', '-c', 'until nc -z {{ include "auth-server.hydraAdmin.fullname" . }} {{ .Values.hydraAdmin.service.port }}; do echo waiting for hydra-admin; sleep 2; done;']
+      - name: wait-for-user-service
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z {{ .Values.loginConsentProvider.config.userServiceAddr | replace ":50051" "" }} 50051; do echo waiting for user-service; sleep 2; done;']
       containers:
       - name: login-consent-provider
         {{- with .Values.securityContext }}
@@ -57,11 +59,11 @@ spec:
             configMapKeyRef:
               name: {{ include "auth-server.fullname" . }}-config
               key: login-consent-hydra-admin-url
-        - name: DATABASE_URL
+        - name: USER_SERVICE_ADDR
           valueFrom:
             configMapKeyRef:
               name: {{ include "auth-server.fullname" . }}-config
-              key: login-consent-database-url
+              key: login-consent-user-service-addr
         - name: SESSION_SECRET
           valueFrom:
             secretKeyRef:

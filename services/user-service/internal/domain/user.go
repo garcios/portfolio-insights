@@ -23,4 +23,5 @@ type UserRepository interface {
 type UserUsecase interface {
 	GetUser(id string) (*User, error)
 	CreateUser(email, username, password string) (*User, error)
+	VerifyUser(email, password string) (*User, error)
 }

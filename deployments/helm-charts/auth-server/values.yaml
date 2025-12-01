@@ -252,8 +252,9 @@ loginConsentProvider:
   config:
     port: "3002"
     hydraAdminUrl: "http://hydra-admin:4445"
-    # Database URL - points to external postgres (portfolio database)
-    databaseUrl: "postgres://garcios:Password123@postgres:5432/portfolio?sslmode=disable"
+    # User Service Address for service-to-service authentication
+    # Replaces direct database access for improved security
+    userServiceAddr: "user-service:50051"
     logLevel: debug
   
   resources:

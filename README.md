@@ -22,10 +22,10 @@ graph TD
     
     subgraph "Authentication (OAuth2/OIDC)"
         HydraPublic -->|Redirect to Login| LoginConsent["Login & Consent Provider :3002"]
-        LoginConsent -->|Verify Credentials| DB
-        LoginConsent -->|Accept/Reject| HydraAdmin["Hydra Admin API :4445"]
-        HydraAdmin -->|SQL| HydraDB[(Hydra PostgreSQL)]
-        HydraPublic -->|SQL| HydraDB
+        LoginConsent --> |gRPC: VerifyUser| UserService
+        LoginConsent --> |Accept/Reject| HydraAdmin["Hydra Admin API :4445"]
+        HydraAdmin --> |SQL| HydraDB[(Hydra PostgreSQL)]
+        HydraPublic --> |SQL| HydraDB
     end
     
     subgraph "Backend Services (Go)"
@@ -84,10 +84,11 @@ graph TD
     - CORS support for frontend integration.
 
 - **Login & Consent Provider**:
-  - **Tech Stack**: Go, HTML.
+  - **Tech Stack**: Go, gRPC Client, HTML.
   - **Responsibility**: Provides the login and consent UI for the OAuth2 flow.
   - **Features**:
-    - User authentication against the main PostgreSQL database (`customers.users` table).
+    - User authentication via gRPC calls to User Service (service-to-service architecture).
+    - No direct database access - improved security and separation of concerns.
     - Consent management for OAuth2 scopes.
     - Session management with secure cookies.
     - Integration with Hydra Admin API for login/consent acceptance.
@@ -196,6 +197,45 @@ sequenceDiagram
     PS->>PS: Calculate New Avg Price & Qty
     PS->>PS: Update Holdings in DB
 ```
+
+### 3. User Authentication (OAuth2 with Service-to-Service Verification)
+When a user logs in, the Login & Consent Provider verifies credentials via the User Service instead of direct database access.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Browser
+    participant Hydra as Hydra Public
+    participant LCP as Login & Consent Provider
+    participant US as User Service
+    participant DB as Database
+    participant HA as Hydra Admin
+
+    User->>Browser: Click Login
+    Browser->>Hydra: OAuth2 Authorization Request
+    Hydra->>Browser: Redirect to Login Page
+    Browser->>LCP: GET /login?login_challenge=xyz
+    LCP->>Hydra: Get Login Request Info
+    Hydra-->>LCP: Login Request Details
+    LCP-->>Browser: Display Login Form
+    
+    User->>Browser: Enter Credentials
+    Browser->>LCP: POST /login (email, password)
+    
+    Note over LCP,US: Service-to-Service Authentication
+    LCP->>US: gRPC: VerifyUser(email, password)
+    US->>DB: Query User & Verify Password
+    DB-->>US: User Data
+    US-->>LCP: VerifyUserResponse{valid, id, email, username}
+    
+    LCP->>HA: Accept Login Request
+    HA-->>LCP: Redirect URL
+    LCP-->>Browser: Redirect to Hydra
+    Browser->>Hydra: Continue OAuth2 Flow
+    Hydra-->>Browser: Access Token
+    Browser->>User: Authenticated
+```
+
 
 ## 🚀 Getting Started
 

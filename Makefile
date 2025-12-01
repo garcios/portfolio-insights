@@ -81,7 +81,7 @@ test-marketdata:
 	cd services/marketdata-service && go test ./internal/... -v
 
 test-login-consent-provider:
-	cd apps/login-consent-provider && go test ./internal/... -v
+	cd apps/login-consent-provider && go test ./... -v
 
 test-gateway:
 	cd apps/gateway && go test ./... -v

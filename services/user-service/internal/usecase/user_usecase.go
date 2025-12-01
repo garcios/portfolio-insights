@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"fmt"
+
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/garcios/portfolio-insights/services/user-service/internal/domain"
@@ -35,4 +37,17 @@ func (uc *UserUsecase) CreateUser(email, username, password string) (*domain.Use
 		return nil, err
 	}
 	return u, nil
+}
+
+func (uc *UserUsecase) VerifyUser(email, password string) (*domain.User, error) {
+	user, err := uc.repo.GetByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return nil, fmt.Errorf("invalid password")
+	}
+
+	return user, nil
 }

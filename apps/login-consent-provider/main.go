@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,16 +10,10 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type DBExecutor interface {
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
-
 type App struct {
-	db           DBExecutor
+	userClient   UserServiceClientInterface
 	hydraAdmin   string
 	sessionStore cookie.Store
 	httpClient   *http.Client
@@ -30,7 +23,7 @@ func main() {
 	// Load configuration
 	port := getEnv("PORT", "3001")
 	hydraAdminURL := getEnv("HYDRA_ADMIN_URL", "http://localhost:4445")
-	databaseURL := getEnv("DATABASE_URL", "postgres://garcios:Password123@localhost:5432/portfolio?sslmode=disable")
+	userServiceAddr := getEnv("USER_SERVICE_ADDR", "localhost:50051")
 	sessionSecret := getEnv("SESSION_SECRET", "change-this-secret")
 	logLevel := getEnv("LOG_LEVEL", "info")
 
@@ -41,23 +34,16 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Connect to database
-	ctx := context.Background()
-	db, err := pgxpool.New(ctx, databaseURL)
+	// Connect to user service
+	userClient, err := NewUserServiceClient(userServiceAddr)
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v", err)
+		log.Fatalf("Unable to connect to user service: %v", err)
 	}
-	defer db.Close()
-
-	// Test database connection
-	if err := db.Ping(ctx); err != nil {
-		log.Fatalf("Unable to ping database: %v", err)
-	}
-	log.Println("Successfully connected to database")
+	defer userClient.Close()
 
 	// Initialize app
 	app := &App{
-		db:           db,
+		userClient:   userClient,
 		hydraAdmin:   hydraAdminURL,
 		sessionStore: cookie.NewStore([]byte(sessionSecret)),
 		httpClient:   &http.Client{Timeout: 10 * time.Second},

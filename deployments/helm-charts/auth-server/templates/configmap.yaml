@@ -48,5 +48,5 @@ data:
   # Login Consent Provider Configuration
   login-consent-port: {{ .Values.loginConsentProvider.config.port | quote }}
   login-consent-hydra-admin-url: {{ .Values.loginConsentProvider.config.hydraAdminUrl | quote }}
-  login-consent-database-url: {{ .Values.loginConsentProvider.config.databaseUrl | quote }}
+  login-consent-user-service-addr: {{ .Values.loginConsentProvider.config.userServiceAddr | quote }}
   login-consent-log-level: {{ .Values.loginConsentProvider.config.logLevel | quote }}

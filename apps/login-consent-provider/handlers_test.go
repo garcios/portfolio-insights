@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,31 +13,29 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
-// MockDB implements DBExecutor for testing
-type MockDB struct {
-	QueryRowFunc func(ctx context.Context, sql string, args ...any) pgx.Row
+// MockUserServiceClient implements UserServiceClient for testing
+type MockUserServiceClient struct {
+	VerifyUserFunc func(ctx context.Context, email, password string) (*User, error)
+	GetUserFunc    func(ctx context.Context, userID string) (*User, error)
 }
 
-func (m *MockDB) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
-	if m.QueryRowFunc != nil {
-		return m.QueryRowFunc(ctx, sql, args...)
+func (m *MockUserServiceClient) VerifyUser(ctx context.Context, email, password string) (*User, error) {
+	if m.VerifyUserFunc != nil {
+		return m.VerifyUserFunc(ctx, email, password)
 	}
-	return nil
+	return nil, nil
 }
 
-// MockRow implements pgx.Row for testing
-type MockRow struct {
-	ScanFunc func(dest ...any) error
-}
-
-func (m *MockRow) Scan(dest ...any) error {
-	if m.ScanFunc != nil {
-		return m.ScanFunc(dest...)
+func (m *MockUserServiceClient) GetUser(ctx context.Context, userID string) (*User, error) {
+	if m.GetUserFunc != nil {
+		return m.GetUserFunc(ctx, userID)
 	}
+	return nil, nil
+}
+
+func (m *MockUserServiceClient) Close() error {
 	return nil
 }
 
@@ -44,7 +43,7 @@ func setupTestApp() (*App, *gin.Engine) {
 	gin.SetMode(gin.TestMode)
 
 	app := &App{
-		db:           &MockDB{},
+		userClient:   &MockUserServiceClient{},
 		sessionStore: cookie.NewStore([]byte("secret")),
 		httpClient:   &http.Client{},
 	}
@@ -142,27 +141,17 @@ func TestLoginPost_Success(t *testing.T) {
 	app.hydraAdmin = hydraServer.URL
 	router.POST("/login", app.loginPost)
 
-	// Mock DB to return a user
-	mockDB := app.db.(*MockDB)
-	mockDB.QueryRowFunc = func(ctx context.Context, sql string, args ...any) pgx.Row {
-		return &MockRow{
-			ScanFunc: func(dest ...any) error {
-				// dest[0] = &user.ID
-				// dest[1] = &user.Email
-				// dest[2] = &user.PasswordHash
-				// dest[3] = &user.Username
-
-				hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
-
-				if len(dest) >= 4 {
-					*dest[0].(*string) = "user123"
-					*dest[1].(*string) = "test@example.com"
-					*dest[2].(*string) = string(hashedPassword)
-					*dest[3].(*string) = "testuser"
-				}
-				return nil
-			},
+	// Mock UserServiceClient to return a user
+	mockClient := app.userClient.(*MockUserServiceClient)
+	mockClient.VerifyUserFunc = func(ctx context.Context, email, password string) (*User, error) {
+		if email == "test@example.com" && password == "password123" {
+			return &User{
+				ID:       "user123",
+				Email:    "test@example.com",
+				Username: "testuser",
+			}, nil
 		}
+		return nil, fmt.Errorf("invalid credentials")
 	}
 
 	// Create form data
@@ -191,22 +180,10 @@ func TestLoginPost_InvalidCredentials(t *testing.T) {
 	app, router := setupTestApp()
 	router.POST("/login", app.loginPost)
 
-	// Mock DB to return a user
-	mockDB := app.db.(*MockDB)
-	mockDB.QueryRowFunc = func(ctx context.Context, sql string, args ...any) pgx.Row {
-		return &MockRow{
-			ScanFunc: func(dest ...any) error {
-				hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
-
-				if len(dest) >= 4 {
-					*dest[0].(*string) = "user123"
-					*dest[1].(*string) = "test@example.com"
-					*dest[2].(*string) = string(hashedPassword)
-					*dest[3].(*string) = "testuser"
-				}
-				return nil
-			},
-		}
+	// Mock UserServiceClient to return error for wrong password
+	mockClient := app.userClient.(*MockUserServiceClient)
+	mockClient.VerifyUserFunc = func(ctx context.Context, email, password string) (*User, error) {
+		return nil, fmt.Errorf("invalid credentials")
 	}
 
 	// Create form data with wrong password

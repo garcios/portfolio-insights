@@ -11,7 +11,6 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // Hydra API structures
@@ -501,31 +500,12 @@ func (app *App) acceptLogout(challenge string) (string, error) {
 	return logoutResp.RedirectTo, nil
 }
 
-// Database functions
+// Database functions replaced with service calls
 
 func (app *App) authenticateUser(ctx context.Context, email, password string) (*User, error) {
-	var user User
-	query := `SELECT id, email, password_hash, username FROM customers.users WHERE email = $1`
-	err := app.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Username)
-	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
-	}
-
-	// Verify password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, fmt.Errorf("invalid password")
-	}
-
-	return &user, nil
+	return app.userClient.VerifyUser(ctx, email, password)
 }
 
 func (app *App) getUserByID(ctx context.Context, userID string) (*User, error) {
-	var user User
-	query := `SELECT id, email, username FROM customers.users WHERE id = $1`
-	err := app.db.QueryRow(ctx, query, userID).Scan(&user.ID, &user.Email, &user.Username)
-	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
-	}
-
-	return &user, nil
+	return app.userClient.GetUser(ctx, userID)
 }

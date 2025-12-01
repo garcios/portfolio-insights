@@ -166,9 +166,8 @@ services:
     environment:
       PORT: "3002"
       HYDRA_ADMIN_URL: http://hydra-admin:4445
-      # Now correctly points to Hydra database
-      # DATABASE_URL: postgres://hydra:hydra_secret@hydra-postgres:5432/hydra?sslmode=disable
-      DATABASE_URL: postgres://garcios:Password123@postgres:5432/portfolio?sslmode=disable
+      # Service-to-service call to user-service instead of direct DB access
+      USER_SERVICE_ADDR: user-service:50051
       SESSION_SECRET: changeThisToASecureRandomString
       LOG_LEVEL: debug
     # depends_on:

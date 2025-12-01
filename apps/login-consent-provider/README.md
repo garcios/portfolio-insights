@@ -18,11 +18,11 @@ User Browser
      ↓
 Ory Hydra (Public)
      ↓
-Login/Consent Provider (this app)
+Login/Consent Provider (this app) 
      ↓
 Ory Hydra (Admin API)
      ↓
-PostgreSQL (user database)
+PostgreSQL
 ```
 
 ## Features
@@ -227,7 +227,7 @@ http://localhost:4445/admin/clients/portfolio-insights-spa
 podman-compose -f deployments/docker-compose/docker-compose.hydra.yml build --no-cache login-consent-provider
 ```
 
-### etc/hosts
+### /etc/hosts
 
 When testing locally, add the following line to your `/etc/hosts` file:
 
@@ -235,6 +235,10 @@ When testing locally, add the following line to your `/etc/hosts` file:
 127.0.0.1   hydra-public
 ```
 
+### References
+
+- [Ory Hydra Documentation](https://www.ory.sh/docs)
+- [Gin Framework Documentation](https://gin-gonic.com/en/docs)
 
 
 ## License
