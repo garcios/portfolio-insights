@@ -158,8 +158,8 @@ services:
   # ---------------------------------------------------------------------------
   login-consent-provider:
     build:
-      context: ../../apps/login-consent-provider
-      dockerfile: Dockerfile
+      context: ../../
+      dockerfile: apps/login-consent-provider/Dockerfile
     container_name: login-consent-provider
     ports:
       - "3002:3002"

@@ -257,7 +257,30 @@ This command will:
 1. Build all Go microservices.
 2. Build the Gateway.
 3. Start PostgreSQL and NATS.
-4. Start the Frontend (if containerized) or you can run it locally.
+
+
+
+### Run DB migrations
+```bash
+cd infra/db && make migrate-up
+```
+
+### Access local database 
+
+```
+jdbc:postgresql://127.0.0.1:5432/portfolio
+```
+
+### Run Hydra
+```bash
+make hydra-up
+```
+
+### Register a new app client
+```bash
+ ./scripts/register-client.sh
+```
+
 
 ### Running Frontend Locally
 ```bash
@@ -267,8 +290,19 @@ npm run dev
 ```
 Access the app at `http://localhost:5173`.
 
+- Register a new user by clicking on `Get Started For Free` button.
+- Login with the registered user.
+
+
 ### Running GraphQL Playground
 Access the GraphQL Playground at `http://localhost:8080`.
+
+### Access the minio admin page
+Access the minio admin page at `http://localhost:9001`.
+
+### Market Data Ingestion
+To ingest market data such as asset, asset prices and currency rates, upload the csv files to minio bucket `market-data`.
+
 
 ### Running the Monitoring Stack
 To start Prometheus, Grafana, and Alertmanager:

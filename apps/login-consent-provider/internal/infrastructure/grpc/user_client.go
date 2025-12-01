@@ -1,21 +1,15 @@
-package main
+package grpc
 
 import (
 	"context"
 	"fmt"
 	"log"
 
+	"github.com/garcios/portfolio-insights/apps/login-consent-provider/internal/domain"
 	pb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
-
-// UserServiceClientInterface defines the interface for user service operations
-type UserServiceClientInterface interface {
-	VerifyUser(ctx context.Context, email, password string) (*User, error)
-	GetUser(ctx context.Context, userID string) (*User, error)
-	Close() error
-}
 
 // UserServiceClient wraps the gRPC client for user-service
 type UserServiceClient struct {
@@ -48,7 +42,7 @@ func (c *UserServiceClient) Close() error {
 }
 
 // VerifyUser verifies user credentials via gRPC call
-func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password string) (*User, error) {
+func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password string) (*domain.User, error) {
 	resp, err := c.client.VerifyUser(ctx, &pb.VerifyUserRequest{
 		Email:    email,
 		Password: password,
@@ -61,7 +55,7 @@ func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password stri
 		return nil, fmt.Errorf("invalid credentials")
 	}
 
-	return &User{
+	return &domain.User{
 		ID:       resp.Id,
 		Email:    resp.Email,
 		Username: resp.Username,
@@ -69,7 +63,7 @@ func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password stri
 }
 
 // GetUser retrieves user by ID via gRPC call
-func (c *UserServiceClient) GetUser(ctx context.Context, userID string) (*User, error) {
+func (c *UserServiceClient) GetUser(ctx context.Context, userID string) (*domain.User, error) {
 	resp, err := c.client.GetUser(ctx, &pb.GetUserRequest{
 		Id: userID,
 	})
@@ -77,7 +71,7 @@ func (c *UserServiceClient) GetUser(ctx context.Context, userID string) (*User, 
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	return &User{
+	return &domain.User{
 		ID:       resp.Id,
 		Email:    resp.Email,
 		Username: resp.Username,
