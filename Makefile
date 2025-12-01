@@ -1,4 +1,4 @@
-.PHONY: run-gateway run-user run-portfolio
+.PHONY: run-gateway run-user run-portfolio tidy-all
 
 run-gateway:
 	cd apps/gateway && HYDRA_PUBLIC_URL=http://localhost:4444 go run cmd/server/main.go
@@ -78,3 +78,11 @@ test-all:
 
 podman-prune:
 	podman system prune -a --volumes
+
+tidy-all:
+	cd services/user-service && go mod tidy
+	cd services/transaction-service && go mod tidy
+	cd services/portfolio-service && go mod tidy
+	cd services/marketdata-service && go mod tidy		
+	cd apps/login-consent-provider && go mod tidy
+	cd apps/gateway && go mod tidy
