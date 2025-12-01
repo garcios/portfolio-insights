@@ -1,0 +1,17 @@
+{{- if .Values.hydraAdmin.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "auth-server.hydraAdmin.fullname" . }}
+  labels:
+    {{- include "auth-server.hydraAdmin.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.hydraAdmin.service.type }}
+  ports:
+  - port: {{ .Values.hydraAdmin.service.port }}
+    targetPort: admin
+    protocol: TCP
+    name: admin
+  selector:
+    {{- include "auth-server.hydraAdmin.selectorLabels" . | nindent 4 }}
+{{- end }}

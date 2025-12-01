@@ -1,0 +1,193 @@
+{{- if .Values.hydraAdmin.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "auth-server.hydraAdmin.fullname" . }}
+  labels:
+    {{- include "auth-server.hydraAdmin.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.hydraAdmin.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "auth-server.hydraAdmin.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # Note: Kubernetes does not natively support depends_on from docker-compose.
+        # Consider using init containers or readiness probes to ensure proper startup ordering.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "auth-server.hydraAdmin.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "auth-server.serviceAccountName" . }}
+      # Init container to wait for postgres and migration
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z {{ include "auth-server.postgres.fullname" . }} {{ .Values.postgres.service.port }}; do echo waiting for postgres; sleep 2; done;']
+      containers:
+      - name: hydra-admin
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        image: "{{ .Values.hydraAdmin.image.repository }}:{{ .Values.hydraAdmin.image.tag }}"
+        imagePullPolicy: {{ .Values.hydraAdmin.image.pullPolicy }}
+        command: ["hydra"]
+        args: ["serve", "admin", "--dev"]
+        ports:
+        - name: admin
+          containerPort: 4445
+          protocol: TCP
+        env:
+        - name: DSN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "auth-server.fullname" . }}-secrets
+              key: database-dsn
+        - name: URLS_SELF_ISSUER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-issuer-url
+        - name: URLS_LOGIN
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-login-url
+        - name: URLS_CONSENT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-consent-url
+        - name: URLS_LOGOUT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-logout-url
+        - name: URLS_ERROR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-error-url
+        - name: SECRETS_SYSTEM
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "auth-server.fullname" . }}-secrets
+              key: hydra-system-secret
+        - name: SECRETS_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "auth-server.fullname" . }}-secrets
+              key: hydra-cookie-secret
+        - name: OIDC_SUBJECT_IDENTIFIERS_PAIRWISE_SALT
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "auth-server.fullname" . }}-secrets
+              key: hydra-oidc-pairwise-salt
+        - name: OAUTH2_ACCESS_TOKEN_STRATEGY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-oauth2-access-token-strategy
+        - name: OAUTH2_EXPOSE_INTERNAL_ERRORS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-oauth2-expose-internal-errors
+        - name: TTL_ACCESS_TOKEN
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-ttl-access-token
+        - name: TTL_REFRESH_TOKEN
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-ttl-refresh-token
+        - name: TTL_ID_TOKEN
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-ttl-id-token
+        - name: TTL_AUTH_CODE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-ttl-auth-code
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-log-level
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-log-format
+        - name: SERVE_PUBLIC_CORS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-cors-public-enabled
+        - name: SERVE_PUBLIC_CORS_ALLOWED_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-cors-public-allowed-origins
+        - name: SERVE_ADMIN_CORS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-cors-admin-enabled
+        - name: SERVE_ADMIN_CORS_ALLOWED_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-cors-admin-allowed-origins
+        - name: SERVE_COOKIES_SAME_SITE_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "auth-server.fullname" . }}-config
+              key: hydra-admin-cookies-same-site-mode
+        {{- if .Values.hydraAdmin.healthcheck.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.hydraAdmin.healthcheck.path }}
+            port: admin
+          initialDelaySeconds: {{ .Values.hydraAdmin.healthcheck.initialDelaySeconds }}
+          periodSeconds: {{ .Values.hydraAdmin.healthcheck.periodSeconds }}
+          timeoutSeconds: {{ .Values.hydraAdmin.healthcheck.timeoutSeconds }}
+          failureThreshold: {{ .Values.hydraAdmin.healthcheck.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.hydraAdmin.healthcheck.path }}
+            port: admin
+          initialDelaySeconds: {{ .Values.hydraAdmin.healthcheck.initialDelaySeconds }}
+          periodSeconds: {{ .Values.hydraAdmin.healthcheck.periodSeconds }}
+          timeoutSeconds: {{ .Values.hydraAdmin.healthcheck.timeoutSeconds }}
+          failureThreshold: {{ .Values.hydraAdmin.healthcheck.failureThreshold }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.hydraAdmin.resources | nindent 10 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

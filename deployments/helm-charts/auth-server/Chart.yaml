@@ -1,0 +1,13 @@
+apiVersion: v2
+name: auth-server
+description: A Helm chart for Ory Hydra OAuth2 server with login-consent provider
+type: application
+version: 0.1.0
+appVersion: "2.2.0"
+keywords:
+  - oauth2
+  - hydra
+  - authentication
+  - authorization
+maintainers:
+  - name: Oscar Garcia

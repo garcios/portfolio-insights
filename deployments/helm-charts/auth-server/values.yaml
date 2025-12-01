@@ -1,0 +1,307 @@
+# Default values for auth-server
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  # External network name for cross-service communication
+  externalNetworkName: "default"
+
+# PostgreSQL for Hydra
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  
+  # Database credentials (should be stored in secrets)
+  auth:
+    username: hydra
+    password: hydra_secret
+    database: hydra
+  
+  service:
+    type: ClusterIP
+    port: 5432
+  
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  healthcheck:
+    enabled: true
+    command: ["pg_isready", "-U", "hydra"]
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+# Hydra Migration Job
+hydraMigrate:
+  enabled: true
+  image:
+    repository: oryd/hydra
+    tag: "v2.2.0"
+    pullPolicy: IfNotPresent
+  
+  # DSN will be constructed from postgres.auth values
+  # Format: postgres://username:password@host:port/database?sslmode=disable
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Hydra Admin API
+hydraAdmin:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: oryd/hydra
+    tag: "v2.2.0"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 4445
+    targetPort: 4445
+  
+  # Environment configuration
+  config:
+    # DSN constructed from postgres values
+    # Issuer URL - points to public service
+    issuerUrl: "http://hydra-public:4444"
+    
+    # Login & Consent URLs - points to login-consent-provider
+    loginUrl: "http://login-consent-provider:3002/login"
+    consentUrl: "http://login-consent-provider:3002/consent"
+    logoutUrl: "http://login-consent-provider:3002/logout"
+    errorUrl: "http://login-consent-provider:3002/error"
+    
+    # OAuth2 settings
+    oauth2:
+      accessTokenStrategy: jwt
+      exposeInternalErrors: true
+    
+    # TTL settings
+    ttl:
+      accessToken: "15m"
+      refreshToken: "720h"
+      idToken: "1h"
+      authCode: "10m"
+    
+    # Logging
+    log:
+      level: debug
+      format: json
+    
+    # CORS settings
+    cors:
+      public:
+        enabled: true
+        allowedOrigins: "http://localhost:5173,http://localhost:3002"
+      admin:
+        enabled: true
+        allowedOrigins: "http://localhost:3002"
+    
+    # Cookie settings
+    cookies:
+      sameSiteMode: Lax
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  healthcheck:
+    enabled: true
+    path: /health/ready
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+# Hydra Public API
+hydraPublic:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: oryd/hydra
+    tag: "v2.2.0"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 4444
+    targetPort: 4444
+  
+  # Ingress configuration for external access
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: auth.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+      # - secretName: auth-tls
+      #   hosts:
+      #     - auth.example.com
+  
+  # Environment configuration (inherits from hydraAdmin)
+  config:
+    issuerUrl: "http://hydra-public:4444"
+    loginUrl: "http://localhost:3002/login"
+    consentUrl: "http://localhost:3002/consent"
+    logoutUrl: "http://localhost:3002/logout"
+    errorUrl: "http://localhost:3002/error"
+    
+    oauth2:
+      accessTokenStrategy: jwt
+      exposeInternalErrors: true
+    
+    ttl:
+      accessToken: "15m"
+      refreshToken: "720h"
+      idToken: "1h"
+      authCode: "10m"
+    
+    log:
+      level: debug
+      format: json
+    
+    cors:
+      public:
+        enabled: true
+        allowedOrigins: "http://localhost:5173,http://localhost:3002"
+      admin:
+        enabled: true
+        allowedOrigins: "http://localhost:3002"
+    
+    cookies:
+      sameSiteMode: Lax
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  healthcheck:
+    enabled: true
+    path: /health/ready
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+# Login & Consent Provider
+loginConsentProvider:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    repository: your-registry/login-consent-provider
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 3002
+    targetPort: 3002
+  
+  # Ingress configuration for external access
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+    hosts:
+      - host: login.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  
+  # Environment configuration
+  config:
+    port: "3002"
+    hydraAdminUrl: "http://hydra-admin:4445"
+    # Database URL - points to external postgres (portfolio database)
+    databaseUrl: "postgres://garcios:Password123@postgres:5432/portfolio?sslmode=disable"
+    logLevel: debug
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Secrets (should be overridden in production)
+secrets:
+  # Hydra secrets
+  hydra:
+    system: "youReallyNeedToChangeThis"
+    cookie: "youReallyNeedToChangeThisToo"
+    oidcPairwiseSalt: "youReallyNeedToChangeThisThree"
+  
+  # Login consent provider session secret
+  sessionSecret: "changeThisToASecureRandomString"
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext: {}
+  # fsGroup: 2000
+
+# Security context
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}

@@ -1,0 +1,41 @@
+{{- if .Values.loginConsentProvider.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "auth-server.loginConsentProvider.fullname" . }}
+  labels:
+    {{- include "auth-server.loginConsentProvider.labels" . | nindent 4 }}
+  {{- with .Values.loginConsentProvider.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.loginConsentProvider.ingress.className }}
+  ingressClassName: {{ .Values.loginConsentProvider.ingress.className }}
+  {{- end }}
+  {{- if .Values.loginConsentProvider.ingress.tls }}
+  tls:
+    {{- range .Values.loginConsentProvider.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.loginConsentProvider.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "auth-server.loginConsentProvider.fullname" $ }}
+                port:
+                  number: {{ $.Values.loginConsentProvider.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,17 @@
+{{- if .Values.hydraPublic.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "auth-server.hydraPublic.fullname" . }}
+  labels:
+    {{- include "auth-server.hydraPublic.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.hydraPublic.service.type }}
+  ports:
+  - port: {{ .Values.hydraPublic.service.port }}
+    targetPort: public
+    protocol: TCP
+    name: public
+  selector:
+    {{- include "auth-server.hydraPublic.selectorLabels" . | nindent 4 }}
+{{- end }}

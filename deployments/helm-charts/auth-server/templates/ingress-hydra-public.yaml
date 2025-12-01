@@ -1,0 +1,41 @@
+{{- if .Values.hydraPublic.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "auth-server.hydraPublic.fullname" . }}
+  labels:
+    {{- include "auth-server.hydraPublic.labels" . | nindent 4 }}
+  {{- with .Values.hydraPublic.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.hydraPublic.ingress.className }}
+  ingressClassName: {{ .Values.hydraPublic.ingress.className }}
+  {{- end }}
+  {{- if .Values.hydraPublic.ingress.tls }}
+  tls:
+    {{- range .Values.hydraPublic.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.hydraPublic.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "auth-server.hydraPublic.fullname" $ }}
+                port:
+                  number: {{ $.Values.hydraPublic.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

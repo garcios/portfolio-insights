@@ -1,0 +1,218 @@
+# Default values for portfolio-insights.
+
+global:
+  imagePullPolicy: IfNotPresent
+
+services:
+  postgres:
+    enabled: true
+    image:
+      repository: postgres
+      tag: 16-alpine
+    ports:
+      - name: tcp
+        port: 5432
+        targetPort: 5432
+    env:
+      POSTGRES_USER: garcios
+      POSTGRES_DB: portfolio
+    secrets:
+      POSTGRES_PASSWORD: Password123
+    persistence:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 1Gi
+      mountPath: /var/lib/postgresql/data
+    resources: {}
+
+  nats:
+    enabled: true
+    image:
+      repository: nats
+      tag: latest
+    command: ["-js"]
+    ports:
+      - name: client
+        port: 4222
+        targetPort: 4222
+      - name: monitor
+        port: 8222
+        targetPort: 8222
+    resources: {}
+
+  redis:
+    enabled: true
+    image:
+      repository: redis
+      tag: 7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - name: tcp
+        port: 6379
+        targetPort: 6379
+    persistence:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 1Gi
+      mountPath: /data
+    resources: {}
+
+  minio:
+    enabled: true
+    image:
+      repository: minio/minio
+      tag: latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - name: api
+        port: 9000
+        targetPort: 9000
+      - name: console
+        port: 9001
+        targetPort: 9001
+    env:
+      MINIO_ROOT_USER: minioadmin
+    secrets:
+      MINIO_ROOT_PASSWORD: minioadmin
+    persistence:
+      enabled: true
+      accessMode: ReadWriteOnce
+      size: 5Gi
+      mountPath: /data
+    resources: {}
+
+  gateway:
+    enabled: true
+    image:
+      repository: portfolio-insights/gateway
+      tag: latest
+    ports:
+      - name: http
+        port: 8080
+        targetPort: 8080
+    env:
+      PORTFOLIO_SERVICE_ADDR: "portfolio-service:50052"
+      USER_SERVICE_ADDR: "user-service:50051"
+      TRANSACTION_SERVICE_ADDR: "transaction-service:50053"
+      TRANSACTION_SERVICE_HTTP_ADDR: "http://transaction-service:8081"
+      HYDRA_PUBLIC_URL: "http://hydra-public:4444"
+    dependsOn:
+      - user-service
+      - portfolio-service
+      - transaction-service
+    ingress:
+      enabled: true
+      hosts:
+        - host: gateway.local
+          paths:
+            - path: /
+              pathType: Prefix
+    resources: {}
+
+  user-service:
+    enabled: true
+    image:
+      repository: portfolio-insights/user-service
+      tag: latest
+    ports:
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+      - name: metrics
+        port: 9096
+        targetPort: 9096
+    env:
+      DB_HOST: "postgres"
+      DB_USER: "garcios"
+      DB_NAME: "portfolio"
+    secrets:
+      DB_PASSWORD: "Password123"
+    dependsOn:
+      - postgres
+    resources: {}
+
+  portfolio-service:
+    enabled: true
+    image:
+      repository: portfolio-insights/portfolio-service
+      tag: latest
+    ports:
+      - name: grpc
+        port: 50052
+        targetPort: 50052
+      - name: metrics
+        port: 9098
+        targetPort: 9090
+    env:
+      DB_HOST: "postgres"
+      DB_USER: "garcios"
+      DB_NAME: "portfolio"
+      NATS_URL: "nats://nats:4222"
+      REDIS_ADDR: "redis:6379"
+      PRICE_CACHE_TTL_SECONDS: "60"
+      MARKETDATA_SERVICE_ADDR: "marketdata-service:50054"
+    secrets:
+      DB_PASSWORD: "Password123"
+      ADMIN_TOKEN: "secret"
+    dependsOn:
+      - postgres
+      - nats
+      - redis
+      - marketdata-service
+    resources: {}
+
+  marketdata-service:
+    enabled: true
+    image:
+      repository: portfolio-insights/marketdata-service
+      tag: latest
+    ports:
+      - name: grpc
+        port: 50054
+        targetPort: 50054
+      - name: metrics
+        port: 9099
+        targetPort: 9099
+    env:
+      DB_HOST: "postgres"
+      DB_USER: "garcios"
+      DB_NAME: "portfolio"
+      MINIO_ENDPOINT: "minio:9000"
+      MINIO_ACCESS_KEY: "minioadmin"
+      MINIO_BUCKET_NAME: "market-data"
+    secrets:
+      DB_PASSWORD: "Password123"
+      MINIO_SECRET_KEY: "minioadmin"
+    dependsOn:
+      - postgres
+      - minio
+    resources: {}
+
+  transaction-service:
+    enabled: true
+    image:
+      repository: portfolio-insights/transaction-service
+      tag: latest
+    ports:
+      - name: grpc
+        port: 50053
+        targetPort: 50053
+      - name: metrics
+        port: 9097
+        targetPort: 9097
+      - name: http
+        port: 8081
+        targetPort: 8081
+    env:
+      DB_HOST: "postgres"
+      DB_USER: "garcios"
+      DB_NAME: "portfolio"
+      PORT: "50053"
+      HTTP_PORT: "8081"
+      NATS_URL: "nats://nats:4222"
+    secrets:
+      DB_PASSWORD: "Password123"
+    dependsOn:
+      - postgres
+      - nats
+    resources: {}

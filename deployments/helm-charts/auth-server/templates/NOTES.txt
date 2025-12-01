@@ -1,0 +1,138 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }} -n {{ .Release.Namespace }}
+  $ helm get all {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔐 Auth Server Components:
+
+{{- if .Values.postgres.enabled }}
+  ✓ PostgreSQL Database
+{{- end }}
+{{- if .Values.hydraMigrate.enabled }}
+  ✓ Hydra Database Migration (Job)
+{{- end }}
+{{- if .Values.hydraAdmin.enabled }}
+  ✓ Hydra Admin API
+{{- end }}
+{{- if .Values.hydraPublic.enabled }}
+  ✓ Hydra Public API
+{{- end }}
+{{- if .Values.loginConsentProvider.enabled }}
+  ✓ Login & Consent Provider
+{{- end }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 Getting Started:
+
+1. Wait for all pods to be ready:
+
+   kubectl wait --for=condition=ready pod -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }} --timeout=300s
+
+2. Check the status of your deployment:
+
+   kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐 Accessing Services:
+
+{{- if .Values.hydraPublic.enabled }}
+
+Hydra Public API (OAuth2/OIDC):
+{{- if .Values.hydraPublic.ingress.enabled }}
+  External URL: https://{{ (index .Values.hydraPublic.ingress.hosts 0).host }}
+{{- else }}
+  Port-forward: kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "auth-server.hydraPublic.fullname" . }} 4444:4444
+  Access at: http://localhost:4444
+{{- end }}
+{{- end }}
+
+{{- if .Values.hydraAdmin.enabled }}
+
+Hydra Admin API (Client Management):
+  Port-forward: kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "auth-server.hydraAdmin.fullname" . }} 4445:4445
+  Access at: http://localhost:4445
+{{- end }}
+
+{{- if .Values.loginConsentProvider.enabled }}
+
+Login & Consent Provider:
+{{- if .Values.loginConsentProvider.ingress.enabled }}
+  External URL: https://{{ (index .Values.loginConsentProvider.ingress.hosts 0).host }}
+{{- else }}
+  Port-forward: kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "auth-server.loginConsentProvider.fullname" . }} 3002:3002
+  Access at: http://localhost:3002
+{{- end }}
+{{- end }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 Next Steps:
+
+1. Create an OAuth2 client:
+
+   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "auth-server.hydraAdmin.fullname" . }} 4445:4445
+
+   curl -X POST http://localhost:4445/admin/clients \
+     -H "Content-Type: application/json" \
+     -d '{
+       "client_id": "my-client",
+       "client_secret": "my-secret",
+       "grant_types": ["authorization_code", "refresh_token"],
+       "redirect_uris": ["http://localhost:5173/callback"],
+       "response_types": ["code"],
+       "scope": "openid offline_access"
+     }'
+
+2. Test the OAuth2 flow by navigating to:
+   http://localhost:4444/oauth2/auth?client_id=my-client&response_type=code&scope=openid&redirect_uri=http://localhost:5173/callback
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  IMPORTANT SECURITY NOTES:
+
+{{- if or (eq .Values.secrets.hydra.system "youReallyNeedToChangeThis") (eq .Values.secrets.hydra.cookie "youReallyNeedToChangeThisToo") }}
+
+  🚨 WARNING: You are using default secrets!
+  
+  Please update the following secrets in your values.yaml:
+  - secrets.hydra.system
+  - secrets.hydra.cookie
+  - secrets.hydra.oidcPairwiseSalt
+  - secrets.sessionSecret
+
+  Generate secure random strings (32+ characters) for production use.
+
+{{- end }}
+
+{{- if not .Values.hydraPublic.ingress.enabled }}
+
+  💡 TIP: Enable ingress for external access in production:
+  
+  hydraPublic:
+    ingress:
+      enabled: true
+      className: "nginx"
+      hosts:
+        - host: auth.yourdomain.com
+          paths:
+            - path: /
+              pathType: Prefix
+
+{{- end }}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 Documentation:
+
+For more information, see the README.md file or visit:
+  https://www.ory.sh/docs/hydra
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

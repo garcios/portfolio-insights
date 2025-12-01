@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "auth-server.fullname" . }}-config
+  labels:
+    {{- include "auth-server.labels" . | nindent 4 }}
+data:
+  # Hydra Admin Configuration
+  hydra-admin-issuer-url: {{ .Values.hydraAdmin.config.issuerUrl | quote }}
+  hydra-admin-login-url: {{ .Values.hydraAdmin.config.loginUrl | quote }}
+  hydra-admin-consent-url: {{ .Values.hydraAdmin.config.consentUrl | quote }}
+  hydra-admin-logout-url: {{ .Values.hydraAdmin.config.logoutUrl | quote }}
+  hydra-admin-error-url: {{ .Values.hydraAdmin.config.errorUrl | quote }}
+  hydra-admin-oauth2-access-token-strategy: {{ .Values.hydraAdmin.config.oauth2.accessTokenStrategy | quote }}
+  hydra-admin-oauth2-expose-internal-errors: {{ .Values.hydraAdmin.config.oauth2.exposeInternalErrors | quote }}
+  hydra-admin-ttl-access-token: {{ .Values.hydraAdmin.config.ttl.accessToken | quote }}
+  hydra-admin-ttl-refresh-token: {{ .Values.hydraAdmin.config.ttl.refreshToken | quote }}
+  hydra-admin-ttl-id-token: {{ .Values.hydraAdmin.config.ttl.idToken | quote }}
+  hydra-admin-ttl-auth-code: {{ .Values.hydraAdmin.config.ttl.authCode | quote }}
+  hydra-admin-log-level: {{ .Values.hydraAdmin.config.log.level | quote }}
+  hydra-admin-log-format: {{ .Values.hydraAdmin.config.log.format | quote }}
+  hydra-admin-cors-public-enabled: {{ .Values.hydraAdmin.config.cors.public.enabled | quote }}
+  hydra-admin-cors-public-allowed-origins: {{ .Values.hydraAdmin.config.cors.public.allowedOrigins | quote }}
+  hydra-admin-cors-admin-enabled: {{ .Values.hydraAdmin.config.cors.admin.enabled | quote }}
+  hydra-admin-cors-admin-allowed-origins: {{ .Values.hydraAdmin.config.cors.admin.allowedOrigins | quote }}
+  hydra-admin-cookies-same-site-mode: {{ .Values.hydraAdmin.config.cookies.sameSiteMode | quote }}
+  
+  # Hydra Public Configuration
+  hydra-public-issuer-url: {{ .Values.hydraPublic.config.issuerUrl | quote }}
+  hydra-public-login-url: {{ .Values.hydraPublic.config.loginUrl | quote }}
+  hydra-public-consent-url: {{ .Values.hydraPublic.config.consentUrl | quote }}
+  hydra-public-logout-url: {{ .Values.hydraPublic.config.logoutUrl | quote }}
+  hydra-public-error-url: {{ .Values.hydraPublic.config.errorUrl | quote }}
+  hydra-public-oauth2-access-token-strategy: {{ .Values.hydraPublic.config.oauth2.accessTokenStrategy | quote }}
+  hydra-public-oauth2-expose-internal-errors: {{ .Values.hydraPublic.config.oauth2.exposeInternalErrors | quote }}
+  hydra-public-ttl-access-token: {{ .Values.hydraPublic.config.ttl.accessToken | quote }}
+  hydra-public-ttl-refresh-token: {{ .Values.hydraPublic.config.ttl.refreshToken | quote }}
+  hydra-public-ttl-id-token: {{ .Values.hydraPublic.config.ttl.idToken | quote }}
+  hydra-public-ttl-auth-code: {{ .Values.hydraPublic.config.ttl.authCode | quote }}
+  hydra-public-log-level: {{ .Values.hydraPublic.config.log.level | quote }}
+  hydra-public-log-format: {{ .Values.hydraPublic.config.log.format | quote }}
+  hydra-public-cors-public-enabled: {{ .Values.hydraPublic.config.cors.public.enabled | quote }}
+  hydra-public-cors-public-allowed-origins: {{ .Values.hydraPublic.config.cors.public.allowedOrigins | quote }}
+  hydra-public-cors-admin-enabled: {{ .Values.hydraPublic.config.cors.admin.enabled | quote }}
+  hydra-public-cors-admin-allowed-origins: {{ .Values.hydraPublic.config.cors.admin.allowedOrigins | quote }}
+  hydra-public-cookies-same-site-mode: {{ .Values.hydraPublic.config.cookies.sameSiteMode | quote }}
+  
+  # Login Consent Provider Configuration
+  login-consent-port: {{ .Values.loginConsentProvider.config.port | quote }}
+  login-consent-hydra-admin-url: {{ .Values.loginConsentProvider.config.hydraAdminUrl | quote }}
+  login-consent-database-url: {{ .Values.loginConsentProvider.config.databaseUrl | quote }}
+  login-consent-log-level: {{ .Values.loginConsentProvider.config.logLevel | quote }}

@@ -1,0 +1,32 @@
+{{- range $name, $svc := .Values.services }}
+{{- if and $svc.ingress $svc.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "portfolio-insights.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "portfolio-insights.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+  {{- if $svc.ingress.annotations }}
+  annotations:
+    {{- toYaml $svc.ingress.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  rules:
+    {{- range $svc.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  number: {{ (first $svc.ports).port }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

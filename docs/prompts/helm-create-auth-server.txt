@@ -1,0 +1,92 @@
+Create a full Helm chart based on the following deployments/docker-compose/docker-compose.hydra.yml.
+Follow these requirements:
+
+
+1. Output structure
+
+Generate a complete Helm chart with:
+	•	Chart.yaml
+	•	values.yaml
+	•	Templates inside templates/:
+	•	deployment.yaml
+	•	service.yaml
+	•	configmap.yaml (if needed)
+	•	secret.yaml (if needed)
+	•	ingress.yaml (only if external ports exist)
+	•	pvc.yaml (if volumes are used)
+	•	_helpers.tpl
+
+
+Provide the output as a single multi-file Helm chart, separated using:
+
+```yaml
+# File: Chart.yaml
+---
+# File: values.yaml
+---
+# File: templates/deployment.yaml
+...
+
+2. Translation rules
+	•	Convert each docker-compose service into its own:
+	•	Deployment template
+	•	Service template
+	•	Optional: configmap/secret/PVC templates
+	•	Environment variables:
+	•	Sensitive values → secret.yaml + template references
+	•	Non-sensitive → configmap.yaml + template references
+	•	Ports:
+	•	Map to Service ports
+	•	If ports expose externally → generate ingress.yaml
+	•	Volumes:
+	•	Host path → PersistentVolumeClaim (if appropriate)
+	•	Named volumes → storage class PVC
+	•	depends_on:
+	•	Convert into annotations or startup ordering comments (K8s does not support native ordering)
+
+⸻
+
+3. Best practices
+	•	Use:
+	•	apps/v1 for Deployments
+	•	v1 for Services, ConfigMaps, Secrets, PVCs
+	•	Deployments should include:
+	•	Liveness and readiness probes (if ports exist)
+	•	Resource requests/limits
+	•	ImagePullPolicy: IfNotPresent
+	•	Common labels and selectors using a helper template
+	•	Use _helpers.tpl to define reusable:
+	•	Name template
+	•	Label template
+
+⸻
+
+4. values.yaml requirements
+
+Populate values for:
+	•	image.repository, image.tag, image.pullPolicy
+	•	service.type and service.port
+	•	environment (non-secret)
+	•	secrets (secret values)
+	•	volumes and persistence
+	•	ingress.enabled, ingress.hosts, ingress.annotations (if needed)
+
+All hard-coded values should be replaced with .Values.* placeholders.
+
+⸻
+
+5. Output requirements
+	•	Only output valid YAML/Helm templates.
+	•	No backticks.
+	•	Ensure files include comments showing where to insert compose-derived values.
+	•	Do not invent missing ports, commands, or env values.
+	•	Indentation and templating syntax must be accurate.
+    •   Place files in deployments/helm-charts/auth-server.
+	•   Create README.md with instructions on how to use the chart.	
+    
+
+
+
+
+
+

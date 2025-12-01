@@ -1,0 +1,98 @@
+# Default values for observability.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  environment: development
+
+prometheus:
+  enabled: true
+  image:
+    repository: prom/prometheus
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "v2.48.0"
+  service:
+    type: ClusterIP
+    port: 9090
+  resources: 
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  persistence:
+    enabled: true
+    size: 10Gi
+    accessMode: ReadWriteOnce
+    # storageClass: "-"
+  config:
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    # Targets for the services to be monitored. 
+    # In K8s, these should be the service names.
+    targets:
+      gateway: "gateway-service:80"
+      user: "user-service:80"
+      transaction: "transaction-service:80"
+      portfolio: "portfolio-service:80"
+      marketdata: "marketdata-service:80"
+
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana
+    pullPolicy: IfNotPresent
+    tag: "10.2.2"
+  service:
+    type: ClusterIP
+    port: 3000
+  admin:
+    user: "admin"
+    # Password should be overridden in production or passed via --set
+    password: "admin"
+  resources: 
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  persistence:
+    enabled: true
+    size: 10Gi
+    accessMode: ReadWriteOnce
+    # storageClass: "-"
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: grafana.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+
+alertmanager:
+  enabled: true
+  image:
+    repository: prom/alertmanager
+    pullPolicy: IfNotPresent
+    tag: "v0.26.0"
+  service:
+    type: ClusterIP
+    port: 9093
+  resources: 
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  persistence:
+    enabled: true
+    size: 5Gi
+    accessMode: ReadWriteOnce
+    # storageClass: "-"
