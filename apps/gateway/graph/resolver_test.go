@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
@@ -292,7 +293,11 @@ func TestQueryResolver_PortfolioPerformance(t *testing.T) {
 
 	queryResolver := &queryResolver{resolver}
 
-	performance, err := queryResolver.PortfolioPerformance(context.Background(), "user-123", "1w")
+	ctx := auth.WithAuthContext(context.Background(), &auth.AuthContext{
+		UserID: "user-123",
+	})
+
+	performance, err := queryResolver.PortfolioPerformance(ctx, "1w")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -321,7 +326,11 @@ func TestQueryResolver_Portfolio(t *testing.T) {
 
 	queryResolver := &queryResolver{resolver}
 
-	portfolio, err := queryResolver.Portfolio(context.Background(), "user-123")
+	ctx := auth.WithAuthContext(context.Background(), &auth.AuthContext{
+		UserID: "user-123",
+	})
+
+	portfolio, err := queryResolver.Portfolio(ctx)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

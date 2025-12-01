@@ -84,7 +84,7 @@ test-login-consent-provider:
 	cd apps/login-consent-provider && go test ./internal/... -v
 
 test-gateway:
-	cd apps/gateway && go test ./internal/... -v
+	cd apps/gateway && go test ./... -v
 
 test-all:
 	cd services/user-service && go test ./internal/... -v
@@ -92,7 +92,7 @@ test-all:
 	cd services/portfolio-service && go test ./internal/... -v
 	cd services/marketdata-service && go test ./internal/... -v
 	cd apps/login-consent-provider && go test ./... -v
-	cd apps/gateway && go test ./internal/... -v
+	cd apps/gateway && go test ./... -v
 
 podman-prune:
 	podman system prune -a --volumes
