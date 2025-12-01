@@ -71,15 +71,33 @@ test-portfolio-coverage:
 test-portfolio-race:
 	cd services/portfolio-service && go test ./internal/... -race
 
+test-user:
+	cd services/user-service && go test ./internal/... -v
+
+test-transaction:
+	cd services/transaction-service && go test ./internal/... -v
+
+test-marketdata:
+	cd services/marketdata-service && go test ./internal/... -v
+
+test-login-consent-provider:
+	cd apps/login-consent-provider && go test ./internal/... -v
+
+test-gateway:
+	cd apps/gateway && go test ./internal/... -v
+
 test-all:
 	cd services/user-service && go test ./internal/... -v
 	cd services/transaction-service && go test ./internal/... -v
 	cd services/portfolio-service && go test ./internal/... -v
+	cd services/marketdata-service && go test ./internal/... -v
+	cd apps/login-consent-provider && go test ./... -v
+	cd apps/gateway && go test ./internal/... -v
 
 podman-prune:
 	podman system prune -a --volumes
 
-tidy-all:
+tidy-all:	
 	cd services/user-service && go mod tidy
 	cd services/transaction-service && go mod tidy
 	cd services/portfolio-service && go mod tidy

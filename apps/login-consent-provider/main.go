@@ -11,13 +11,19 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type DBExecutor interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 type App struct {
-	db           *pgxpool.Pool
+	db           DBExecutor
 	hydraAdmin   string
 	sessionStore cookie.Store
+	httpClient   *http.Client
 }
 
 func main() {
@@ -54,6 +60,7 @@ func main() {
 		db:           db,
 		hydraAdmin:   hydraAdminURL,
 		sessionStore: cookie.NewStore([]byte(sessionSecret)),
+		httpClient:   &http.Client{Timeout: 10 * time.Second},
 	}
 
 	// Setup router

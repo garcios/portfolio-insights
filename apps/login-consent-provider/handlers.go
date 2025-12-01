@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -302,7 +301,7 @@ func (app *App) errorGet(c *gin.Context) {
 
 func (app *App) getLoginRequest(challenge string) (*LoginRequest, error) {
 	url := fmt.Sprintf("%s/admin/oauth2/auth/requests/login?login_challenge=%s", app.hydraAdmin, challenge)
-	resp, err := http.Get(url)
+	resp, err := app.httpClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -340,8 +339,7 @@ func (app *App) acceptLogin(challenge, subject string, remember bool) (string, e
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := app.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -362,7 +360,7 @@ func (app *App) acceptLogin(challenge, subject string, remember bool) (string, e
 
 func (app *App) getConsentRequest(challenge string) (*ConsentRequest, error) {
 	url := fmt.Sprintf("%s/admin/oauth2/auth/requests/consent?consent_challenge=%s", app.hydraAdmin, challenge)
-	resp, err := http.Get(url)
+	resp, err := app.httpClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -419,8 +417,7 @@ func (app *App) acceptConsent(challenge string, grantScope, grantAudience []stri
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := app.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -457,8 +454,7 @@ func (app *App) rejectConsent(challenge, reason string) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := app.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -484,8 +480,7 @@ func (app *App) acceptLogout(challenge string) (string, error) {
 		return "", err
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := app.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
