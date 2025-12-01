@@ -172,6 +172,26 @@ jobs:
           name: gateway-coverage
           fail_ci_if_error: false
 
+      - name: Test Login Consent Provider
+        env:
+          PORT: 3001
+          HYDRA_ADMIN_URL: http://localhost:4445
+          USER_SERVICE_ADDR: localhost:50051
+          SESSION_SECRET: test-secret
+          LOG_LEVEL: info
+        run: |
+          cd apps/login-consent-provider
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload Login Consent Provider coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./apps/login-consent-provider/coverage.out
+          flags: login-consent-provider
+          name: login-consent-provider-coverage
+          fail_ci_if_error: false
+
   test-frontend:
     name: Frontend Coverage
     runs-on: ubuntu-latest
