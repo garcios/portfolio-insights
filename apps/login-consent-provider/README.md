@@ -241,9 +241,6 @@ When testing locally, add the following line to your `/etc/hosts` file:
 
 Part of Portfolio Insights project.
 
-## Contributing
-
-This is a personal project. Contributions are welcome via pull requests.
 
 ---
 
