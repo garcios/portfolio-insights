@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 	"time"
 
@@ -57,8 +58,9 @@ func (m *mockHoldingRepository) ListByUser(userID string) ([]*domain.Holding, er
 
 // Mock MarketDataGateway
 type mockMarketDataGateway struct {
-	prices map[string]float64
-	err    error
+	prices             map[string]float64
+	err                error
+	getPriceOnDateFunc func(symbol string, date time.Time) (float64, error)
 }
 
 func newMockMarketDataGateway() *mockMarketDataGateway {
@@ -109,6 +111,9 @@ func (m *mockMarketDataGateway) GetAssetName(ctx context.Context, symbol string)
 func (m *mockMarketDataGateway) GetPriceOnDate(ctx context.Context, symbol string, date time.Time) (float64, error) {
 	if m.err != nil {
 		return 0, m.err
+	}
+	if m.getPriceOnDateFunc != nil {
+		return m.getPriceOnDateFunc(symbol, date)
 	}
 	// For testing, return same price as current price
 	price, exists := m.prices[symbol]
@@ -405,5 +410,79 @@ func TestGetPortfolioSummary_RepositoryError(t *testing.T) {
 	// Assert
 	if err == nil {
 		t.Fatal("Expected error, got nil")
+	}
+}
+
+func TestGetPortfolioSummary_DayChange(t *testing.T) {
+	// Setup
+	repo := newMockHoldingRepository()
+	marketData := newMockMarketDataGateway()
+
+	// Define historical prices
+	// Current: AAPL 150, GOOGL 2800
+	// Yesterday: AAPL 140, GOOGL 2700
+	marketData.getPriceOnDateFunc = func(symbol string, date time.Time) (float64, error) {
+		// Check if date is roughly yesterday (within a minute tolerance or just check if it's in the past)
+		// Since the usecase subtracts exactly 24 hours, we can check if it's before now.
+		// For this test, we assume any call to GetPriceOnDate is for the historical calculation.
+		if symbol == "AAPL" {
+			return 140.0, nil
+		}
+		if symbol == "GOOGL" {
+			return 2700.0, nil
+		}
+		return 0, errors.New("price not found")
+	}
+
+	uc := NewPortfolioUsecase(repo, marketData)
+
+	// Add test holdings
+	repo.holdings["user-123:AAPL"] = &domain.Holding{
+		UserID:      "user-123",
+		Symbol:      "AAPL",
+		Quantity:    10,
+		AverageCost: 100.00, // Cost basis doesn't affect day change, but needed for total cost
+		LastUpdated: time.Now(),
+	}
+	repo.holdings["user-123:GOOGL"] = &domain.Holding{
+		UserID:      "user-123",
+		Symbol:      "GOOGL",
+		Quantity:    5,
+		AverageCost: 2000.00,
+		LastUpdated: time.Now(),
+	}
+
+	// Add current market prices
+	marketData.prices["AAPL"] = 150.00
+	marketData.prices["GOOGL"] = 2800.00
+
+	// Execute
+	ctx := context.Background()
+	summary, err := uc.GetPortfolioSummary(ctx, "user-123")
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	// Calculate expected values
+	// Current Value: (10 * 150) + (5 * 2800) = 1500 + 14000 = 15500
+	// Yesterday Value: (10 * 140) + (5 * 2700) = 1400 + 13500 = 14900
+	// Day Change: 15500 - 14900 = 600
+	// Day Change Pct: (600 / 14900) * 100 = 4.0268...
+
+	expectedTotalValue := 15500.0
+	if summary.TotalValue != expectedTotalValue {
+		t.Errorf("Expected total value %f, got %f", expectedTotalValue, summary.TotalValue)
+	}
+
+	expectedDayChange := 600.0
+	if summary.DayChange != expectedDayChange {
+		t.Errorf("Expected day change %f, got %f", expectedDayChange, summary.DayChange)
+	}
+
+	expectedDayChangePct := (600.0 / 14900.0) * 100
+	if math.Abs(summary.DayChangePct-expectedDayChangePct) > 0.000001 {
+		t.Errorf("Expected day change pct %f, got %f", expectedDayChangePct, summary.DayChangePct)
 	}
 }

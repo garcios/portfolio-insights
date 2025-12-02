@@ -10,9 +10,9 @@
 
 ### Week 1: Authentication & User Service Polish (✅ Partially Done)
 - [x] **User Service**: Basic CRUD & DB Connection.
-- [ ] **Auth Implementation**: Implement JWT (JSON Web Tokens) generation in `user-service`.
-- [ ] **Gateway Auth**: Implement auth middleware in `apps/gateway` to validate JWTs.
-- [ ] **Frontend Auth**: Create Login/Signup pages and store JWT in local storage/cookies.
+- [x] **Auth Implementation**: Implement JWT (JSON Web Tokens) generation in `user-service`.
+- [x] **Gateway Auth**: Implement auth middleware in `apps/gateway` to validate JWTs.
+- [x] **Frontend Auth**: Create Login/Signup pages and store JWT in local storage/cookies.
 
 ### Week 2: Market Data Service (The Data Engine)
 - [ ] **External API Integration**: Choose a provider (Yahoo Finance, AlphaVantage, or CoinGecko) and implement a client in `marketdata-service`.
@@ -29,9 +29,9 @@
 ### Week 4: Portfolio Service (The Aggregator)
 - [x] **Calculation Engine**: Implement logic to calculate current holdings based on transaction events from NATS.
 - [x] **Value Calculation**: Fetch latest prices from `marketdata-service` to calculate total portfolio value.
-- [ ] **History Tracking**: Implement snapshots of portfolio value over time for the performance chart.
+- [x] **History Tracking**: Implement snapshots of portfolio value over time for the performance chart.
 - [x] **DB Integration**: Store in `investments.holdings`.
-- [ ] **DB Integration**: Store in `investments.portfolio_history`.
+- [x] **DB Integration**: Store in `investments.portfolio_history`.
 
 ---
 
@@ -39,18 +39,18 @@
 **Focus**: Connecting the frontend to the backend via GraphQL.
 
 ### Week 5: GraphQL Gateway & Federation
-- [ ] **Schema Stitching**: Map gRPC services (Market, Transaction, Portfolio) to the GraphQL Schema in `apps/gateway`.
-- [ ] **Resolvers**: Implement resolvers to call the gRPC clients.
+- [x] **Schema Stitching**: Map gRPC services (Market, Transaction, Portfolio) to the GraphQL Schema in `apps/gateway`.
+- [x] **Resolvers**: Implement resolvers to call the gRPC clients.
 - [ ] **Data Loaders**: Implement DataLoaders to solve the N+1 problem (efficiently fetching nested data).
 
 ### Week 6: Dashboard Integration
-- [ ] **Real Data**: Replace Frontend mock data with Apollo Client queries.
-- [ ] **Portfolio Chart**: Connect the Area Chart to the `PortfolioService` history endpoint.
-- [ ] **Stats Cards**: Wire up "Total Value", "Day Change" to real calculations.
+- [x] **Real Data**: Replace Frontend mock data with Apollo Client queries.
+- [x] **Portfolio Chart**: Connect the Area Chart to the `PortfolioService` history endpoint.
+- [x] **Stats Cards**: Wire up "Total Value", "Day Change" to real calculations.
 
 ### Week 7: Transaction Management UI
-- [ ] **Add Transaction Modal**: Create a form to search for assets and add Buy/Sell records.
-- [ ] **Holdings Table**: Connect the table to real holdings data.
+- [x] **Add Transaction Modal**: Create a form to search for assets and add Buy/Sell records.
+- [x] **Holdings Table**: Connect the table to real holdings data.
 - [ ] **Asset Search**: Implement an autocomplete search bar for finding stocks/crypto.
 
 ### Week 8: User Experience & Polish
@@ -73,7 +73,7 @@
 - [x] **Instrumentation**: Add Prometheus metrics middleware to all Go microservices (Request latency, Error rates, Active goroutines).
 - [x] **Dashboards**: Create Grafana dashboards to visualize service health, system metrics (CPU/Memory), and business metrics (e.g., New Users, Total Transactions).
 - [ ] **CI/CD**: Setup GitHub Actions for automated testing and linting.
-- [ ] **Docker Optimization**: Multi-stage builds for smaller images.
+- [x] **Docker Optimization**: Multi-stage builds for smaller images.
 - [ ] **Environment Config**: Ensure strict separation of Dev/Prod configs.
 
 ---
