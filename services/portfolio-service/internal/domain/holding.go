@@ -4,14 +4,15 @@ import "time"
 
 // Holding represents a user's current position in an asset
 type Holding struct {
-	UserID       string
-	Symbol       string
-	Quantity     float64
-	AverageCost  float64
-	Currency     string  // Currency of the holding (e.g., USD, AUD, EUR)
-	AssetName    string  // Name of the asset (e.g., "Apple Inc.")
-	CurrentPrice float64 // Enriched from market data
-	LastUpdated  time.Time
+	UserID           string
+	Symbol           string
+	Quantity         float64
+	AverageCost      float64
+	Currency         string    // Currency of the holding (e.g., USD, AUD, EUR)
+	AssetName        string    // Name of the asset (e.g., "Apple Inc.")
+	CurrentPrice     float64   // Enriched from market data
+	PriceLastUpdated time.Time // Timestamp of the current price
+	LastUpdated      time.Time
 }
 
 // PortfolioSummary represents the overall portfolio metrics

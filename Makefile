@@ -10,19 +10,31 @@ run-portfolio:
 	cd services/portfolio-service && go run cmd/server/main.go
 
 podman-up:
-	podman-compose -f deployments/docker-compose/docker-compose.yml up --build
+	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up --build
 
 podman-down:
-	podman-compose -f deployments/docker-compose/docker-compose.yml down
+	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml down
 
 podman-logs:
-	podman-compose -f deployments/docker-compose/docker-compose.yml logs -f
+	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml logs -f
 
 podman-build-gateway:
-	podman-compose -f deployments/docker-compose/docker-compose.yml up -d --build gateway
+	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build gateway
+
+podman-build-user-service:
+	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build user-service
+
+podman-build-portfolio-service:
+	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build portfolio-service
+
+podman-build-transaction-service:
+	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build transaction-service
+
+podman-build-marketdata-service:
+	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build marketdata-service
 
 monitoring-up:
-	./deployments/monitoring/start-monitoring.sh
+	./deployments/monitoring/start-monitoring.sh	
 
 monitoring-down:
 	./deployments/monitoring/stop-monitoring.sh

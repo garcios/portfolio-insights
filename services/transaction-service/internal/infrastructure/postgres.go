@@ -16,23 +16,8 @@ func NewPostgresDB() (*sql.DB, error) {
 	dbname := os.Getenv("DB_NAME")
 	sslmode := os.Getenv("DB_SSLMODE")
 
-	if host == "" {
-		host = "localhost"
-	}
-	if port == "" {
-		port = "5432"
-	}
-	if user == "" {
-		user = "garcios"
-	}
-	if password == "" {
-		password = "Password123"
-	}
-	if dbname == "" {
-		dbname = "portfolio"
-	}
-	if sslmode == "" {
-		sslmode = "disable"
+	if host == "" || port == "" || user == "" || password == "" || dbname == "" || sslmode == "" {
+		return nil, fmt.Errorf("missing required environment variables")
 	}
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",

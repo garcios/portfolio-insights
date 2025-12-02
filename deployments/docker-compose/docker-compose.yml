@@ -5,12 +5,17 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: garcios
-      POSTGRES_PASSWORD: Password123
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: portfolio
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U garcios -d portfolio" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   nats:
     image: nats:latest
@@ -53,9 +58,11 @@ services:
       - "9096:9096"
     environment:
       - DB_HOST=postgres
+      - DB_PORT=5432
       - DB_USER=garcios
-      - DB_PASSWORD=Password123
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=portfolio
+      - DB_SSLMODE=disable
     depends_on:
       - postgres
 
@@ -68,9 +75,11 @@ services:
       - "9098:9090"
     environment:
       - DB_HOST=postgres
+      - DB_PORT=5432
       - DB_USER=garcios
-      - DB_PASSWORD=Password123
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=portfolio
+      - DB_SSLMODE=disable
       - NATS_URL=nats://nats:4222
       - REDIS_ADDR=redis:6379
       - PRICE_CACHE_TTL_SECONDS=60
@@ -90,7 +99,7 @@ services:
       - "9001:9001"
     environment:
       - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - minio_data:/data
 
@@ -103,13 +112,14 @@ services:
       - "9099:9099"
     environment:
       - DB_HOST=postgres
+      - DB_PORT=5432
       - DB_USER=garcios
-      - DB_PASSWORD=Password123
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=portfolio
+      - DB_SSLMODE=disable
       - MINIO_ENDPOINT=minio:9000
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET_NAME=market-data
     depends_on:
       - postgres
       - minio
@@ -124,15 +134,27 @@ services:
       - "8081:8081"
     environment:
       - DB_HOST=postgres
+      - DB_PORT=5432
       - DB_USER=garcios
-      - DB_PASSWORD=Password123
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=portfolio
+      - DB_SSLMODE=disable
       - PORT=50053
       - HTTP_PORT=8081
       - NATS_URL=nats://nats:4222
     depends_on:
       - postgres
       - nats
+
+  migrations:
+    build:
+      context: ../../infra/db
+      dockerfile: Dockerfile
+    environment:
+      - DB_URL=postgres://garcios:${DB_PASSWORD}@postgres:5432/portfolio?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:

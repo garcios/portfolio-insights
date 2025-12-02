@@ -256,14 +256,9 @@ make podman-up
 This command will:
 1. Build all Go microservices.
 2. Build the Gateway.
-3. Start PostgreSQL and NATS.
+3. Start PostgreSQL, Redis, NATS and MinIO.
+4. Run DB migrations.
 
-
-
-### Run DB migrations
-```bash
-cd infra/db && make migrate-up
-```
 
 ### Access local database 
 

@@ -11,6 +11,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 )
 
 type MarketDataGateway struct {
@@ -104,13 +106,13 @@ func (g *MarketDataGateway) GetCurrentPrice(ctx context.Context, symbol string) 
 
 // GetCurrentPrices fetches current prices for multiple symbols
 // Uses cache-aside pattern with batch operations
-func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []string) (map[string]float64, error) {
+func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []string) (map[string]usecase.PriceData, error) {
 	start := time.Now()
 	if len(symbols) == 0 {
-		return make(map[string]float64), nil
+		return make(map[string]usecase.PriceData), nil
 	}
 
-	prices := make(map[string]float64)
+	prices := make(map[string]usecase.PriceData)
 	var uncachedSymbols []string
 
 	// Check cache for all symbols
@@ -121,7 +123,10 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 
 		if err == nil {
 			for symbol, cached := range cachedPrices {
-				prices[symbol] = cached.Price
+				prices[symbol] = usecase.PriceData{
+					Price:     cached.Price,
+					Timestamp: cached.Timestamp,
+				}
 			}
 			metrics.RecordPriceFetch("cache", len(prices))
 		}
@@ -159,11 +164,15 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 
 		for symbol, assetPrice := range resp.Prices {
 			if assetPrice != nil {
-				prices[symbol] = assetPrice.Price
-				fetchedPrices[symbol] = assetPrice.Price
+				timestamp := time.Now()
 				if !assetPrice.Timestamp.AsTime().IsZero() {
 					timestamp = assetPrice.Timestamp.AsTime()
 				}
+				prices[symbol] = usecase.PriceData{
+					Price:     assetPrice.Price,
+					Timestamp: timestamp,
+				}
+				fetchedPrices[symbol] = assetPrice.Price
 				count++
 			}
 		}

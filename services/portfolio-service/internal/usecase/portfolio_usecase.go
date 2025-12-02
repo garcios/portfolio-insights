@@ -15,6 +15,11 @@ type PortfolioUsecase interface {
 	GetHistoricalPortfolioSummary(ctx context.Context, userID string, date time.Time) (*domain.PortfolioSummary, error)
 }
 
+type PriceData struct {
+	Price     float64
+	Timestamp time.Time
+}
+
 type portfolioUsecase struct {
 	holdingRepo       domain.HoldingRepository
 	marketDataGateway MarketDataGateway
@@ -23,7 +28,7 @@ type portfolioUsecase struct {
 // MarketDataGateway defines the interface for fetching current market prices
 type MarketDataGateway interface {
 	GetCurrentPrice(ctx context.Context, symbol string) (float64, error)
-	GetCurrentPrices(ctx context.Context, symbols []string) (map[string]float64, error)
+	GetCurrentPrices(ctx context.Context, symbols []string) (map[string]PriceData, error)
 	GetCurrencyRate(ctx context.Context, baseCurrency, targetCurrency string) (float64, error)
 	GetAssetName(ctx context.Context, symbol string) (string, error)
 	GetPriceOnDate(ctx context.Context, symbol string, date time.Time) (float64, error)
@@ -65,8 +70,9 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 
 	// Enrich holdings with current prices and asset names
 	for _, holding := range holdings {
-		if price, ok := prices[holding.Symbol]; ok {
-			holding.CurrentPrice = price
+		if data, ok := prices[holding.Symbol]; ok {
+			holding.CurrentPrice = data.Price
+			holding.PriceLastUpdated = data.Timestamp
 		}
 
 		// Fetch asset name (best effort)
@@ -131,8 +137,39 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	}
 
 	// Calculate Day Change
-	// Get portfolio value from 24 hours ago
-	yesterday := time.Now().Add(-24 * time.Hour)
+	// Determine the reference date for "yesterday"
+	// If we have recent price data, use that as the anchor.
+	// Otherwise, default to time.Now()
+	anchorDate := time.Now()
+	for _, h := range holdings {
+		if !h.PriceLastUpdated.IsZero() && h.PriceLastUpdated.After(anchorDate.Add(-24*time.Hour)) {
+			// If we have a price update from "today" (or recent), use it.
+			// But wait, if the price is from "yesterday" (UTC), we want to compare with "day before yesterday".
+			// Let's use the latest price timestamp as the "current" time.
+			if h.PriceLastUpdated.After(anchorDate) {
+				// This shouldn't happen if anchorDate is Now(), unless clock skew.
+			}
+			// We want the max timestamp?
+		}
+	}
+	// Actually, simpler: Find the latest PriceLastUpdated.
+	var latestUpdate time.Time
+	for _, h := range holdings {
+		if h.PriceLastUpdated.After(latestUpdate) {
+			latestUpdate = h.PriceLastUpdated
+		}
+	}
+
+	// If we have a valid latest update, use it to calculate "yesterday".
+	// If latestUpdate is zero (no prices), use Now().
+	if latestUpdate.IsZero() {
+		latestUpdate = time.Now()
+	}
+
+	// Calculate yesterday relative to the latest data we have.
+	// e.g. if data is from Dec 1, we want comparison with Nov 30.
+	// if data is from Dec 2, we want comparison with Dec 1.
+	yesterday := latestUpdate.Add(-24 * time.Hour)
 	prevSummary, err := uc.GetHistoricalPortfolioSummary(ctx, userID, yesterday)
 	if err != nil {
 		// Log warning but don't fail the request

@@ -25,8 +25,8 @@ func LoadDBConfigFromEnv() *DBConfig {
 	return &DBConfig{
 		Host:     getEnv("DB_HOST", "localhost"),
 		Port:     getEnv("DB_PORT", "5432"),
-		User:     getEnv("DB_USER", "garcios"),
-		Password: getEnv("DB_PASSWORD", "Password123"),
+		User:     getEnv("DB_USER", ""),
+		Password: getEnv("DB_PASSWORD", ""),
 		DBName:   getEnv("DB_NAME", "portfolio"),
 		SSLMode:  getEnv("DB_SSLMODE", "disable"),
 	}
@@ -35,6 +35,10 @@ func LoadDBConfigFromEnv() *DBConfig {
 // NewPostgresDB creates a new PostgreSQL database connection
 func NewPostgresDB() (*sql.DB, error) {
 	config := LoadDBConfigFromEnv()
+
+	if config.Host == "" || config.Port == "" || config.User == "" || config.Password == "" || config.DBName == "" || config.SSLMode == "" {
+		return nil, fmt.Errorf("missing required environment variables")
+	}
 
 	// Build connection string
 	connStr := fmt.Sprintf(

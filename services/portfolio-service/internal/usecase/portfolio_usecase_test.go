@@ -59,13 +59,15 @@ func (m *mockHoldingRepository) ListByUser(userID string) ([]*domain.Holding, er
 // Mock MarketDataGateway
 type mockMarketDataGateway struct {
 	prices             map[string]float64
+	timestamps         map[string]time.Time
 	err                error
 	getPriceOnDateFunc func(symbol string, date time.Time) (float64, error)
 }
 
 func newMockMarketDataGateway() *mockMarketDataGateway {
 	return &mockMarketDataGateway{
-		prices: make(map[string]float64),
+		prices:     make(map[string]float64),
+		timestamps: make(map[string]time.Time),
 	}
 }
 
@@ -80,14 +82,21 @@ func (m *mockMarketDataGateway) GetCurrentPrice(ctx context.Context, symbol stri
 	return price, nil
 }
 
-func (m *mockMarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []string) (map[string]float64, error) {
+func (m *mockMarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []string) (map[string]PriceData, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	prices := make(map[string]float64)
+	prices := make(map[string]PriceData)
 	for _, symbol := range symbols {
 		if price, exists := m.prices[symbol]; exists {
-			prices[symbol] = price
+			ts := time.Now()
+			if t, ok := m.timestamps[symbol]; ok {
+				ts = t
+			}
+			prices[symbol] = PriceData{
+				Price:     price,
+				Timestamp: ts,
+			}
 		}
 	}
 	return prices, nil
@@ -484,5 +493,70 @@ func TestGetPortfolioSummary_DayChange(t *testing.T) {
 	expectedDayChangePct := (600.0 / 14900.0) * 100
 	if math.Abs(summary.DayChangePct-expectedDayChangePct) > 0.000001 {
 		t.Errorf("Expected day change pct %f, got %f", expectedDayChangePct, summary.DayChangePct)
+	}
+}
+
+func TestGetPortfolioSummary_DayChange_Timezone(t *testing.T) {
+	// Setup
+	repo := newMockHoldingRepository()
+	marketData := newMockMarketDataGateway()
+
+	// Scenario:
+	// Current Time: Dec 2 12:00 UTC
+	// Latest Price Update: Dec 1 23:00 UTC (e.g. ingested late previous day)
+	// Without fix: "Yesterday" from Now() is Dec 1 12:00. GetPriceOnDate(Dec 1) finds the Dec 1 23:00 price. Result: 0 change.
+	// With fix: "Yesterday" from LatestUpdate is Nov 30 23:00. GetPriceOnDate(Nov 30) finds Nov 30 price. Result: Correct change.
+
+	now := time.Date(2025, 12, 2, 12, 0, 0, 0, time.UTC)
+	latestPriceTime := time.Date(2025, 12, 1, 23, 0, 0, 0, time.UTC)
+
+	marketData.getPriceOnDateFunc = func(symbol string, date time.Time) (float64, error) {
+		// Check if date matches Nov 30
+		if date.Year() == 2025 && date.Month() == 11 && date.Day() == 30 {
+			if symbol == "AAPL" {
+				return 140.0, nil
+			}
+		}
+		// If it asks for Dec 1, it might find the current price (simulating DB behavior)
+		if date.Year() == 2025 && date.Month() == 12 && date.Day() == 1 {
+			if symbol == "AAPL" {
+				return 150.0, nil
+			}
+		}
+		return 0, errors.New("price not found")
+	}
+
+	uc := NewPortfolioUsecase(repo, marketData)
+
+	// Add test holdings
+	repo.holdings["user-tz:AAPL"] = &domain.Holding{
+		UserID:      "user-tz",
+		Symbol:      "AAPL",
+		Quantity:    10,
+		AverageCost: 100.00,
+		LastUpdated: now,
+	}
+
+	// Add current market prices with timestamp
+	marketData.prices["AAPL"] = 150.00
+	marketData.timestamps["AAPL"] = latestPriceTime
+
+	// Execute
+	ctx := context.Background()
+	summary, err := uc.GetPortfolioSummary(ctx, "user-tz")
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	// Expected:
+	// Current Value: 10 * 150 = 1500
+	// Historical Value (Nov 30): 10 * 140 = 1400
+	// Day Change: 100
+
+	expectedDayChange := 100.0
+	if summary.DayChange != expectedDayChange {
+		t.Errorf("Expected day change %f, got %f. This implies it compared with Dec 1 price instead of Nov 30.", expectedDayChange, summary.DayChange)
 	}
 }
