@@ -1045,4 +1045,89 @@ Successfully implemented a complete OAuth2/OpenID Connect authentication system 
 
 ---
 
-*Last Updated: 2025-11-30 10:00 AEDT*
+## 2025-11-30 (Continued) - Frontend Homepage & Refinements
+
+### Overview
+Continued development on the frontend experience and resolved several critical integration bugs. Implemented a dedicated homepage and refined the system architecture documentation.
+
+### Features Implemented
+
+#### 1. Frontend Homepage
+**Status:** ✅ Complete
+
+- **Component:** `HomePage.tsx`
+- **Features:**
+  - Compelling value proposition and clear call-to-action.
+  - Responsive design with "Get Started" and "Login" buttons.
+  - Smart routing: Redirects authenticated users to Dashboard, shows Homepage to visitors.
+
+#### 2. Bug Fixes & Refinements
+- **Login Provider:** Fixed query to target `customers.users` table instead of `users.users`.
+- **User Service:** Resolved `[]byte` vs `string` type mismatch for password hashing.
+- **GraphQL Schema:** Fixed `NewUser` input type definition in resolvers.
+- **Hydra Connection:** Resolved "no such host" errors by correcting Docker Compose networking.
+- **Frontend:** Fixed TypeScript import errors in `Header.tsx`.
+
+#### 3. Architecture & Testing
+- **Diagrams:** Updated `README.md` system architecture to include Ory Hydra and External APIs.
+- **Testing:** Added initial unit tests for `login-consent-provider`.
+
+---
+
+## 2025-12-01 - Helm Charts, Clean Architecture & Testing
+
+### Overview
+A major push towards production readiness with the creation of Helm charts for Kubernetes deployment. Also performed significant refactoring of the `login-consent-provider` to align with Clean Architecture principles.
+
+### Features Implemented
+
+#### 1. Helm Chart Generation
+**Status:** ✅ Complete
+
+- **Charts Created:**
+  - `deployments/helm-charts/portfolio-insights` (Main application stack)
+  - `deployments/helm-charts/observability` (Monitoring stack)
+  - `deployments/helm-charts/hydra` (Auth server)
+- **Features:**
+  - Complete templates for Deployments, Services, ConfigMaps, Secrets, and Ingress.
+  - Configurable `values.yaml` for environment-specific settings.
+  - Linter checks passed.
+
+#### 2. Login-Consent Provider Refactoring
+**Status:** ✅ Complete
+
+- **Architecture:** Refactored to Clean Architecture (Domain, UseCase, Infrastructure, Interface Adapters).
+- **Communication:** Switched from direct DB access to gRPC communication with `user-service`.
+- **Benefits:** Improved security (no shared DB access) and testability.
+
+#### 3. Testing & Build Improvements
+- **Gateway:** Fixed auth tests by properly mocking user context.
+- **CI/CD:** Added `login-consent-provider` tests to GitHub Actions workflow.
+- **Build:** Resolved Go module version mismatches and `go mod tidy` errors.
+
+---
+
+## 2025-12-02 - Deployment & Logic Fixes
+
+### Overview
+Focused on stabilizing the deployment pipeline and fixing core business logic for portfolio calculations.
+
+### Features Implemented
+
+#### 1. Deployment Improvements
+**Status:** ✅ Complete
+
+- **Database Migrations:** Created dedicated Dockerfile in `infra/db` to run migrations reliably during deployment.
+- **Secrets Management:** Fixed `docker-compose` secrets configuration to resolve `unparsable secret` errors.
+- **Connectivity:** Resolved "connection refused" errors for migration containers.
+
+#### 2. Portfolio Logic Fixes
+**Status:** ✅ Complete
+
+- **Day Change Calculation:** Fixed logic in `GetPortfolioSummary` to correctly calculate "Day Change" and "Percentage".
+- **Issue:** Previous logic was returning zero values due to incorrect historical data fetching.
+- **Fix:** Implemented robust comparison with ~24h prior value, handling edge cases where exact timestamps are missing.
+
+---
+
+*Last Updated: 2025-12-02 21:55 AEDT*
