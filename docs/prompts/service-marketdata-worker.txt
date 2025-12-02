@@ -1,0 +1,11 @@
+Convert the exsiting ingestion workers in marketdata-service to implement an event-based worker for MinIO.
+
+The worker must connect to a MinIO instance and continuously monitor a the "market-data" bucket for file upload events.
+
+Requirements:
+
+Event Listening: Use minioClient.ListenBucketNotification to monitor only s3:ObjectCreated:Put events on the targetBucketName.
+
+Error Handling: Include logging for connection errors, bucket check/creation errors, and event channel errors.
+
+Context: Use context.Background() for the listening loop.

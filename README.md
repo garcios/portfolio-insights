@@ -11,6 +11,7 @@ The system follows a microservices architecture pattern, utilizing **gRPC** for 
 ```mermaid
 graph TD
     User[User] -->|HTTPS| Frontend["Frontend App (React)"]
+    Admin[Admin User] -->|HTTPS| MinIOUI["MinIO UI :9001"]
     
     subgraph "API Layer"
         Gateway["API Gateway (Go/gqlgen)"]
@@ -45,7 +46,11 @@ graph TD
         DB[(PostgreSQL)]
         NATS[NATS Message Broker]
         Redis[(Redis)]
+        MinIO[(MinIO Object Storage)]
     end
+
+    MinIOUI -->|Uploads| MinIO
+    MinIO -.->|Event: ObjectCreated| MarketData
 
     UserService -->|SQL| DB
     PortfolioService -->|SQL| DB
@@ -136,6 +141,7 @@ All services follow **Clean Architecture** principles (Domain, Usecase, Reposito
 - **NATS**: Cloud-native messaging system used for the event bus.
 - **PostgreSQL**: Relational database for persistent storage.
 - **Redis**: In-memory cache for market data prices (reduces API calls to external providers).
+- **MinIO**: Object storage for file uploads.
 
 ### 6. Observability
 - **Prometheus**: Metrics collection and time-series database. Scrapes metrics from all services.

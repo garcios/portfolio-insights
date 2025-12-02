@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"time"
 
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/domain"
 	"github.com/minio/minio-go/v7"
@@ -18,7 +17,6 @@ type IngestionWorker struct {
 	repo        domain.MarketDataRepository
 	minioClient *minio.Client
 	bucketName  string
-	fileName    string
 }
 
 func NewIngestionWorker(repo domain.MarketDataRepository) (*IngestionWorker, error) {
@@ -27,7 +25,6 @@ func NewIngestionWorker(repo domain.MarketDataRepository) (*IngestionWorker, err
 	secretAccessKey := os.Getenv("MINIO_SECRET_KEY")
 	useSSL := os.Getenv("MINIO_USE_SSL") == "true"
 	bucketName := os.Getenv("MINIO_BUCKET_NAME")
-	fileName := "asset.csv"
 
 	if endpoint == "" {
 		endpoint = "localhost:9000"
@@ -48,41 +45,57 @@ func NewIngestionWorker(repo domain.MarketDataRepository) (*IngestionWorker, err
 		repo:        repo,
 		minioClient: minioClient,
 		bucketName:  bucketName,
-		fileName:    fileName,
 	}, nil
 }
 
 func (w *IngestionWorker) Start(ctx context.Context) {
 	go func() {
-		ticker := time.NewTicker(1 * time.Hour)
-		defer ticker.Stop()
+		log.Println("Starting ingestion worker...")
 
-		if err := w.processFile(ctx); err != nil {
-			log.Printf("Error processing file: %v", err)
+		// Check if bucket exists, create if not
+		exists, err := w.minioClient.BucketExists(ctx, w.bucketName)
+		if err != nil {
+			log.Printf("Error checking bucket existence: %v", err)
+			return
+		}
+		if !exists {
+			err = w.minioClient.MakeBucket(ctx, w.bucketName, minio.MakeBucketOptions{})
+			if err != nil {
+				log.Printf("Error creating bucket: %v", err)
+				return
+			}
+			log.Printf("Created bucket: %s", w.bucketName)
 		}
 
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if err := w.processFile(ctx); err != nil {
-					log.Printf("Error processing file: %v", err)
+		// Listen for bucket notifications
+		log.Printf("Listening for events on bucket: %s", w.bucketName)
+		for notificationInfo := range w.minioClient.ListenBucketNotification(ctx, w.bucketName, "", "asset.csv", []string{
+			"s3:ObjectCreated:Put",
+		}) {
+			if notificationInfo.Err != nil {
+				log.Printf("Error in event channel: %v", notificationInfo.Err)
+				continue
+			}
+
+			for _, record := range notificationInfo.Records {
+				log.Printf("Received event: %s for object: %s", record.EventName, record.S3.Object.Key)
+				if err := w.processFile(ctx, record.S3.Object.Key); err != nil {
+					log.Printf("Error processing file %s: %v", record.S3.Object.Key, err)
 				}
 			}
 		}
 	}()
 }
 
-func (w *IngestionWorker) processFile(ctx context.Context) error {
-	log.Println("Starting asset ingestion...")
+func (w *IngestionWorker) processFile(ctx context.Context, objectKey string) error {
+	log.Printf("Starting ingestion for object: %s", objectKey)
 
-	_, err := w.minioClient.StatObject(ctx, w.bucketName, w.fileName, minio.StatObjectOptions{})
+	_, err := w.minioClient.StatObject(ctx, w.bucketName, objectKey, minio.StatObjectOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to stat object %s/%s: %w", w.bucketName, w.fileName, err)
+		return fmt.Errorf("failed to stat object %s/%s: %w", w.bucketName, objectKey, err)
 	}
 
-	object, err := w.minioClient.GetObject(ctx, w.bucketName, w.fileName, minio.GetObjectOptions{})
+	object, err := w.minioClient.GetObject(ctx, w.bucketName, objectKey, minio.GetObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get object: %w", err)
 	}
