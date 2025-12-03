@@ -34,10 +34,10 @@
   - Errors: Total errors by component/type
 - **Dashboard**: Added Cache Hit Rate, Ops Rate, Latency.
 
-### 4. Gateway Service Metrics (http://localhost:8080/metrics)
+### 4. Gateway Service Metrics (http://localhost:9095/metrics)
 - **Implemented**: HTTP middleware for request tracking, metrics for all HTTP endpoints.
-- **Exposed**: Port 8080 at `/metrics` endpoint.
-- **Metrics**: Request count, duration by method/path/status.
+- **Exposed**: Port 9095 at `/metrics` endpoint.
+- **Metrics**: Request count, duration by method/path/status (namespaced with `gateway_`).
 - **Dashboard**: Request Rate, Latency, Status Code distribution.
 
 ### 5. Login Consent Provider Metrics (http://localhost:3002/metrics)

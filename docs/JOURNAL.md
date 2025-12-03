@@ -4,6 +4,25 @@ A chronological record of development progress, features implemented, and techni
 
 ---
 
+## 2025-12-03 - Post-Mortem: Grafana Metrics Display Issue
+
+### Overview
+Documented and resolved a configuration issue where Prometheus metrics were not displaying in Grafana dashboards. The issue stemmed from datasource UID and metric name mismatches.
+
+### Key Findings
+- **Datasource UID**: Grafana dashboards expected `uid: "prometheus"`, but the provisioning file lacked this explicit ID.
+- **Metric Names**: Dashboards used generic names (e.g., `http_requests_total`) while services exposed namespaced metrics (e.g., `gateway_http_requests_total`).
+
+### Resolution
+- Updated `prometheus.yml` to explicitly set the datasource UID.
+- Corrected dashboard JSON to use namespaced metric queries.
+- Restarted monitoring stack to apply changes.
+
+### Documentation
+- Full details in `docs/POST_MORTEM_METRICS_DISPLAY_ISSUE.md`
+
+---
+
 ## 2025-12-03 - Gateway Prometheus Metrics Implementation
 
 ### Overview
@@ -226,6 +245,86 @@ All core services now have Prometheus metrics:
 - ✅ `apps/gateway/test-metrics.sh` (new)
 - ✅ `deployments/docker-compose/docker-compose.yml` (modified - added port 9095)
 - ✅ `docs/OBSERVABILITY_SUMMARY.md` (updated)
+
+---
+
+## 2025-12-02 - Deployment & Logic Fixes
+
+### Overview
+Focused on stabilizing the deployment pipeline and fixing core business logic for portfolio calculations.
+
+### Features Implemented
+
+#### 1. Deployment Improvements
+**Status:** ✅ Complete
+
+- **Database Migrations:** Created dedicated Dockerfile in `infra/db` to run migrations reliably during deployment.
+- **Secrets Management:** Fixed `docker-compose` secrets configuration to resolve `unparsable secret` errors.
+- **Connectivity:** Resolved "connection refused" errors for migration containers.
+
+#### 2. Portfolio Logic Fixes
+**Status:** ✅ Complete
+
+- **Day Change Calculation:** Fixed logic in `GetPortfolioSummary` to correctly calculate "Day Change" and "Percentage".
+- **Issue:** Previous logic was returning zero values due to incorrect historical data fetching.
+- **Fix:** Implemented robust comparison with ~24h prior value, handling edge cases where exact timestamps are missing.
+
+
+---
+
+## 2025-12-02 (Evening) - Market Data Service Event-Based Ingestion
+
+### Overview
+Refactored the `marketdata-service` ingestion workers to use an event-driven approach with MinIO bucket notifications. This replaces the previous polling mechanism, allowing for immediate processing of uploaded market data files (`asset.csv`, `price.csv`, `currency_rates.csv`). The system architecture diagram was also updated to reflect the new data flow involving the Admin User and MinIO UI.
+
+### Features Implemented
+
+#### 1. Event-Based Ingestion Workers
+**Status:** ✅ Complete
+
+**Components:**
+- **IngestionWorker (Assets):**
+  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
+  - Filters for `asset.csv` suffix.
+  - Automatically processes the file upon upload.
+  - Checks for bucket existence on startup and creates it if missing.
+- **PriceIngestionWorker (Prices):**
+  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
+  - Filters for `price.csv` suffix.
+  - Automatically processes the file upon upload.
+- **CurrencyIngestionWorker (Currency Rates):**
+  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
+  - Filters for `currency_rates.csv` suffix.
+  - Automatically processes the file upon upload.
+
+**Implementation Details:**
+- Used `minioClient.ListenBucketNotification` for real-time event monitoring.
+- Removed polling loops (`time.Ticker`) in favor of blocking channel reads.
+- Updated `processFile` methods to accept the specific object key from the event record.
+
+#### 2. System Architecture Update
+**Status:** ✅ Complete
+
+**Changes:**
+- Updated `README.md` Mermaid diagram.
+- Added **Admin User** node connecting to **MinIO UI**.
+- Added **MinIO UI** node connecting to **MinIO Object Storage**.
+- Added **MinIO** to the **Infrastructure** subgraph.
+- Illustrated the event flow: `MinIO -.->|Event: ObjectCreated| MarketData`.
+
+### Technical Decisions
+
+#### 1. MinIO Bucket Notifications
+**Decision:** Switch from polling to MinIO bucket notifications.
+
+**Rationale:**
+- **Efficiency:** Eliminates unnecessary API calls to check for new files.
+- **Latency:** Reduces the delay between file upload and processing.
+- **Scalability:** Better suited for event-driven architectures.
+
+### Next Steps
+1.  **Validation:** Verify the end-to-end flow by uploading files via the MinIO UI and checking logs/database.
+2.  **Error Handling:** Ensure robust error handling for network interruptions during event listening (already implemented with error logging in the loop).
 
 ---
 
@@ -1330,86 +1429,4 @@ A major push towards production readiness with the creation of Helm charts for K
 - **CI/CD:** Added `login-consent-provider` tests to GitHub Actions workflow.
 - **Build:** Resolved Go module version mismatches and `go mod tidy` errors.
 
----
 
-## 2025-12-02 - Deployment & Logic Fixes
-
-### Overview
-Focused on stabilizing the deployment pipeline and fixing core business logic for portfolio calculations.
-
-### Features Implemented
-
-#### 1. Deployment Improvements
-**Status:** ✅ Complete
-
-- **Database Migrations:** Created dedicated Dockerfile in `infra/db` to run migrations reliably during deployment.
-- **Secrets Management:** Fixed `docker-compose` secrets configuration to resolve `unparsable secret` errors.
-- **Connectivity:** Resolved "connection refused" errors for migration containers.
-
-#### 2. Portfolio Logic Fixes
-**Status:** ✅ Complete
-
-- **Day Change Calculation:** Fixed logic in `GetPortfolioSummary` to correctly calculate "Day Change" and "Percentage".
-- **Issue:** Previous logic was returning zero values due to incorrect historical data fetching.
-- **Fix:** Implemented robust comparison with ~24h prior value, handling edge cases where exact timestamps are missing.
-
-
----
-
-## 2025-12-02 (Evening) - Market Data Service Event-Based Ingestion
-
-### Overview
-Refactored the `marketdata-service` ingestion workers to use an event-driven approach with MinIO bucket notifications. This replaces the previous polling mechanism, allowing for immediate processing of uploaded market data files (`asset.csv`, `price.csv`, `currency_rates.csv`). The system architecture diagram was also updated to reflect the new data flow involving the Admin User and MinIO UI.
-
-### Features Implemented
-
-#### 1. Event-Based Ingestion Workers
-**Status:** ✅ Complete
-
-**Components:**
-- **IngestionWorker (Assets):**
-  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
-  - Filters for `asset.csv` suffix.
-  - Automatically processes the file upon upload.
-  - Checks for bucket existence on startup and creates it if missing.
-- **PriceIngestionWorker (Prices):**
-  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
-  - Filters for `price.csv` suffix.
-  - Automatically processes the file upon upload.
-- **CurrencyIngestionWorker (Currency Rates):**
-  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
-  - Filters for `currency_rates.csv` suffix.
-  - Automatically processes the file upon upload.
-
-**Implementation Details:**
-- Used `minioClient.ListenBucketNotification` for real-time event monitoring.
-- Removed polling loops (`time.Ticker`) in favor of blocking channel reads.
-- Updated `processFile` methods to accept the specific object key from the event record.
-
-#### 2. System Architecture Update
-**Status:** ✅ Complete
-
-**Changes:**
-- Updated `README.md` Mermaid diagram.
-- Added **Admin User** node connecting to **MinIO UI**.
-- Added **MinIO UI** node connecting to **MinIO Object Storage**.
-- Added **MinIO** to the **Infrastructure** subgraph.
-- Illustrated the event flow: `MinIO -.->|Event: ObjectCreated| MarketData`.
-
-### Technical Decisions
-
-#### 1. MinIO Bucket Notifications
-**Decision:** Switch from polling to MinIO bucket notifications.
-
-**Rationale:**
-- **Efficiency:** Eliminates unnecessary API calls to check for new files.
-- **Latency:** Reduces the delay between file upload and processing.
-- **Scalability:** Better suited for event-driven architectures.
-
-### Next Steps
-1.  **Validation:** Verify the end-to-end flow by uploading files via the MinIO UI and checking logs/database.
-2.  **Error Handling:** Ensure robust error handling for network interruptions during event listening (already implemented with error logging in the loop).
-
----
-
-*Last Updated: 2025-12-02 22:55 AEDT*
