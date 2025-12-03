@@ -4,6 +4,231 @@ A chronological record of development progress, features implemented, and techni
 
 ---
 
+## 2025-12-03 - Gateway Prometheus Metrics Implementation
+
+### Overview
+Successfully added Prometheus metrics instrumentation to the `apps/gateway` service, completing the observability implementation across all core services. The gateway now exposes HTTP request metrics for monitoring performance, request rates, and error tracking.
+
+### Features Implemented
+
+#### 1. Prometheus Metrics Package
+**Status:** ✅ Complete
+
+**Components:**
+- **Metrics Package:** `internal/metrics/metrics.go`
+  - `HttpRequestsTotal` - Counter for total HTTP requests by method, path, and status
+  - `HttpRequestDuration` - Histogram for request duration by method and path
+  - `RecordHttpRequest()` - Helper function to record metrics
+
+**Standard Metrics:**
+- Automatically exposed by Prometheus client:
+  - `process_cpu_seconds_total` - CPU usage
+  - `process_resident_memory_bytes` - Memory usage
+  - `go_goroutines` - Goroutine count
+  - `go_memstats_*` - Go memory statistics
+
+#### 2. HTTP Metrics Middleware
+**Status:** ✅ Complete
+
+**Implementation:**
+- **File:** `internal/middleware/metrics.go`
+- **Features:**
+  - Custom response writer to capture status codes
+  - Request duration measurement
+  - Automatic metrics recording for all HTTP requests
+  - Integrates seamlessly with existing middleware chain
+
+**Middleware Chain:**
+```
+HTTP Request → CORS → Auth → Metrics → GraphQL Handler
+```
+
+#### 3. Server Integration
+**Status:** ✅ Complete
+
+**Changes to `cmd/server/main.go`:**
+- Added `prometheus/promhttp` import
+- Wrapped GraphQL handler with `MetricsMiddleware`
+- Exposed `/metrics` endpoint for Prometheus scraping
+- Port 9095 configured for metrics endpoint
+
+#### 4. Infrastructure Updates
+**Status:** ✅ Complete
+
+**Docker Compose:**
+- Added port `9095:9095` to gateway service
+- Aligned with existing Prometheus scrape configuration
+
+**Prometheus Configuration:**
+- Gateway already configured in `prometheus.yml`:
+  ```yaml
+  - job_name: 'gateway-service'
+    static_configs:
+      - targets: ['host.docker.internal:9095']
+        labels:
+          service: 'gateway'
+          tier: 'api'
+  ```
+
+#### 5. Testing
+**Status:** ✅ Complete
+
+**Test Suite:**
+- Created `internal/metrics/metrics_test.go`
+- Tests for metrics registration
+- Tests for recording HTTP requests
+- All tests passing ✅
+
+**Build Verification:**
+- ✅ Gateway builds successfully
+- ✅ All existing tests passing
+- ✅ No regressions introduced
+
+### Metrics Exposed
+
+#### Gateway-Specific Metrics
+```promql
+# Total HTTP requests by method, path, and status
+gateway_http_requests_total{method="GET", path="/query", status="200"}
+
+# Request duration histogram by method and path
+gateway_http_request_duration_seconds{method="GET", path="/query"}
+```
+
+#### Example Queries
+```promql
+# Request rate over 5 minutes
+rate(gateway_http_requests_total[5m])
+
+# 95th percentile response time
+histogram_quantile(0.95, rate(gateway_http_request_duration_seconds_bucket[5m]))
+
+# Error rate
+sum(rate(gateway_http_requests_total{status=~"5.."}[5m])) / sum(rate(gateway_http_requests_total[5m]))
+```
+
+### Technical Decisions
+
+#### 1. HTTP Middleware Approach
+**Decision:** Implement metrics collection as HTTP middleware
+
+**Rationale:**
+- Captures all HTTP requests automatically
+- No need to instrument individual handlers
+- Consistent with other services (portfolio, user, transaction)
+- Minimal code changes to existing handlers
+
+#### 2. Metrics Granularity
+**Decision:** Track metrics by method, path, and status code
+
+**Rationale:**
+- **Method:** Distinguish GET, POST, OPTIONS
+- **Path:** Separate `/query`, `/`, `/metrics` endpoints
+- **Status:** Track success (2xx), client errors (4xx), server errors (5xx)
+
+**Trade-offs:**
+- Higher cardinality with path labels
+- Acceptable for gateway with limited endpoints
+- Can aggregate by method/status if needed
+
+#### 3. Port Selection
+**Decision:** Use port 9095 for metrics endpoint
+
+**Rationale:**
+- Consistent with service naming pattern:
+  - User Service: 9096
+  - Transaction Service: 9097
+  - Portfolio Service: 9098
+  - Market Data Service: 9099
+  - Gateway: 9095 (API tier)
+- Already configured in Prometheus
+
+### Documentation Created
+
+1. **Implementation Guide:** `apps/gateway/PROMETHEUS_METRICS.md`
+   - Comprehensive overview
+   - Metrics exposed
+   - Verification steps
+   - Next steps for enhancement
+
+2. **Test Script:** `apps/gateway/test-metrics.sh`
+   - Automated verification script
+   - Checks endpoint accessibility
+   - Validates metrics presence
+   - Generates test traffic
+
+3. **Updated Observability Summary:** `docs/OBSERVABILITY_SUMMARY.md`
+   - Added Gateway section
+   - Documented exposed port and metrics
+
+### Observability Stack Status
+
+All core services now have Prometheus metrics:
+- ✅ **Gateway** (Port 9095) - HTTP request metrics
+- ✅ **User Service** (Port 9096) - gRPC + DB metrics
+- ✅ **Transaction Service** (Port 9097) - gRPC + DB metrics
+- ✅ **Portfolio Service** (Port 9098) - gRPC + DB + Cache metrics
+- ✅ **Market Data Service** (Port 9099) - gRPC + DB metrics
+- ✅ **Login Consent Provider** (Port 3002) - HTTP metrics
+
+### Verification Steps
+
+1. **Check Metrics Endpoint:**
+   ```bash
+   curl http://localhost:9095/metrics
+   ```
+
+2. **Run Test Script:**
+   ```bash
+   cd apps/gateway
+   ./test-metrics.sh
+   ```
+
+3. **Query in Prometheus:**
+   - Navigate to `http://localhost:9081`
+   - Query: `rate(gateway_http_requests_total[5m])`
+
+4. **View in Grafana:**
+   - Navigate to `http://localhost:3001`
+   - Use existing dashboard or create new panels
+
+### Next Steps
+
+1. **Grafana Dashboard Enhancement:**
+   - Add Gateway-specific panels
+   - HTTP request rate by path
+   - Response time percentiles
+   - Error rate visualization
+
+2. **GraphQL-Specific Metrics (Optional):**
+   - Query complexity tracking
+   - Resolver execution time
+   - Query vs Mutation breakdown
+   - Field-level metrics
+
+3. **Alerting Rules:**
+   - High error rate (5xx > threshold)
+   - Slow response times (p95 > threshold)
+   - High request volume
+
+4. **Performance Optimization:**
+   - Monitor metrics overhead
+   - Consider sampling for high-traffic scenarios
+
+### Files Modified/Created
+
+- ✅ `apps/gateway/internal/metrics/metrics.go` (new)
+- ✅ `apps/gateway/internal/metrics/metrics_test.go` (new)
+- ✅ `apps/gateway/internal/middleware/metrics.go` (new)
+- ✅ `apps/gateway/cmd/server/main.go` (modified)
+- ✅ `apps/gateway/go.mod` (modified - added prometheus client)
+- ✅ `apps/gateway/PROMETHEUS_METRICS.md` (new)
+- ✅ `apps/gateway/test-metrics.sh` (new)
+- ✅ `deployments/docker-compose/docker-compose.yml` (modified - added port 9095)
+- ✅ `docs/OBSERVABILITY_SUMMARY.md` (updated)
+
+---
+
 ## 2025-11-29 (Evening) - Gateway Clean Architecture Refactoring & CSV Upload
 
 ### Overview

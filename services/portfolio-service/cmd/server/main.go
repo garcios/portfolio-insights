@@ -27,8 +27,8 @@ func main() {
 	// Start Metrics Server
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		l.Info("Metrics server listening on :9090")
-		if err := http.ListenAndServe(":9090", nil); err != nil {
+		l.Info("Metrics server listening on :9098")
+		if err := http.ListenAndServe(":9098", nil); err != nil {
 			l.Error("failed to start metrics server", "error", err)
 		}
 	}()

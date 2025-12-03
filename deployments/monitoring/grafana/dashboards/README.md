@@ -365,7 +365,7 @@ go_goroutines
 ### Dashboard Shows "No Data"
 
 **Check:**
-1. Prometheus is running: `http://localhost:9090`
+1. Prometheus is running: `http://localhost:9081`
 2. Services are exposing metrics
 3. Prometheus is scraping targets
 4. Data source is configured correctly
@@ -373,10 +373,10 @@ go_goroutines
 **Fix:**
 ```bash
 # Check Prometheus targets
-curl http://localhost:9090/api/v1/targets
+curl http://localhost:9081/api/v1/targets
 
 # Check if metrics exist
-curl http://localhost:9090/api/v1/query?query=up
+curl http://localhost:9081/api/v1/query?query=up
 ```
 
 ### Panels Show Errors
@@ -393,7 +393,7 @@ curl http://localhost:9090/api/v1/query?query=up
 3. **Data source not configured**
    - Go to Configuration → Data Sources
    - Add Prometheus data source
-   - URL: `http://prometheus:9090`
+   - URL: `http://prometheus:9081`
 
 ### Slow Dashboard Loading
 

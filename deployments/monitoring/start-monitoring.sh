@@ -84,7 +84,7 @@ echo "🔥 Starting Prometheus..."
 podman run -d \
   --name prometheus \
   --network monitoring \
-  -p 9090:9090 \
+  -p 9081:9090 \
   -v prometheus-data:/prometheus \
   prometheus-custom:latest \
   --config.file=/etc/prometheus/prometheus.yml \
@@ -93,7 +93,7 @@ podman run -d \
   --web.console.templates=/usr/share/prometheus/consoles \
   --web.enable-lifecycle
 
-echo "✓ Prometheus started on http://localhost:9090"
+echo "✓ Prometheus started on http://localhost:9081"
 echo ""
 
 # Start Grafana
@@ -131,7 +131,7 @@ echo "✅ Monitoring stack is running!"
 echo "========================================="
 echo ""
 echo "Access the services:"
-echo "  Prometheus:   http://localhost:9090"
+echo "  Prometheus:   http://localhost:9081"
 echo "  Grafana:      http://localhost:3001 (admin/admin)"
 echo "  AlertManager: http://localhost:9093"
 echo ""

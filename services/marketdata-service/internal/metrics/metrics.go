@@ -75,6 +75,13 @@ var (
 		},
 	)
 
+	CurrenciesIngestedTotal = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "marketdata_currencies_ingested_total",
+			Help: "Total number of currency rates ingested",
+		},
+	)
+
 	// Business Metrics
 	TotalAssets = promauto.NewGauge(
 		prometheus.GaugeOpts{
@@ -115,4 +122,9 @@ func RecordIngestionJob(jobType, status string, duration float64) {
 // RecordPricesIngested records the number of prices ingested
 func RecordPricesIngested(count int) {
 	PricesIngestedTotal.Add(float64(count))
+}
+
+// RecordCurrenciesIngested records the number of currency rates ingested
+func RecordCurrenciesIngested(count int) {
+	CurrenciesIngestedTotal.Add(float64(count))
 }

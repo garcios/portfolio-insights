@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/domain"
+	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -90,20 +91,30 @@ func (w *PriceIngestionWorker) Start(ctx context.Context) {
 }
 
 func (w *PriceIngestionWorker) processFile(ctx context.Context, objectKey string) error {
+	start := time.Now()
+	status := "success"
+	defer func() {
+		duration := time.Since(start).Seconds()
+		metrics.RecordIngestionJob("price", status, duration)
+	}()
+
 	log.Printf("Price Worker: Starting ingestion for object: %s", objectKey)
 
 	_, err := w.minioClient.StatObject(ctx, w.bucketName, objectKey, minio.StatObjectOptions{})
 	if err != nil {
+		status = "failure"
 		return fmt.Errorf("failed to stat object %s/%s: %w", w.bucketName, objectKey, err)
 	}
 
 	assetMap, err := w.repo.GetAllAssetIDs()
 	if err != nil {
+		status = "failure"
 		return fmt.Errorf("failed to load asset map: %w", err)
 	}
 
 	object, err := w.minioClient.GetObject(ctx, w.bucketName, objectKey, minio.GetObjectOptions{})
 	if err != nil {
+		status = "failure"
 		return fmt.Errorf("failed to get object: %w", err)
 	}
 	defer object.Close()
@@ -111,6 +122,7 @@ func (w *PriceIngestionWorker) processFile(ctx context.Context, objectKey string
 	reader := csv.NewReader(object)
 	_, err = reader.Read() // Skip header
 	if err != nil {
+		status = "failure"
 		return fmt.Errorf("failed to read header: %w", err)
 	}
 
@@ -121,13 +133,18 @@ func (w *PriceIngestionWorker) processFile(ctx context.Context, objectKey string
 			break
 		}
 		if err != nil {
+			status = "failure"
 			return fmt.Errorf("failed to read csv record: %w", err)
 		}
 		rows = append(rows, record)
 	}
 
 	if len(rows) > 0 {
-		return w.batchInsert(ctx, rows, assetMap)
+		if err := w.batchInsert(ctx, rows, assetMap); err != nil {
+			status = "failure"
+			return err
+		}
+		return nil
 	}
 
 	log.Println("Price Worker: No rows to insert.")
@@ -201,5 +218,6 @@ func (w *PriceIngestionWorker) batchInsert(ctx context.Context, rows [][]string,
 	}
 
 	log.Printf("Price Worker: Successfully ingested %d prices.", len(prices))
+	metrics.RecordPricesIngested(len(prices))
 	return nil
 }

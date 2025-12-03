@@ -3,10 +3,14 @@ package http
 import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func NewRouter(handler *Handler, sessionStore sessions.Store) *gin.Engine {
 	router := gin.Default()
+
+	// Prometheus middleware
+	router.Use(PrometheusMiddleware())
 
 	// Session middleware
 	router.Use(sessions.Sessions("auth_session", sessionStore))
@@ -27,6 +31,7 @@ func NewRouter(handler *Handler, sessionStore sessions.Store) *gin.Engine {
 	})
 
 	// Routes
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	router.GET("/health", handler.HealthCheck)
 	router.GET("/login", handler.LoginGet)
 	router.POST("/login", handler.LoginPost)

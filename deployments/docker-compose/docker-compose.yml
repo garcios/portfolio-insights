@@ -38,6 +38,7 @@ services:
       dockerfile: apps/gateway/Dockerfile
     ports:
       - "8080:8080"
+      - "9095:9095"
     environment:
       - PORTFOLIO_SERVICE_ADDR=portfolio-service:50052
       - USER_SERVICE_ADDR=user-service:50051
@@ -72,7 +73,7 @@ services:
       dockerfile: services/portfolio-service/Dockerfile
     ports:
       - "50052:50052"
-      - "9098:9090"
+      - "9098:9098"
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432

@@ -45,14 +45,14 @@ Ensure `docker-compose.yml` has:
   portfolio-service:
     ports:
       - "50052:50052"
-      - "9098:9090"  # Metrics
+      - "9098:9098"  # Metrics
 ```
 
 ## 3. Verify Prometheus Targets
 
 Check if Prometheus is successfully scraping the targets.
 
-1. Open Prometheus UI: http://localhost:9090
+1. Open Prometheus UI: http://localhost:9081
 2. Go to **Status** -> **Targets**
 3. Check the status of `portfolio-service` and `transaction-service`.
 
@@ -71,7 +71,7 @@ If Prometheus has data but Grafana is empty:
 1. Open the dashboard in Grafana.
 2. Click the title of an empty panel -> **Edit**.
 3. Check the **PromQL Query**.
-4. Run the same query in Prometheus UI (http://localhost:9090/graph) to see if it returns data.
+4. Run the same query in Prometheus UI (http://localhost:9081/graph) to see if it returns data.
 
 **Correct Metric Names:**
 - `portfolio_grpc_requests_total`

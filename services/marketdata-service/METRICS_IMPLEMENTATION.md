@@ -27,6 +27,7 @@ Successfully implemented Prometheus metrics for the `marketdata-service` and upd
 - `marketdata_ingestion_jobs_total`: Counter by type and status
 - `marketdata_ingestion_duration_seconds`: Histogram of job duration
 - `marketdata_prices_ingested_total`: Counter of ingested prices
+- `marketdata_currencies_ingested_total`: Counter of ingested currency rates
 
 ### **2. Instrumentation Points**
 

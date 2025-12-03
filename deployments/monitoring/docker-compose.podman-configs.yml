@@ -3,7 +3,7 @@ services:
     image: prom/prometheus:v2.48.0
     container_name: prometheus
     ports:
-      - "9090:9090"
+      - "9081:9090"
     volumes:
       - prometheus-data:/prometheus
       - prometheus-config:/etc/prometheus

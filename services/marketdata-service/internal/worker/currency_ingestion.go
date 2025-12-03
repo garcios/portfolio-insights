@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/domain"
+	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -90,17 +91,26 @@ func (w *CurrencyIngestionWorker) Start(ctx context.Context) {
 }
 
 func (w *CurrencyIngestionWorker) processFile(ctx context.Context, objectKey string) error {
+	start := time.Now()
+	status := "success"
+	defer func() {
+		duration := time.Since(start).Seconds()
+		metrics.RecordIngestionJob("currency", status, duration)
+	}()
+
 	log.Printf("Currency Worker: Starting ingestion for object: %s", objectKey)
 
 	// Check if file exists
 	_, err := w.minioClient.StatObject(ctx, w.bucketName, objectKey, minio.StatObjectOptions{})
 	if err != nil {
+		status = "failure"
 		return fmt.Errorf("failed to stat object %s/%s: %w", w.bucketName, objectKey, err)
 	}
 
 	// Get the file from MinIO
 	object, err := w.minioClient.GetObject(ctx, w.bucketName, objectKey, minio.GetObjectOptions{})
 	if err != nil {
+		status = "failure"
 		return fmt.Errorf("failed to get object: %w", err)
 	}
 	defer object.Close()
@@ -109,6 +119,7 @@ func (w *CurrencyIngestionWorker) processFile(ctx context.Context, objectKey str
 	reader := csv.NewReader(object)
 	_, err = reader.Read() // Skip header
 	if err != nil {
+		status = "failure"
 		return fmt.Errorf("failed to read header: %w", err)
 	}
 
@@ -119,13 +130,18 @@ func (w *CurrencyIngestionWorker) processFile(ctx context.Context, objectKey str
 			break
 		}
 		if err != nil {
+			status = "failure"
 			return fmt.Errorf("failed to read csv record: %w", err)
 		}
 		rows = append(rows, record)
 	}
 
 	if len(rows) > 0 {
-		return w.batchInsert(ctx, rows)
+		if err := w.batchInsert(ctx, rows); err != nil {
+			status = "failure"
+			return err
+		}
+		return nil
 	}
 
 	log.Println("Currency Worker: No rows to insert.")
@@ -189,5 +205,6 @@ func (w *CurrencyIngestionWorker) batchInsert(ctx context.Context, rows [][]stri
 	}
 
 	log.Printf("Currency Worker: Successfully ingested %d currency rates.", len(rates))
+	metrics.RecordCurrenciesIngested(len(rates))
 	return nil
 }

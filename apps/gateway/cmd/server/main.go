@@ -12,10 +12,12 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/middleware"
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
 	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -154,7 +156,8 @@ func main() {
 	}
 
 	http.Handle("/", corsMiddleware(playground.Handler("GraphQL playground", "/query")))
-	http.Handle("/query", corsMiddleware(authMiddleware(srv)))
+	http.Handle("/query", corsMiddleware(authMiddleware(middleware.MetricsMiddleware(srv))))
+	http.Handle("/metrics", promhttp.Handler())
 
 	l.Info("connect to http://localhost:" + port + "/ for GraphQL playground")
 	log.Fatal(http.ListenAndServe(":"+port, nil))

@@ -279,7 +279,7 @@ make hydra-up
 
 ### Register a new app client
 ```bash
- ./scripts/register-client.sh
+ ./scripts/create-oauth-client.sh
 ```
 
 
@@ -309,8 +309,7 @@ To ingest market data such as asset, asset prices and currency rates, upload the
 To start Prometheus, Grafana, and Alertmanager:
 
 ```bash
-cd deployments/monitoring
-./start-monitoring.sh
+make monitoring-up
 ```
 
 Access the monitoring tools:

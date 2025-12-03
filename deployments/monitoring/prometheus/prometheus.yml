@@ -21,7 +21,7 @@ scrape_configs:
   # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['localhost:9081']
 
   # Gateway Service
   - job_name: 'gateway-service'
@@ -62,3 +62,11 @@ scrape_configs:
         labels:
           service: 'marketdata'
           tier: 'backend'
+
+  # Login Consent Provider
+  - job_name: 'login-consent-provider'
+    static_configs:
+      - targets: ['host.docker.internal:3002']
+        labels:
+          service: 'login-consent'
+          tier: 'auth'

@@ -4,7 +4,7 @@ This directory contains the monitoring stack configuration for the Portfolio Ins
 
 ## Stack Components
 
-- **Prometheus** (port 9090): Metrics collection and storage
+- **Prometheus** (port 9081): Metrics collection and storage
 - **Grafana** (port 3001): Visualization and dashboarding
 - **AlertManager** (port 9093): Alert routing and management
 
@@ -19,7 +19,7 @@ docker-compose up -d
 
 ### 2. Access the UIs
 
-- **Prometheus**: http://localhost:9090
+- **Prometheus**: http://localhost:9081
 - **Grafana**: http://localhost:3001 (admin/admin)
 - **AlertManager**: http://localhost:9093
 
@@ -27,7 +27,7 @@ docker-compose up -d
 
 Check that Prometheus is scraping all services:
 ```bash
-curl http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
+curl http://localhost:9081/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
 ```
 
 ### 4. Test Transaction Service Metrics
@@ -161,7 +161,7 @@ curl http://localhost:9097/health
 
 2. Check Prometheus targets:
 ```bash
-open http://localhost:9090/targets
+open http://localhost:9081/targets
 ```
 
 3. Verify network connectivity from Docker:
@@ -177,14 +177,14 @@ docker exec prometheus wget -O- http://host.docker.internal:9097/metrics
 
 2. Check if metrics exist in Prometheus:
 ```bash
-curl 'http://localhost:9090/api/v1/query?query=up'
+curl 'http://localhost:9081/api/v1/query?query=up'
 ```
 
 ### Alerts not firing
 
 1. Check alert rules are loaded:
 ```bash
-curl http://localhost:9090/api/v1/rules
+curl http://localhost:9081/api/v1/rules
 ```
 
 2. Verify AlertManager is receiving alerts:

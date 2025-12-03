@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"log"
 
+	"time"
+
 	"github.com/garcios/portfolio-insights/apps/login-consent-provider/internal/domain"
+	"github.com/garcios/portfolio-insights/apps/login-consent-provider/internal/metrics"
 	pb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 // UserServiceClient wraps the gRPC client for user-service
@@ -43,6 +48,12 @@ func (c *UserServiceClient) Close() error {
 
 // VerifyUser verifies user credentials via gRPC call
 func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password string) (*domain.User, error) {
+	start := time.Now()
+	var err error
+	defer func() {
+		recordMetrics("VerifyUser", start, err)
+	}()
+
 	resp, err := c.client.VerifyUser(ctx, &pb.VerifyUserRequest{
 		Email:    email,
 		Password: password,
@@ -52,7 +63,8 @@ func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password stri
 	}
 
 	if !resp.Valid {
-		return nil, fmt.Errorf("invalid credentials")
+		err = fmt.Errorf("invalid credentials")
+		return nil, err
 	}
 
 	return &domain.User{
@@ -64,6 +76,12 @@ func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password stri
 
 // GetUser retrieves user by ID via gRPC call
 func (c *UserServiceClient) GetUser(ctx context.Context, userID string) (*domain.User, error) {
+	start := time.Now()
+	var err error
+	defer func() {
+		recordMetrics("GetUser", start, err)
+	}()
+
 	resp, err := c.client.GetUser(ctx, &pb.GetUserRequest{
 		Id: userID,
 	})
@@ -76,4 +94,18 @@ func (c *UserServiceClient) GetUser(ctx context.Context, userID string) (*domain
 		Email:    resp.Email,
 		Username: resp.Username,
 	}, nil
+}
+
+func recordMetrics(method string, start time.Time, err error) {
+	duration := time.Since(start).Seconds()
+	statusCode := codes.OK.String()
+	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			statusCode = s.Code().String()
+		} else {
+			statusCode = "ERROR"
+		}
+	}
+	metrics.GrpcClientRequestsTotal.WithLabelValues(method, statusCode).Inc()
+	metrics.GrpcClientRequestDuration.WithLabelValues(method).Observe(duration)
 }

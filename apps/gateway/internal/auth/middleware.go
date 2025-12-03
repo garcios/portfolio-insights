@@ -33,7 +33,6 @@ func Middleware(config *Config) func(http.Handler) http.Handler {
 			// Extract token from Authorization header
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				fmt.Println("***Missing authorization header")
 				http.Error(w, "Missing authorization header", http.StatusUnauthorized)
 				return
 			}
@@ -41,7 +40,6 @@ func Middleware(config *Config) func(http.Handler) http.Handler {
 			// Check Bearer prefix
 			parts := strings.Split(authHeader, " ")
 			if len(parts) != 2 || parts[0] != "Bearer" {
-				fmt.Println("***Invalid authorization header format")
 				http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
 				return
 			}
@@ -139,8 +137,6 @@ func OptionalMiddleware(config *Config) func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-
-			fmt.Println("***auth header: ", authHeader)
 
 			// Check Bearer prefix
 			parts := strings.Split(authHeader, " ")

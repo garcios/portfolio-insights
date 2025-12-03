@@ -68,10 +68,19 @@ func main() {
 		httpPort = "8081"
 	}
 
-	metricsPort := os.Getenv("METRICS_PORT")
-	if metricsPort == "" {
-		metricsPort = "9097"
-	}
+	// Start Metrics Server
+	go func() {
+		metricsPort := os.Getenv("METRICS_PORT")
+		if metricsPort == "" {
+			metricsPort = "9097"
+		}
+
+		http.Handle("/metrics", promhttp.Handler())
+		l.Info("Metrics server listening on :" + metricsPort)
+		if err := http.ListenAndServe(":"+metricsPort, nil); err != nil {
+			l.Error("failed to start metrics server", "error", err)
+		}
+	}()
 
 	go func() {
 		httpMux := http.NewServeMux()

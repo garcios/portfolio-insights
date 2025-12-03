@@ -24,7 +24,7 @@ podman logs -f alertmanager
 
 ## 🌐 Access URLs
 
-- **Prometheus**: http://localhost:9090
+- **Prometheus**: http://localhost:9081
 - **Grafana**: http://localhost:3001 (admin/Password123)
 - **AlertManager**: http://localhost:9093
 
@@ -84,7 +84,7 @@ make monitoring-up
 
 ### Check Prometheus Targets
 ```bash
-curl http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
+curl http://localhost:9081/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
 ```
 
 ### Check Transaction Service Metrics
