@@ -4,912 +4,70 @@ A chronological record of development progress, features implemented, and techni
 
 ---
 
-## 2025-12-03 - Post-Mortem: Grafana Metrics Display Issue
-
-### Overview
-Documented and resolved a configuration issue where Prometheus metrics were not displaying in Grafana dashboards. The issue stemmed from datasource UID and metric name mismatches.
-
-### Key Findings
-- **Datasource UID**: Grafana dashboards expected `uid: "prometheus"`, but the provisioning file lacked this explicit ID.
-- **Metric Names**: Dashboards used generic names (e.g., `http_requests_total`) while services exposed namespaced metrics (e.g., `gateway_http_requests_total`).
-
-### Resolution
-- Updated `prometheus.yml` to explicitly set the datasource UID.
-- Corrected dashboard JSON to use namespaced metric queries.
-- Restarted monitoring stack to apply changes.
-
-### Documentation
-- Full details in `docs/POST_MORTEM_METRICS_DISPLAY_ISSUE.md`
-
----
-
-## 2025-12-03 - Gateway Prometheus Metrics Implementation
-
-### Overview
-Successfully added Prometheus metrics instrumentation to the `apps/gateway` service, completing the observability implementation across all core services. The gateway now exposes HTTP request metrics for monitoring performance, request rates, and error tracking.
-
-### Features Implemented
-
-#### 1. Prometheus Metrics Package
-**Status:** ✅ Complete
-
-**Components:**
-- **Metrics Package:** `internal/metrics/metrics.go`
-  - `HttpRequestsTotal` - Counter for total HTTP requests by method, path, and status
-  - `HttpRequestDuration` - Histogram for request duration by method and path
-  - `RecordHttpRequest()` - Helper function to record metrics
-
-**Standard Metrics:**
-- Automatically exposed by Prometheus client:
-  - `process_cpu_seconds_total` - CPU usage
-  - `process_resident_memory_bytes` - Memory usage
-  - `go_goroutines` - Goroutine count
-  - `go_memstats_*` - Go memory statistics
-
-#### 2. HTTP Metrics Middleware
-**Status:** ✅ Complete
-
-**Implementation:**
-- **File:** `internal/middleware/metrics.go`
-- **Features:**
-  - Custom response writer to capture status codes
-  - Request duration measurement
-  - Automatic metrics recording for all HTTP requests
-  - Integrates seamlessly with existing middleware chain
-
-**Middleware Chain:**
-```
-HTTP Request → CORS → Auth → Metrics → GraphQL Handler
-```
-
-#### 3. Server Integration
-**Status:** ✅ Complete
-
-**Changes to `cmd/server/main.go`:**
-- Added `prometheus/promhttp` import
-- Wrapped GraphQL handler with `MetricsMiddleware`
-- Exposed `/metrics` endpoint for Prometheus scraping
-- Port 9095 configured for metrics endpoint
-
-#### 4. Infrastructure Updates
-**Status:** ✅ Complete
-
-**Docker Compose:**
-- Added port `9095:9095` to gateway service
-- Aligned with existing Prometheus scrape configuration
-
-**Prometheus Configuration:**
-- Gateway already configured in `prometheus.yml`:
-  ```yaml
-  - job_name: 'gateway-service'
-    static_configs:
-      - targets: ['host.docker.internal:9095']
-        labels:
-          service: 'gateway'
-          tier: 'api'
-  ```
-
-#### 5. Testing
-**Status:** ✅ Complete
-
-**Test Suite:**
-- Created `internal/metrics/metrics_test.go`
-- Tests for metrics registration
-- Tests for recording HTTP requests
-- All tests passing ✅
-
-**Build Verification:**
-- ✅ Gateway builds successfully
-- ✅ All existing tests passing
-- ✅ No regressions introduced
-
-### Metrics Exposed
-
-#### Gateway-Specific Metrics
-```promql
-# Total HTTP requests by method, path, and status
-gateway_http_requests_total{method="GET", path="/query", status="200"}
-
-# Request duration histogram by method and path
-gateway_http_request_duration_seconds{method="GET", path="/query"}
-```
-
-#### Example Queries
-```promql
-# Request rate over 5 minutes
-rate(gateway_http_requests_total[5m])
-
-# 95th percentile response time
-histogram_quantile(0.95, rate(gateway_http_request_duration_seconds_bucket[5m]))
-
-# Error rate
-sum(rate(gateway_http_requests_total{status=~"5.."}[5m])) / sum(rate(gateway_http_requests_total[5m]))
-```
-
-### Technical Decisions
-
-#### 1. HTTP Middleware Approach
-**Decision:** Implement metrics collection as HTTP middleware
-
-**Rationale:**
-- Captures all HTTP requests automatically
-- No need to instrument individual handlers
-- Consistent with other services (portfolio, user, transaction)
-- Minimal code changes to existing handlers
-
-#### 2. Metrics Granularity
-**Decision:** Track metrics by method, path, and status code
-
-**Rationale:**
-- **Method:** Distinguish GET, POST, OPTIONS
-- **Path:** Separate `/query`, `/`, `/metrics` endpoints
-- **Status:** Track success (2xx), client errors (4xx), server errors (5xx)
-
-**Trade-offs:**
-- Higher cardinality with path labels
-- Acceptable for gateway with limited endpoints
-- Can aggregate by method/status if needed
-
-#### 3. Port Selection
-**Decision:** Use port 9095 for metrics endpoint
-
-**Rationale:**
-- Consistent with service naming pattern:
-  - User Service: 9096
-  - Transaction Service: 9097
-  - Portfolio Service: 9098
-  - Market Data Service: 9099
-  - Gateway: 9095 (API tier)
-- Already configured in Prometheus
-
-### Documentation Created
-
-1. **Implementation Guide:** `apps/gateway/PROMETHEUS_METRICS.md`
-   - Comprehensive overview
-   - Metrics exposed
-   - Verification steps
-   - Next steps for enhancement
-
-2. **Test Script:** `apps/gateway/test-metrics.sh`
-   - Automated verification script
-   - Checks endpoint accessibility
-   - Validates metrics presence
-   - Generates test traffic
-
-3. **Updated Observability Summary:** `docs/OBSERVABILITY_SUMMARY.md`
-   - Added Gateway section
-   - Documented exposed port and metrics
-
-### Observability Stack Status
-
-All core services now have Prometheus metrics:
-- ✅ **Gateway** (Port 9095) - HTTP request metrics
-- ✅ **User Service** (Port 9096) - gRPC + DB metrics
-- ✅ **Transaction Service** (Port 9097) - gRPC + DB metrics
-- ✅ **Portfolio Service** (Port 9098) - gRPC + DB + Cache metrics
-- ✅ **Market Data Service** (Port 9099) - gRPC + DB metrics
-- ✅ **Login Consent Provider** (Port 3002) - HTTP metrics
-
-### Verification Steps
-
-1. **Check Metrics Endpoint:**
-   ```bash
-   curl http://localhost:9095/metrics
-   ```
-
-2. **Run Test Script:**
-   ```bash
-   cd apps/gateway
-   ./test-metrics.sh
-   ```
-
-3. **Query in Prometheus:**
-   - Navigate to `http://localhost:9081`
-   - Query: `rate(gateway_http_requests_total[5m])`
-
-4. **View in Grafana:**
-   - Navigate to `http://localhost:3001`
-   - Use existing dashboard or create new panels
-
-### Next Steps
-
-1. **Grafana Dashboard Enhancement:**
-   - Add Gateway-specific panels
-   - HTTP request rate by path
-   - Response time percentiles
-   - Error rate visualization
-
-2. **GraphQL-Specific Metrics (Optional):**
-   - Query complexity tracking
-   - Resolver execution time
-   - Query vs Mutation breakdown
-   - Field-level metrics
-
-3. **Alerting Rules:**
-   - High error rate (5xx > threshold)
-   - Slow response times (p95 > threshold)
-   - High request volume
-
-4. **Performance Optimization:**
-   - Monitor metrics overhead
-   - Consider sampling for high-traffic scenarios
-
-### Files Modified/Created
-
-- ✅ `apps/gateway/internal/metrics/metrics.go` (new)
-- ✅ `apps/gateway/internal/metrics/metrics_test.go` (new)
-- ✅ `apps/gateway/internal/middleware/metrics.go` (new)
-- ✅ `apps/gateway/cmd/server/main.go` (modified)
-- ✅ `apps/gateway/go.mod` (modified - added prometheus client)
-- ✅ `apps/gateway/PROMETHEUS_METRICS.md` (new)
-- ✅ `apps/gateway/test-metrics.sh` (new)
-- ✅ `deployments/docker-compose/docker-compose.yml` (modified - added port 9095)
-- ✅ `docs/OBSERVABILITY_SUMMARY.md` (updated)
-
----
-
-## 2025-12-02 - Deployment & Logic Fixes
-
-### Overview
-Focused on stabilizing the deployment pipeline and fixing core business logic for portfolio calculations.
-
-### Features Implemented
-
-#### 1. Deployment Improvements
-**Status:** ✅ Complete
-
-- **Database Migrations:** Created dedicated Dockerfile in `infra/db` to run migrations reliably during deployment.
-- **Secrets Management:** Fixed `docker-compose` secrets configuration to resolve `unparsable secret` errors.
-- **Connectivity:** Resolved "connection refused" errors for migration containers.
-
-#### 2. Portfolio Logic Fixes
-**Status:** ✅ Complete
-
-- **Day Change Calculation:** Fixed logic in `GetPortfolioSummary` to correctly calculate "Day Change" and "Percentage".
-- **Issue:** Previous logic was returning zero values due to incorrect historical data fetching.
-- **Fix:** Implemented robust comparison with ~24h prior value, handling edge cases where exact timestamps are missing.
-
-
----
-
-## 2025-12-02 (Evening) - Market Data Service Event-Based Ingestion
-
-### Overview
-Refactored the `marketdata-service` ingestion workers to use an event-driven approach with MinIO bucket notifications. This replaces the previous polling mechanism, allowing for immediate processing of uploaded market data files (`asset.csv`, `price.csv`, `currency_rates.csv`). The system architecture diagram was also updated to reflect the new data flow involving the Admin User and MinIO UI.
-
-### Features Implemented
-
-#### 1. Event-Based Ingestion Workers
-**Status:** ✅ Complete
-
-**Components:**
-- **IngestionWorker (Assets):**
-  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
-  - Filters for `asset.csv` suffix.
-  - Automatically processes the file upon upload.
-  - Checks for bucket existence on startup and creates it if missing.
-- **PriceIngestionWorker (Prices):**
-  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
-  - Filters for `price.csv` suffix.
-  - Automatically processes the file upon upload.
-- **CurrencyIngestionWorker (Currency Rates):**
-  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
-  - Filters for `currency_rates.csv` suffix.
-  - Automatically processes the file upon upload.
-
-**Implementation Details:**
-- Used `minioClient.ListenBucketNotification` for real-time event monitoring.
-- Removed polling loops (`time.Ticker`) in favor of blocking channel reads.
-- Updated `processFile` methods to accept the specific object key from the event record.
-
-#### 2. System Architecture Update
-**Status:** ✅ Complete
-
-**Changes:**
-- Updated `README.md` Mermaid diagram.
-- Added **Admin User** node connecting to **MinIO UI**.
-- Added **MinIO UI** node connecting to **MinIO Object Storage**.
-- Added **MinIO** to the **Infrastructure** subgraph.
-- Illustrated the event flow: `MinIO -.->|Event: ObjectCreated| MarketData`.
-
-### Technical Decisions
-
-#### 1. MinIO Bucket Notifications
-**Decision:** Switch from polling to MinIO bucket notifications.
-
-**Rationale:**
-- **Efficiency:** Eliminates unnecessary API calls to check for new files.
-- **Latency:** Reduces the delay between file upload and processing.
-- **Scalability:** Better suited for event-driven architectures.
-
-### Next Steps
-1.  **Validation:** Verify the end-to-end flow by uploading files via the MinIO UI and checking logs/database.
-2.  **Error Handling:** Ensure robust error handling for network interruptions during event listening (already implemented with error logging in the loop).
-
----
-
-## 2025-11-29 (Evening) - Gateway Clean Architecture Refactoring & CSV Upload
-
-### Overview
-Major refactoring of the GraphQL Gateway to implement Clean Architecture principles, followed by implementation of CSV file upload functionality for bulk transaction imports. This represents a significant architectural improvement that enhances maintainability, testability, and separation of concerns.
-
-### Features Implemented
-
-#### 1. Gateway Clean Architecture Refactoring
-**Status:** ✅ Complete
-
-**Architecture Layers:**
-
-**Domain Layer** (`internal/domain/`)
-- **Entities:** Core business objects
-  - `User` - User domain entity
-  - `Portfolio`, `PortfolioSummary`, `Holding`, `PortfolioPerformancePoint` - Portfolio entities
-  - `Transaction` - Transaction entity with builder methods
-- **Gateway Interfaces:** Abstract contracts for external services
-  - `UserGateway` - User service operations
-  - `PortfolioGateway` - Portfolio service operations
-  - `TransactionGateway` - Transaction service operations
-  - `TransactionFileGateway` - File upload operations
-
-**Use Case Layer** (`internal/usecase/`)
-- `UserUseCase` - User business logic (GetUser, CreateUser, GetCurrentUser)
-- `PortfolioUseCase` - Portfolio operations (GetPortfolio, GetSummary, GetHoldings, GetPerformance)
-- `TransactionUseCase` - Transaction logic with validation (CreateTransaction, UploadCSV)
-
-**Infrastructure Layer** (`internal/infrastructure/`)
-- **gRPC Gateways:**
-  - `UserGRPCGateway` - User service client
-  - `PortfolioGRPCGateway` - Portfolio service client
-  - `TransactionGRPCGateway` - Transaction service client
-- **HTTP Gateway:**
-  - `TransactionHTTPGateway` - Streaming CSV upload to transaction service
-- **Mappers:**
-  - `proto_mapper.go` - Protobuf ↔ Domain conversion
-  - `graphql_mapper.go` - GraphQL ↔ Domain conversion
-
-**Presentation Layer** (`graph/`)
-- Refactored resolvers to be thin, delegating to use cases
-- Removed direct gRPC client dependencies
-- Clean separation of GraphQL concerns from business logic
-
-**Dependency Injection** (`internal/container/`)
-- `Container` struct managing all dependencies
-- Centralized initialization and wiring
-- Updated `main.go` to use container
-
-**Testing:**
-- ✅ Use case tests (`*_usecase_test.go`) - Business logic validation
-- ✅ Infrastructure mapper tests (`proto_mapper_test.go`) - Protobuf conversion
-- ✅ GraphQL mapper tests (`graphql_mapper_test.go`) - GraphQL conversion
-- ✅ Resolver tests (`resolver_test.go`) - Updated for new architecture
-- All tests passing
+## Previous Development Sessions
+
+### Asset Price Integration
+**Date:** 2025-11-27
+
+**Achievements:**
+- Created `tools/asset-prices/eodhd/asset_prices_eodhd.go`
+- Support for stock prices and forex rates
+- CSV output format for database ingestion
+- Automatic detection of forex vs. stock data
+- Rate limiting and error handling
 
 **Documentation:**
-- `CLEAN_ARCHITECTURE.md` - Comprehensive architecture guide
-- `ARCHITECTURE_DIAGRAMS.md` - Visual diagrams and data flow
-- `REFACTORING_SUMMARY.md` - Detailed refactoring summary
-
-**Cleanup:**
-- Removed `internal/service` directory (replaced by use cases)
-- Removed `internal/util` directory (no longer needed)
-
-#### 2. CSV Upload Feature
-**Status:** ✅ Complete
-
-**Backend (Gateway):**
-
-**GraphQL Schema:**
-```graphql
-scalar Upload
-
-extend type Mutation {
-  uploadTransactionCSV(file: Upload!): Boolean!
-}
-```
-
-**Domain Layer:**
-- Added `TransactionFileGateway` interface with `UploadCSV` method
-- Accepts `io.Reader` for streaming file content
-
-**Infrastructure Layer:**
-- `TransactionHTTPGateway` implementation
-  - Streams file to `transaction-service:8081/upload-csv`
-  - Uses `multipart/form-data` for file transfer
-  - Passes `user_id` as query parameter
-  - No file buffering in gateway memory
-
-**Use Case Layer:**
-- `TransactionUseCase.UploadCSV` method
-  - Validates file and filename
-  - Delegates to file gateway
-
-**Resolver:**
-- `uploadTransactionCSV` mutation implementation
-  - Extracts user ID from auth context
-  - Calls use case with file reader
-  - Returns success/failure boolean
-
-**Configuration:**
-- Added `TRANSACTION_SERVICE_HTTP_ADDR` environment variable
-- Updated `docker-compose.yml` with HTTP endpoint URL
-- Container initialized with transaction service URL
-
-**Frontend:**
-
-**GraphQL Mutation:**
-```typescript
-export const UPLOAD_TRANSACTION_CSV = gql`
-  mutation UploadTransactionCSV($file: Upload!) {
-    uploadTransactionCSV(file: $file)
-  }
-`;
-```
-
-**Custom Upload Link:**
-- Created `createUploadLink.ts` - Custom Apollo Link
-- Detects `File` objects in variables
-- Sends multipart/form-data requests
-- Follows GraphQL multipart request specification
-- No external dependencies required
-
-**Apollo Client:**
-- Updated `apolloClient.ts` to use `createUploadLink`
-- Replaced standard `HttpLink` with upload-capable link
-
-**UI Integration:**
-- Updated `TransactionsPage.tsx`
-- Wired "Upload CSV" button to mutation
-- File selection dialog
-- Success/error handling
-- Alert notifications
-
-**Transaction Service Updates:**
-- Updated CSV parser to handle new fields:
-  - `brokerage`, `notes`, `price_currency`, `brokerage_currency`
-- Updated repository to insert all fields
-- Fixed bulk insert SQL statement
-
-### Technical Decisions
-
-#### 1. Clean Architecture Benefits
-**Decision:** Refactor gateway to Clean Architecture pattern
-
-**Rationale:**
-- **Testability:** Each layer can be tested in isolation with mocks
-- **Maintainability:** Clear separation of concerns
-- **Flexibility:** Easy to swap implementations (e.g., gRPC → REST)
-- **Scalability:** New features fit naturally into existing structure
-
-**Trade-offs:**
-- Initial complexity increase
-- More files and interfaces
-- Learning curve for new developers
-
-#### 2. Streaming File Upload
-**Decision:** Stream files directly without buffering in gateway
-
-**Rationale:**
-- **Memory Efficiency:** Large CSV files don't consume gateway memory
-- **Performance:** Direct streaming to transaction service
-- **Scalability:** Can handle files of any size
-
-**Implementation:**
-- Gateway receives `graphql.Upload` with `io.Reader`
-- Creates multipart request with file stream
-- Transaction service processes stream directly
-
-#### 3. Custom Upload Link
-**Decision:** Implement custom Apollo Link instead of using `apollo-upload-client`
-
-**Rationale:**
-- **No Dependencies:** Avoids external package
-- **Control:** Full control over multipart request format
-- **Simplicity:** Straightforward implementation
-- **Compatibility:** Works with standard Apollo Client
-
-**Implementation:**
-- Detects `File` objects in variables
-- Builds GraphQL multipart request spec
-- Handles both file and non-file requests
-
-#### 4. Dependency Injection Container
-**Decision:** Centralize dependency management in Container
-
-**Rationale:**
-- **Single Source of Truth:** All dependencies initialized in one place
-- **Easier Testing:** Mock entire container or individual components
-- **Clearer Dependencies:** Explicit dependency graph
-- **Reduced Coupling:** Components depend on interfaces, not implementations
-
-### Data Flow
-
-#### Clean Architecture Data Flow:
-```
-GraphQL Request
-    ↓
-Resolver (Presentation)
-    ↓
-Use Case (Business Logic)
-    ↓
-Gateway Interface (Domain)
-    ↓
-gRPC/HTTP Gateway (Infrastructure)
-    ↓
-External Service
-```
-
-#### CSV Upload Flow:
-```
-Frontend File Selection
-    ↓
-GraphQL Mutation (multipart/form-data)
-    ↓
-Gateway Resolver
-    ↓
-TransactionUseCase.UploadCSV
-    ↓
-TransactionHTTPGateway (streaming)
-    ↓
-Transaction Service HTTP Endpoint
-    ↓
-CSV Parser & Bulk Insert
-    ↓
-PostgreSQL
-```
-
-### Build Status
-- ✅ Gateway builds successfully
-- ✅ All tests passing (use cases, mappers, resolvers)
-- ✅ Frontend compiles without errors
-- ✅ Docker Compose configuration updated
-- ✅ Services start successfully
-
-### Documentation Created
-1. **Architecture Documentation:**
-   - `apps/gateway/CLEAN_ARCHITECTURE.md`
-   - `apps/gateway/ARCHITECTURE_DIAGRAMS.md`
-   - `apps/gateway/REFACTORING_SUMMARY.md`
-
-2. **Code Documentation:**
-   - Comprehensive inline comments
-   - Interface documentation
-   - Test documentation
-
-### Testing Coverage
-- **Use Cases:** 100% of public methods tested
-- **Mappers:** All conversion functions tested
-- **Resolvers:** Integration tests with mocked container
-
-### Next Steps
-1. **JWT Integration:** Extract user ID from JWT tokens instead of hardcoding
-2. **File Validation:** Add CSV format validation before upload
-3. **Progress Tracking:** WebSocket for upload progress updates
-4. **Error Details:** Return detailed validation errors from CSV parsing
-5. **Batch Processing:** Support for very large CSV files with chunking
-6. **OAuth2/OIDC:** Implement Ory Hydra integration for authentication
-
----
-
-## 2025-11-29 (Afternoon) - Transaction Schema Extension & GraphQL Mutation
-
-### Overview
-Extended the transaction schema to support brokerage fees and notes fields across all layers (database, gRPC, GraphQL). Implemented a complete GraphQL mutation for adding transactions, replacing the mock data layer with real backend integration.
-
-### Features Implemented
-
-#### 1. Transaction Schema Extension
-**Status:** ✅ Complete
-
-**Database Changes:**
-- **Migration:** Created `000008_add_brokerage_and_notes_to_transactions`
-- **Fields Added:**
-  - `brokerage` (NUMERIC(20, 8) DEFAULT 0) - For transaction fees
-  - `notes` (VARCHAR(100)) - For optional transaction notes
-- **Status:** Migration applied successfully
-
-**Protocol Buffer Updates:**
-- Updated `proto/transaction/transaction.proto`
-- Added `brokerage` (double, field 10) and `notes` (string, field 11) to `Transaction` message
-- Added fields to `CreateTransactionRequest` and `UpdateTransactionRequest`
-- Regenerated gRPC code
-
-**Domain Model Updates:**
-- Updated `Transaction` struct in `services/transaction-service/internal/domain/transaction.go`
-- Refactored `TransactionUsecase` interface to use struct-based parameters instead of individual arguments
-- Improved API design: `CreateTransaction(ctx, *Transaction) error` vs old `CreateTransaction(ctx, userID, symbol, type, qty, price, executedAt) (*Transaction, error)`
-
-**Repository Layer:**
-- Updated all SQL queries in `postgres_repo.go` to handle new fields
-- Implemented proper NULL handling using `sql.NullFloat64` and `sql.NullString`
-- Updated `Create`, `GetByID`, `ListByUserID`, and `Update` methods
-
-**Use Case Layer:**
-- Completely refactored `transaction_usecase.go` to match new interface
-- Added UUID generation for transaction IDs
-- Maintained validation logic (type, quantity, price, user, asset)
-- Preserved event publishing and metrics recording
-
-**Handler Layer:**
-- Updated gRPC handler to validate required fields
-- Added mapping for `brokerage` and `notes` fields
-- Renamed helper function to `mapDomainToProto` for clarity
-
-**Testing:**
-- Updated all unit tests to use new struct-based API
-- All tests passing (handler + usecase)
-- Added `github.com/google/uuid` dependency
-
-#### 2. GraphQL Add Transaction Mutation
-**Status:** ✅ Complete
-
-**Schema Definition:**
-```graphql
-enum TransactionType {
-  BUY
-  SELL
-  SPLIT
-  DIVIDEND
-}
-
-type Transaction {
-  id: ID!
-  userId: ID!
-  symbol: String!
-  type: TransactionType!
-  quantity: Float!
-  pricePerShare: Float!
-  executedAt: String!
-  notes: String
-  brokerage: Float
-  createdAt: String!
-  updatedAt: String!
-}
-
-input NewTransaction {
-  symbol: String!
-  quantity: Float!
-  pricePerShare: Float!
-  executedAt: String!
-  type: TransactionType!
-  notes: String
-  brokerage: Float
-}
-
-extend type Mutation {
-  addTransaction(input: NewTransaction!): Transaction!
-}
-```
-
-**Resolver Implementation:**
-- Implemented `AddTransaction` resolver in `apps/gateway/graph/schema.resolvers.go`
-- Added `parseTimestamp` helper for ISO-8601 date parsing
-- Hardcoded user ID (`3a4b3185-5abb-4899-9835-829ddb91e3a6`) until JWT is implemented
-- Calls transaction-service via gRPC
-- Handles optional fields (notes, brokerage) correctly
-
-**Dependency Injection:**
-- Added `TransactionClient` to Resolver struct
-- Initialized gRPC connection to transaction-service (default: `localhost:50053`)
-- Updated `main.go` to wire up the client
-
-**Frontend Integration:**
-- Created `ADD_TRANSACTION` mutation in `apps/frontend/src/graphql/mutations.ts`
-- Updated `AddTransactionModal.tsx` to use `useMutation` hook
-- Replaced `onSave` callback with GraphQL mutation call
-- Added loading state ("Saving..." button text)
-- Added error display with styled error message
-- Disabled form controls during submission
-- Proper date format conversion to ISO-8601
-
-**Page Updates:**
-- Removed mock `handleAddTransaction` function from `TransactionsPage.tsx`
-- Changed to use `onSuccess` callback
-- Added comment about future GraphQL query integration for listing transactions
-
-### Technical Decisions
-
-#### 1. Struct-Based Use Case API
-**Decision:** Refactored `TransactionUsecase` to accept `*Transaction` structs instead of individual parameters.
-
-**Rationale:**
-- **Cleaner API:** Easier to add new fields without changing method signatures
-- **Better Encapsulation:** Transaction is a cohesive entity
-- **Reduced Boilerplate:** Fewer parameters to pass around
-- **Consistency:** Matches common Go patterns (e.g., HTTP handlers)
-
-**Example:**
-```go
-// Before
-CreateTransaction(ctx, userID, symbol, type, qty, price, executedAt) (*Transaction, error)
-
-// After
-CreateTransaction(ctx, *Transaction) error
-```
-
-#### 2. Data Type Precision
-**Decision:** Used `NUMERIC(20, 8)` for brokerage in PostgreSQL.
-
-**Rationale:**
-- Avoids floating-point precision errors for monetary values
-- Supports large values (up to 20 digits total)
-- 8 decimal places for fractional cents or crypto
-
-#### 3. Hardcoded User ID in GraphQL
-**Decision:** Temporarily hardcode user ID in resolver until JWT is implemented.
-
-**Rationale:**
-- Allows testing of the mutation immediately
-- Clear TODO for future JWT extraction from context
-- Doesn't block frontend development
-
-#### 4. Optional Fields Handling
-**Decision:** Use pointers for optional fields in GraphQL input, NULL in database.
-
-**Rationale:**
-- Distinguishes between "not provided" and "empty string"
-- Database NULL handling via `sql.NullString` and `sql.NullFloat64`
-- GraphQL schema allows omitting optional fields
-
-### Data Flow
-
-```
-Frontend Modal (React)
-    ↓ (useMutation)
-GraphQL Gateway (Go)
-    ↓ (gRPC)
-Transaction Service (Go)
-    ↓ (SQL)
-PostgreSQL
-    ↓ (Response)
-Frontend (Success/Error)
-```
-
-#### 3. Transaction Currency Support
-**Status:** ✅ Complete
-
-**Database Changes:**
-- **Migration:** Created `000009_add_currency_fields_to_transactions`
-- **Fields Added:** `price_currency` (VARCHAR(3)), `brokerage_currency` (VARCHAR(3))
-
-**Protocol Buffer Updates:**
-- Updated `proto/transaction/transaction.proto`
-- Added `price_currency` and `brokerage_currency` strings
-
-**Service Updates:**
-- Updated `Transaction` domain model
-- Updated repository CRUD operations
-- Added validation for 3-letter currency codes in usecase
-- Updated gRPC handler mapping
-
-### Build Status
-- ✅ Transaction service builds and tests pass
-- ✅ Gateway builds successfully (Fixed dependency issue with `transaction-service` import)
-- ✅ Docker Compose configuration updated (Added `TRANSACTION_SERVICE_ADDR` to gateway)
-- ✅ Frontend compiles (main code)
-- ⚠️ Frontend has pre-existing test errors (unrelated to changes)
-
-### Documentation
-- Created `docs/TRANSACTION_SCHEMA_UPDATE.md` - Comprehensive schema update documentation
-- Created `docs/GRAPHQL_ADD_TRANSACTION.md` - GraphQL mutation implementation guide
-
-### Next Steps
-1. **JWT Integration:** Replace hardcoded user ID with JWT token extraction
-2. **List Transactions Query:** Add GraphQL query to fetch transactions
-3. **Refetch Strategy:** Add `refetchQueries` to mutation for auto-update
-4. **Optimistic Updates:** Consider adding optimistic UI updates
-5. **Error Handling:** Implement typed error responses
-
----
-
-## 2025-11-29 (Morning) - Frontend Implementation & UI Polish
-
-### Overview
-Focused on building out the core frontend pages, improving navigation, and establishing a robust testing foundation. Implemented the Transactions page, Authentication UI, and a responsive Header component, backed by comprehensive unit tests.
-
-### Features Implemented
-
-#### 1. Responsive Navigation & Header
-**Status:** ✅ Complete
-
-**Components:**
-- **Header:** Sticky top navigation with glassmorphism effect.
-- **Mobile Menu:** Slide-over menu for small screens with smooth animations.
-- **User Menu:** Dropdown with avatar, settings, and theme toggle (UI).
-- **Routing:** Client-side routing using `react-router-dom` v6.
-
-**Key Features:**
-- Responsive design adapting to mobile/desktop.
-- Active state highlighting for navigation links.
-- Accessible ARIA attributes for menu interactions.
-- "Click outside" detection for closing menus.
-
-#### 2. Transactions Management UI
-**Status:** ✅ Complete (Mock Data)
-
-**Components:**
-- **Page:** `TransactionsPage.tsx`
-- **Table:** `TransactionsTable.tsx` with sorting and filtering.
-- **Modal:** `AddTransactionModal.tsx` for creating new entries.
-
-**Features:**
-- **List View:** Display transactions with formatted dates, currency, and type-based coloring.
-- **Sorting:** Sort by date, ticker, type, quantity, price, or total.
-- **Filtering:** Real-time search by ticker and filter by transaction type (Buy/Sell/Split/Dividend).
-- **Creation:** Modal form with auto-calculation of totals (Quantity * Price + Brokerage).
-- **Validation:** Client-side validation for required fields and numeric values.
-
-#### 3. Authentication UI
-**Status:** ✅ Complete (UI Only)
-
-**Components:**
-- **Page:** `AuthPage.tsx`
-- **Component:** `Input.tsx` (Reusable UI component)
-
-**Features:**
-- **Dual Mode:** Tabbed interface for Login and Register.
-- **Validation:** Email format, password length, and password matching validation.
-- **Feedback:** Loading states and error messaging.
-- **Design:** Modern, clean aesthetic consistent with the rest of the app.
-
-#### 4. Asset Fundamentals Feature
-**Status:** ✅ Complete (Mock Data)
-
-**Components:**
-- **Screener:** `FundamentalsScreenerPage.tsx`
-- **Detail Page:** `FundamentalsPage.tsx`
-- **Sub-components:** `CompanyInfo`, `ValuationRatios`, `ProfitabilityGrowth`, `FinancialHealth`, `DividendShareData`, `QualitativeContext`
-- **Data:** `mocks/fundamentals.ts`
-
-**Features:**
-- **Screener:** Sortable/filterable table of companies with key metrics (P/E, Market Cap, Yield, etc.).
-- **Details:** Comprehensive view of valuation, profitability, health, and news for a specific company, refactored into modular components.
-- **Navigation:** Deep linking from screener to details page.
-
-#### 5. Frontend Testing Suite
-**Status:** ✅ Complete
-
-**Coverage:**
-- **Header:** 100% coverage
-- **MobileMenu:** 100% coverage
-- **StatsCard:** 100% coverage
-- **LoadingSpinner:** 100% coverage
-- **UserMenu:** ~95% coverage
-- **NavLink:** ~71% coverage
-
-**Tooling:**
-- **Framework:** Vitest + React Testing Library
-- **Features Tested:** Rendering, user interactions (clicks, keyboard), accessibility attributes, and conditional styling.
-
-### Technical Decisions
-
-#### 1. Client-Side Routing
-**Decision:** Migrated from conditional rendering to `react-router-dom`.
-
-**Rationale:**
-- Enables deep linking (e.g., `/transactions`).
-- Supports browser history navigation (back/forward).
-- Standard practice for SPA (Single Page Applications).
-
-#### 2. Mock Data Strategy
-**Decision:** Used local mock data for Transactions and Auth.
-
-**Rationale:**
-- Allowed rapid UI development without waiting for backend endpoints.
-- Decoupled frontend progress from backend readiness.
-- Easy to swap with Apollo Client `useQuery` hooks later.
-
-#### 3. Component-First Testing
-**Decision:** Wrote tests for individual UI components before page integration.
-
-**Rationale:**
-- Ensures building blocks are solid.
-- easier to debug isolated components.
-- Provides immediate feedback on accessibility compliance.
-
-### Next Steps
-1. **Backend Integration:** Connect Transactions and Auth pages to real GraphQL endpoints.
-2. **State Management:** Implement global auth state (Context or Redux) to handle login sessions.
-3. **E2E Testing:** Add Cypress or Playwright tests for full user flows.
+- `tools/asset-prices/README.md`
+
+### Price Ingestion Worker
+**Date:** 2025-11-27
+
+**Achievements:**
+- Fixed date parsing in `price_ingestion.go`
+- Support for YYYY-MM-DD format
+- Resolved "ON CONFLICT" duplicate errors
+- Batch insertion with 1000-row batches
+
+### NATS Event-Driven Architecture
+**Date:** 2025-11-22
+
+**Achievements:**
+- Transaction events published to NATS
+- Portfolio service subscribes to transaction events
+- Automatic holding updates on transactions
+- Support for BUY, SELL, SPLIT transaction types
+
+**Documentation:**
+- `docs/NATS_ARCHITECTURE.md`
+- `docs/NATS_EVENT_FLOW.md`
+- `docs/NATS_IMPLEMENTATION_SUMMARY.md`
+
+### GraphQL Gateway Implementation
+**Date:** 2025-11-25
+
+**Achievements:**
+- Apollo Server setup with gqlgen
+- Portfolio and holdings queries
+- User management mutations
+- CORS configuration
+- Frontend integration
+
+**Documentation:**
+- `docs/GRAPHQL_API.md`
+- `docs/GRAPHQL_TESTING_GUIDE.md`
+
+### Monitoring Stack
+**Date:** Earlier
+
+**Achievements:**
+- Prometheus metrics collection
+- Grafana dashboards
+- AlertManager configuration
+- Service health monitoring
+
+**Documentation:**
+- `docs/MONITORING_IMPLEMENTATION.md`
+- `docs/MONITORING_QUICKSTART.md`
 
 ---
 
@@ -1183,151 +341,588 @@ ON investments.portfolio_history(user_id, timestamp DESC);
 
 ---
 
-## Previous Development Sessions
+## 2025-11-29 (Morning) - Frontend Implementation & UI Polish
 
-### Asset Price Integration
-**Date:** 2025-11-27
+### Overview
+Focused on building out the core frontend pages, improving navigation, and establishing a robust testing foundation. Implemented the Transactions page, Authentication UI, and a responsive Header component, backed by comprehensive unit tests.
 
-**Achievements:**
-- Created `tools/asset-prices/eodhd/asset_prices_eodhd.go`
-- Support for stock prices and forex rates
-- CSV output format for database ingestion
-- Automatic detection of forex vs. stock data
-- Rate limiting and error handling
+### Features Implemented
+
+#### 1. Responsive Navigation & Header
+**Status:** ✅ Complete
+
+**Components:**
+- **Header:** Sticky top navigation with glassmorphism effect.
+- **Mobile Menu:** Slide-over menu for small screens with smooth animations.
+- **User Menu:** Dropdown with avatar, settings, and theme toggle (UI).
+- **Routing:** Client-side routing using `react-router-dom` v6.
+
+**Key Features:**
+- Responsive design adapting to mobile/desktop.
+- Active state highlighting for navigation links.
+- Accessible ARIA attributes for menu interactions.
+- "Click outside" detection for closing menus.
+
+#### 2. Transactions Management UI
+**Status:** ✅ Complete (Mock Data)
+
+**Components:**
+- **Page:** `TransactionsPage.tsx`
+- **Table:** `TransactionsTable.tsx` with sorting and filtering.
+- **Modal:** `AddTransactionModal.tsx` for creating new entries.
+
+**Features:**
+- **List View:** Display transactions with formatted dates, currency, and type-based coloring.
+- **Sorting:** Sort by date, ticker, type, quantity, price, or total.
+- **Filtering:** Real-time search by ticker and filter by transaction type (Buy/Sell/Split/Dividend).
+- **Creation:** Modal form with auto-calculation of totals (Quantity * Price + Brokerage).
+- **Validation:** Client-side validation for required fields and numeric values.
+
+#### 3. Authentication UI
+**Status:** ✅ Complete (UI Only)
+
+**Components:**
+- **Page:** `AuthPage.tsx`
+- **Component:** `Input.tsx` (Reusable UI component)
+
+**Features:**
+- **Dual Mode:** Tabbed interface for Login and Register.
+- **Validation:** Email format, password length, and password matching validation.
+- **Feedback:** Loading states and error messaging.
+- **Design:** Modern, clean aesthetic consistent with the rest of the app.
+
+#### 4. Asset Fundamentals Feature
+**Status:** ✅ Complete (Mock Data)
+
+**Components:**
+- **Screener:** `FundamentalsScreenerPage.tsx`
+- **Detail Page:** `FundamentalsPage.tsx`
+- **Sub-components:** `CompanyInfo`, `ValuationRatios`, `ProfitabilityGrowth`, `FinancialHealth`, `DividendShareData`, `QualitativeContext`
+- **Data:** `mocks/fundamentals.ts`
+
+**Features:**
+- **Screener:** Sortable/filterable table of companies with key metrics (P/E, Market Cap, Yield, etc.).
+- **Details:** Comprehensive view of valuation, profitability, health, and news for a specific company, refactored into modular components.
+- **Navigation:** Deep linking from screener to details page.
+
+#### 5. Frontend Testing Suite
+**Status:** ✅ Complete
+
+**Coverage:**
+- **Header:** 100% coverage
+- **MobileMenu:** 100% coverage
+- **StatsCard:** 100% coverage
+- **LoadingSpinner:** 100% coverage
+- **UserMenu:** ~95% coverage
+- **NavLink:** ~71% coverage
+
+**Tooling:**
+- **Framework:** Vitest + React Testing Library
+- **Features Tested:** Rendering, user interactions (clicks, keyboard), accessibility attributes, and conditional styling.
+
+### Technical Decisions
+
+#### 1. Client-Side Routing
+**Decision:** Migrated from conditional rendering to `react-router-dom`.
+
+**Rationale:**
+- Enables deep linking (e.g., `/transactions`).
+- Supports browser history navigation (back/forward).
+- Standard practice for SPA (Single Page Applications).
+
+#### 2. Mock Data Strategy
+**Decision:** Used local mock data for Transactions and Auth.
+
+**Rationale:**
+- Allowed rapid UI development without waiting for backend endpoints.
+- Decoupled frontend progress from backend readiness.
+- Easy to swap with Apollo Client `useQuery` hooks later.
+
+#### 3. Component-First Testing
+**Decision:** Wrote tests for individual UI components before page integration.
+
+**Rationale:**
+- Ensures building blocks are solid.
+- easier to debug isolated components.
+- Provides immediate feedback on accessibility compliance.
+
+### Next Steps
+1. **Backend Integration:** Connect Transactions and Auth pages to real GraphQL endpoints.
+2. **State Management:** Implement global auth state (Context or Redux) to handle login sessions.
+3. **E2E Testing:** Add Cypress or Playwright tests for full user flows.
+
+---
+
+## 2025-11-29 (Afternoon) - Transaction Schema Extension & GraphQL Mutation
+
+### Overview
+Extended the transaction schema to support brokerage fees and notes fields across all layers (database, gRPC, GraphQL). Implemented a complete GraphQL mutation for adding transactions, replacing the mock data layer with real backend integration.
+
+### Features Implemented
+
+#### 1. Transaction Schema Extension
+**Status:** ✅ Complete
+
+**Database Changes:**
+- **Migration:** Created `000008_add_brokerage_and_notes_to_transactions`
+- **Fields Added:**
+  - `brokerage` (NUMERIC(20, 8) DEFAULT 0) - For transaction fees
+  - `notes` (VARCHAR(100)) - For optional transaction notes
+- **Status:** Migration applied successfully
+
+**Protocol Buffer Updates:**
+- Updated `proto/transaction/transaction.proto`
+- Added `brokerage` (double, field 10) and `notes` (string, field 11) to `Transaction` message
+- Added fields to `CreateTransactionRequest` and `UpdateTransactionRequest`
+- Regenerated gRPC code
+
+**Domain Model Updates:**
+- Updated `Transaction` struct in `services/transaction-service/internal/domain/transaction.go`
+- Refactored `TransactionUsecase` interface to use struct-based parameters instead of individual arguments
+- Improved API design: `CreateTransaction(ctx, *Transaction) error` vs old `CreateTransaction(ctx, userID, symbol, type, qty, price, executedAt) (*Transaction, error)`
+
+**Repository Layer:**
+- Updated all SQL queries in `postgres_repo.go` to handle new fields
+- Implemented proper NULL handling using `sql.NullFloat64` and `sql.NullString`
+- Updated `Create`, `GetByID`, `ListByUserID`, and `Update` methods
+
+**Use Case Layer:**
+- Completely refactored `transaction_usecase.go` to match new interface
+- Added UUID generation for transaction IDs
+- Maintained validation logic (type, quantity, price, user, asset)
+- Preserved event publishing and metrics recording
+
+**Handler Layer:**
+- Updated gRPC handler to validate required fields
+- Added mapping for `brokerage` and `notes` fields
+- Renamed helper function to `mapDomainToProto` for clarity
+
+**Testing:**
+- Updated all unit tests to use new struct-based API
+- All tests passing (handler + usecase)
+- Added `github.com/google/uuid` dependency
+
+#### 2. GraphQL Add Transaction Mutation
+**Status:** ✅ Complete
+
+**Schema Definition:**
+```graphql
+enum TransactionType {
+  BUY
+  SELL
+  SPLIT
+  DIVIDEND
+}
+
+type Transaction {
+  id: ID!
+  userId: ID!
+  symbol: String!
+  type: TransactionType!
+  quantity: Float!
+  pricePerShare: Float!
+  executedAt: String!
+  notes: String
+  brokerage: Float
+  createdAt: String!
+  updatedAt: String!
+}
+
+input NewTransaction {
+  symbol: String!
+  quantity: Float!
+  pricePerShare: Float!
+  executedAt: String!
+  type: TransactionType!
+  notes: String
+  brokerage: Float
+}
+
+extend type Mutation {
+  addTransaction(input: NewTransaction!): Transaction!
+}
+```
+
+**Resolver Implementation:**
+- Implemented `AddTransaction` resolver in `apps/gateway/graph/schema.resolvers.go`
+- Added `parseTimestamp` helper for ISO-8601 date parsing
+- Hardcoded user ID (`3a4b3185-5abb-4899-9835-829ddb91e3a6`) until JWT is implemented
+- Calls transaction-service via gRPC
+- Handles optional fields (notes, brokerage) correctly
+
+**Dependency Injection:**
+- Added `TransactionClient` to Resolver struct
+- Initialized gRPC connection to transaction-service (default: `localhost:50053`)
+- Updated `main.go` to wire up the client
+
+**Frontend Integration:**
+- Created `ADD_TRANSACTION` mutation in `apps/frontend/src/graphql/mutations.ts`
+- Updated `AddTransactionModal.tsx` to use `useMutation` hook
+- Replaced `onSave` callback with GraphQL mutation call
+- Added loading state ("Saving..." button text)
+- Added error display with styled error message
+- Disabled form controls during submission
+- Proper date format conversion to ISO-8601
+
+**Page Updates:**
+- Removed mock `handleAddTransaction` function from `TransactionsPage.tsx`
+- Changed to use `onSuccess` callback
+- Added comment about future GraphQL query integration for listing transactions
+
+### Technical Decisions
+
+#### 1. Struct-Based Use Case API
+**Decision:** Refactored `TransactionUsecase` to accept `*Transaction` structs instead of individual parameters.
+
+**Rationale:**
+- **Cleaner API:** Easier to add new fields without changing method signatures
+- **Better Encapsulation:** Transaction is a cohesive entity
+- **Reduced Boilerplate:** Fewer parameters to pass around
+- **Consistency:** Matches common Go patterns (e.g., HTTP handlers)
+
+**Example:**
+```go
+// Before
+CreateTransaction(ctx, userID, symbol, type, qty, price, executedAt) (*Transaction, error)
+
+// After
+CreateTransaction(ctx, *Transaction) error
+```
+
+#### 2. Data Type Precision
+**Decision:** Used `NUMERIC(20, 8)` for brokerage in PostgreSQL.
+
+**Rationale:**
+- Avoids floating-point precision errors for monetary values
+- Supports large values (up to 20 digits total)
+- 8 decimal places for fractional cents or crypto
+
+#### 3. Hardcoded User ID in GraphQL
+**Decision:** Temporarily hardcode user ID in resolver until JWT is implemented.
+
+**Rationale:**
+- Allows testing of the mutation immediately
+- Clear TODO for future JWT extraction from context
+- Doesn't block frontend development
+
+#### 4. Optional Fields Handling
+**Decision:** Use pointers for optional fields in GraphQL input, NULL in database.
+
+**Rationale:**
+- Distinguishes between "not provided" and "empty string"
+- Database NULL handling via `sql.NullString` and `sql.NullFloat64`
+- GraphQL schema allows omitting optional fields
+
+### Data Flow
+
+```
+Frontend Modal (React)
+    ↓ (useMutation)
+GraphQL Gateway (Go)
+    ↓ (gRPC)
+Transaction Service (Go)
+    ↓ (SQL)
+PostgreSQL
+    ↓ (Response)
+Frontend (Success/Error)
+```
+
+#### 3. Transaction Currency Support
+**Status:** ✅ Complete
+
+**Database Changes:**
+- **Migration:** Created `000009_add_currency_fields_to_transactions`
+- **Fields Added:** `price_currency` (VARCHAR(3)), `brokerage_currency` (VARCHAR(3))
+
+**Protocol Buffer Updates:**
+- Updated `proto/transaction/transaction.proto`
+- Added `price_currency` and `brokerage_currency` strings
+
+**Service Updates:**
+- Updated `Transaction` domain model
+- Updated repository CRUD operations
+- Added validation for 3-letter currency codes in usecase
+- Updated gRPC handler mapping
+
+### Build Status
+- ✅ Transaction service builds and tests pass
+- ✅ Gateway builds successfully (Fixed dependency issue with `transaction-service` import)
+- ✅ Docker Compose configuration updated (Added `TRANSACTION_SERVICE_ADDR` to gateway)
+- ✅ Frontend compiles (main code)
+- ⚠️ Frontend has pre-existing test errors (unrelated to changes)
+
+### Documentation
+- Created `docs/TRANSACTION_SCHEMA_UPDATE.md` - Comprehensive schema update documentation
+- Created `docs/GRAPHQL_ADD_TRANSACTION.md` - GraphQL mutation implementation guide
+
+### Next Steps
+1. **JWT Integration:** Replace hardcoded user ID with JWT token extraction
+2. **List Transactions Query:** Add GraphQL query to fetch transactions
+3. **Refetch Strategy:** Add `refetchQueries` to mutation for auto-update
+4. **Optimistic Updates:** Consider adding optimistic UI updates
+5. **Error Handling:** Implement typed error responses
+
+---
+
+## 2025-11-29 (Evening) - Gateway Clean Architecture Refactoring & CSV Upload
+
+### Overview
+Major refactoring of the GraphQL Gateway to implement Clean Architecture principles, followed by implementation of CSV file upload functionality for bulk transaction imports. This represents a significant architectural improvement that enhances maintainability, testability, and separation of concerns.
+
+### Features Implemented
+
+#### 1. Gateway Clean Architecture Refactoring
+**Status:** ✅ Complete
+
+**Architecture Layers:**
+
+**Domain Layer** (`internal/domain/`)
+- **Entities:** Core business objects
+  - `User` - User domain entity
+  - `Portfolio`, `PortfolioSummary`, `Holding`, `PortfolioPerformancePoint` - Portfolio entities
+  - `Transaction` - Transaction entity with builder methods
+- **Gateway Interfaces:** Abstract contracts for external services
+  - `UserGateway` - User service operations
+  - `PortfolioGateway` - Portfolio service operations
+  - `TransactionGateway` - Transaction service operations
+  - `TransactionFileGateway` - File upload operations
+
+**Use Case Layer** (`internal/usecase/`)
+- `UserUseCase` - User business logic (GetUser, CreateUser, GetCurrentUser)
+- `PortfolioUseCase` - Portfolio operations (GetPortfolio, GetSummary, GetHoldings, GetPerformance)
+- `TransactionUseCase` - Transaction logic with validation (CreateTransaction, UploadCSV)
+
+**Infrastructure Layer** (`internal/infrastructure/`)
+- **gRPC Gateways:**
+  - `UserGRPCGateway` - User service client
+  - `PortfolioGRPCGateway` - Portfolio service client
+  - `TransactionGRPCGateway` - Transaction service client
+- **HTTP Gateway:**
+  - `TransactionHTTPGateway` - Streaming CSV upload to transaction service
+- **Mappers:**
+  - `proto_mapper.go` - Protobuf ↔ Domain conversion
+  - `graphql_mapper.go` - GraphQL ↔ Domain conversion
+
+**Presentation Layer** (`graph/`)
+- Refactored resolvers to be thin, delegating to use cases
+- Removed direct gRPC client dependencies
+- Clean separation of GraphQL concerns from business logic
+
+**Dependency Injection** (`internal/container/`)
+- `Container` struct managing all dependencies
+- Centralized initialization and wiring
+- Updated `main.go` to use container
+
+**Testing:**
+- ✅ Use case tests (`*_usecase_test.go`) - Business logic validation
+- ✅ Infrastructure mapper tests (`proto_mapper_test.go`) - Protobuf conversion
+- ✅ GraphQL mapper tests (`graphql_mapper_test.go`) - GraphQL conversion
+- ✅ Resolver tests (`resolver_test.go`) - Updated for new architecture
+- All tests passing
 
 **Documentation:**
-- `tools/asset-prices/README.md`
+- `CLEAN_ARCHITECTURE.md` - Comprehensive architecture guide
+- `ARCHITECTURE_DIAGRAMS.md` - Visual diagrams and data flow
+- `REFACTORING_SUMMARY.md` - Detailed refactoring summary
 
-### Price Ingestion Worker
-**Date:** 2025-11-27
+**Cleanup:**
+- Removed `internal/service` directory (replaced by use cases)
+- Removed `internal/util` directory (no longer needed)
 
-**Achievements:**
-- Fixed date parsing in `price_ingestion.go`
-- Support for YYYY-MM-DD format
-- Resolved "ON CONFLICT" duplicate errors
-- Batch insertion with 1000-row batches
+#### 2. CSV Upload Feature
+**Status:** ✅ Complete
 
-### NATS Event-Driven Architecture
-**Date:** 2025-11-22
+**Backend (Gateway):**
 
-**Achievements:**
-- Transaction events published to NATS
-- Portfolio service subscribes to transaction events
-- Automatic holding updates on transactions
-- Support for BUY, SELL, SPLIT transaction types
+**GraphQL Schema:**
+```graphql
+scalar Upload
 
-**Documentation:**
-- `docs/NATS_ARCHITECTURE.md`
-- `docs/NATS_EVENT_FLOW.md`
-- `docs/NATS_IMPLEMENTATION_SUMMARY.md`
+extend type Mutation {
+  uploadTransactionCSV(file: Upload!): Boolean!
+}
+```
 
-### GraphQL Gateway Implementation
-**Date:** 2025-11-25
+**Domain Layer:**
+- Added `TransactionFileGateway` interface with `UploadCSV` method
+- Accepts `io.Reader` for streaming file content
 
-**Achievements:**
-- Apollo Server setup with gqlgen
-- Portfolio and holdings queries
-- User management mutations
-- CORS configuration
-- Frontend integration
+**Infrastructure Layer:**
+- `TransactionHTTPGateway` implementation
+  - Streams file to `transaction-service:8081/upload-csv`
+  - Uses `multipart/form-data` for file transfer
+  - Passes `user_id` as query parameter
+  - No file buffering in gateway memory
 
-**Documentation:**
-- `docs/GRAPHQL_API.md`
-- `docs/GRAPHQL_TESTING_GUIDE.md`
+**Use Case Layer:**
+- `TransactionUseCase.UploadCSV` method
+  - Validates file and filename
+  - Delegates to file gateway
 
-### Monitoring Stack
-**Date:** Earlier
+**Resolver:**
+- `uploadTransactionCSV` mutation implementation
+  - Extracts user ID from auth context
+  - Calls use case with file reader
+  - Returns success/failure boolean
 
-**Achievements:**
-- Prometheus metrics collection
-- Grafana dashboards
-- AlertManager configuration
-- Service health monitoring
+**Configuration:**
+- Added `TRANSACTION_SERVICE_HTTP_ADDR` environment variable
+- Updated `docker-compose.yml` with HTTP endpoint URL
+- Container initialized with transaction service URL
 
-**Documentation:**
-- `docs/MONITORING_IMPLEMENTATION.md`
-- `docs/MONITORING_QUICKSTART.md`
+**Frontend:**
 
----
+**GraphQL Mutation:**
+```typescript
+export const UPLOAD_TRANSACTION_CSV = gql`
+  mutation UploadTransactionCSV($file: Upload!) {
+    uploadTransactionCSV(file: $file)
+  }
+`;
+```
 
-## Development Metrics
+**Custom Upload Link:**
+- Created `createUploadLink.ts` - Custom Apollo Link
+- Detects `File` objects in variables
+- Sends multipart/form-data requests
+- Follows GraphQL multipart request specification
+- No external dependencies required
 
-### Code Statistics
-- **Total Services:** 5 (gateway, user, portfolio, transaction, marketdata)
-- **Total Endpoints:** 15+ gRPC RPCs, 5+ GraphQL queries
-- **Database Tables:** 8 tables across 2 schemas
-- **Documentation Files:** 20+ markdown files
-- **Test Coverage:** In progress
+**Apollo Client:**
+- Updated `apolloClient.ts` to use `createUploadLink`
+- Replaced standard `HttpLink` with upload-capable link
 
-### Technology Stack
-- **Backend:** Go 1.21+
-- **Frontend:** React 18 + TypeScript + Vite
-- **API Gateway:** GraphQL (gqlgen)
-- **RPC:** gRPC with Protocol Buffers
-- **Database:** PostgreSQL 16
-- **Caching:** Redis 7
-- **Messaging:** NATS with JetStream
-- **Storage:** MinIO (S3-compatible)
-- **Monitoring:** Prometheus + Grafana
-- **Containerization:** Podman/Docker Compose
+**UI Integration:**
+- Updated `TransactionsPage.tsx`
+- Wired "Upload CSV" button to mutation
+- File selection dialog
+- Success/error handling
+- Alert notifications
 
----
+**Transaction Service Updates:**
+- Updated CSV parser to handle new fields:
+  - `brokerage`, `notes`, `price_currency`, `brokerage_currency`
+- Updated repository to insert all fields
+- Fixed bulk insert SQL statement
 
-## Next Steps
+### Technical Decisions
 
-### Immediate Priorities
-1. ✅ Complete portfolio performance feature
-2. ⏳ Fix test mocks for GetHistoricalCurrencyRates
-3. ⏳ Implement automated daily snapshot job
-4. ⏳ Add performance metrics calculations
-5. ⏳ Implement Transaction Search Page
+#### 1. Clean Architecture Benefits
+**Decision:** Refactor gateway to Clean Architecture pattern
 
-### Short-term Goals
-1. Implement custom date range selection
-2. Add benchmark comparison feature
-3. Create performance analytics dashboard
-4. Implement data aggregation for long periods
+**Rationale:**
+- **Testability:** Each layer can be tested in isolation with mocks
+- **Maintainability:** Clear separation of concerns
+- **Flexibility:** Easy to swap implementations (e.g., gRPC → REST)
+- **Scalability:** New features fit naturally into existing structure
 
-### Long-term Vision
-1. Real-time portfolio updates via WebSocket
-2. Machine learning for portfolio insights
-3. Tax reporting features
-4. Multi-portfolio support
-5. Social features (portfolio sharing, leaderboards)
+**Trade-offs:**
+- Initial complexity increase
+- More files and interfaces
+- Learning curve for new developers
 
----
+#### 2. Streaming File Upload
+**Decision:** Stream files directly without buffering in gateway
 
-## Lessons Learned
+**Rationale:**
+- **Memory Efficiency:** Large CSV files don't consume gateway memory
+- **Performance:** Direct streaming to transaction service
+- **Scalability:** Can handle files of any size
 
-### What Went Well
-1. **Modular Architecture:** Clean separation of concerns enables rapid feature development
-2. **Repository Pattern:** Easy to swap implementations and test
-3. **gRPC + GraphQL:** Best of both worlds - efficient internal communication, flexible client API
-4. **Documentation-First:** Writing docs alongside code improves clarity
+**Implementation:**
+- Gateway receives `graphql.Upload` with `io.Reader`
+- Creates multipart request with file stream
+- Transaction service processes stream directly
 
-### Challenges Overcome
-1. **Historical Data Complexity:** Solved with fallback logic for missing dates
-2. **Multi-Currency Support:** Implemented historical currency rate tracking
-3. **Performance Optimization:** Database indexing and efficient queries
-4. **Frontend State Management:** Apollo Client handles caching and updates elegantly
+#### 3. Custom Upload Link
+**Decision:** Implement custom Apollo Link instead of using `apollo-upload-client`
 
-### Areas for Improvement
-1. **Test Coverage:** Need comprehensive unit and integration tests
-2. **Error Handling:** More granular error types and better user feedback
-3. **Logging:** Structured logging with correlation IDs
-4. **Observability:** Distributed tracing across services
+**Rationale:**
+- **No Dependencies:** Avoids external package
+- **Control:** Full control over multipart request format
+- **Simplicity:** Straightforward implementation
+- **Compatibility:** Works with standard Apollo Client
 
----
+**Implementation:**
+- Detects `File` objects in variables
+- Builds GraphQL multipart request spec
+- Handles both file and non-file requests
 
-## Contributors
+#### 4. Dependency Injection Container
+**Decision:** Centralize dependency management in Container
 
-- Oscar Garcia (@garcios) - Lead Developer
+**Rationale:**
+- **Single Source of Truth:** All dependencies initialized in one place
+- **Easier Testing:** Mock entire container or individual components
+- **Clearer Dependencies:** Explicit dependency graph
+- **Reduced Coupling:** Components depend on interfaces, not implementations
 
----
+### Data Flow
 
-## License
+#### Clean Architecture Data Flow:
+```
+GraphQL Request
+    ↓
+Resolver (Presentation)
+    ↓
+Use Case (Business Logic)
+    ↓
+Gateway Interface (Domain)
+    ↓
+gRPC/HTTP Gateway (Infrastructure)
+    ↓
+External Service
+```
 
-Portfolio Insights is a personal project for investment tracking and analysis.
+#### CSV Upload Flow:
+```
+Frontend File Selection
+    ↓
+GraphQL Mutation (multipart/form-data)
+    ↓
+Gateway Resolver
+    ↓
+TransactionUseCase.UploadCSV
+    ↓
+TransactionHTTPGateway (streaming)
+    ↓
+Transaction Service HTTP Endpoint
+    ↓
+CSV Parser & Bulk Insert
+    ↓
+PostgreSQL
+```
+
+### Build Status
+- ✅ Gateway builds successfully
+- ✅ All tests passing (use cases, mappers, resolvers)
+- ✅ Frontend compiles without errors
+- ✅ Docker Compose configuration updated
+- ✅ Services start successfully
+
+### Documentation Created
+1. **Architecture Documentation:**
+   - `apps/gateway/CLEAN_ARCHITECTURE.md`
+   - `apps/gateway/ARCHITECTURE_DIAGRAMS.md`
+   - `apps/gateway/REFACTORING_SUMMARY.md`
+
+2. **Code Documentation:**
+   - Comprehensive inline comments
+   - Interface documentation
+   - Test documentation
+
+### Testing Coverage
+- **Use Cases:** 100% of public methods tested
+- **Mappers:** All conversion functions tested
+- **Resolvers:** Integration tests with mocked container
+
+### Next Steps
+1. **JWT Integration:** Extract user ID from JWT tokens instead of hardcoding
+2. **File Validation:** Add CSV format validation before upload
+3. **Progress Tracking:** WebSocket for upload progress updates
+4. **Error Details:** Return detailed validation errors from CSV parsing
+5. **Batch Processing:** Support for very large CSV files with chunking
+6. **OAuth2/OIDC:** Implement Ory Hydra integration for authentication
 
 ---
 
@@ -1429,4 +1024,411 @@ A major push towards production readiness with the creation of Helm charts for K
 - **CI/CD:** Added `login-consent-provider` tests to GitHub Actions workflow.
 - **Build:** Resolved Go module version mismatches and `go mod tidy` errors.
 
+
+
+
+---
+
+## 2025-12-02 (Evening) - Market Data Service Event-Based Ingestion
+
+### Overview
+Refactored the `marketdata-service` ingestion workers to use an event-driven approach with MinIO bucket notifications. This replaces the previous polling mechanism, allowing for immediate processing of uploaded market data files (`asset.csv`, `price.csv`, `currency_rates.csv`). The system architecture diagram was also updated to reflect the new data flow involving the Admin User and MinIO UI.
+
+### Features Implemented
+
+#### 1. Event-Based Ingestion Workers
+**Status:** ✅ Complete
+
+**Components:**
+- **IngestionWorker (Assets):**
+  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
+  - Filters for `asset.csv` suffix.
+  - Automatically processes the file upon upload.
+  - Checks for bucket existence on startup and creates it if missing.
+- **PriceIngestionWorker (Prices):**
+  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
+  - Filters for `price.csv` suffix.
+  - Automatically processes the file upon upload.
+- **CurrencyIngestionWorker (Currency Rates):**
+  - Listens for `s3:ObjectCreated:Put` events on the `market-data` bucket.
+  - Filters for `currency_rates.csv` suffix.
+  - Automatically processes the file upon upload.
+
+**Implementation Details:**
+- Used `minioClient.ListenBucketNotification` for real-time event monitoring.
+- Removed polling loops (`time.Ticker`) in favor of blocking channel reads.
+- Updated `processFile` methods to accept the specific object key from the event record.
+
+#### 2. System Architecture Update
+**Status:** ✅ Complete
+
+**Changes:**
+- Updated `README.md` Mermaid diagram.
+- Added **Admin User** node connecting to **MinIO UI**.
+- Added **MinIO UI** node connecting to **MinIO Object Storage**.
+- Added **MinIO** to the **Infrastructure** subgraph.
+- Illustrated the event flow: `MinIO -.->|Event: ObjectCreated| MarketData`.
+
+### Technical Decisions
+
+#### 1. MinIO Bucket Notifications
+**Decision:** Switch from polling to MinIO bucket notifications.
+
+**Rationale:**
+- **Efficiency:** Eliminates unnecessary API calls to check for new files.
+- **Latency:** Reduces the delay between file upload and processing.
+- **Scalability:** Better suited for event-driven architectures.
+
+### Next Steps
+1.  **Validation:** Verify the end-to-end flow by uploading files via the MinIO UI and checking logs/database.
+2.  **Error Handling:** Ensure robust error handling for network interruptions during event listening (already implemented with error logging in the loop).
+
+---
+
+## 2025-12-02 - Deployment & Logic Fixes
+
+### Overview
+Focused on stabilizing the deployment pipeline and fixing core business logic for portfolio calculations.
+
+### Features Implemented
+
+#### 1. Deployment Improvements
+**Status:** ✅ Complete
+
+- **Database Migrations:** Created dedicated Dockerfile in `infra/db` to run migrations reliably during deployment.
+- **Secrets Management:** Fixed `docker-compose` secrets configuration to resolve `unparsable secret` errors.
+- **Connectivity:** Resolved "connection refused" errors for migration containers.
+
+#### 2. Portfolio Logic Fixes
+**Status:** ✅ Complete
+
+- **Day Change Calculation:** Fixed logic in `GetPortfolioSummary` to correctly calculate "Day Change" and "Percentage".
+- **Issue:** Previous logic was returning zero values due to incorrect historical data fetching.
+- **Fix:** Implemented robust comparison with ~24h prior value, handling edge cases where exact timestamps are missing.
+
+
+---
+
+## 2025-12-03 - Gateway Prometheus Metrics Implementation
+
+### Overview
+Successfully added Prometheus metrics instrumentation to the `apps/gateway` service, completing the observability implementation across all core services. The gateway now exposes HTTP request metrics for monitoring performance, request rates, and error tracking.
+
+### Features Implemented
+
+#### 1. Prometheus Metrics Package
+**Status:** ✅ Complete
+
+**Components:**
+- **Metrics Package:** `internal/metrics/metrics.go`
+  - `HttpRequestsTotal` - Counter for total HTTP requests by method, path, and status
+  - `HttpRequestDuration` - Histogram for request duration by method and path
+  - `RecordHttpRequest()` - Helper function to record metrics
+
+**Standard Metrics:**
+- Automatically exposed by Prometheus client:
+  - `process_cpu_seconds_total` - CPU usage
+  - `process_resident_memory_bytes` - Memory usage
+  - `go_goroutines` - Goroutine count
+  - `go_memstats_*` - Go memory statistics
+
+#### 2. HTTP Metrics Middleware
+**Status:** ✅ Complete
+
+**Implementation:**
+- **File:** `internal/middleware/metrics.go`
+- **Features:**
+  - Custom response writer to capture status codes
+  - Request duration measurement
+  - Automatic metrics recording for all HTTP requests
+  - Integrates seamlessly with existing middleware chain
+
+**Middleware Chain:**
+```
+HTTP Request → CORS → Auth → Metrics → GraphQL Handler
+```
+
+#### 3. Server Integration
+**Status:** ✅ Complete
+
+**Changes to `cmd/server/main.go`:**
+- Added `prometheus/promhttp` import
+- Wrapped GraphQL handler with `MetricsMiddleware`
+- Exposed `/metrics` endpoint for Prometheus scraping
+- Port 9095 configured for metrics endpoint
+
+#### 4. Infrastructure Updates
+**Status:** ✅ Complete
+
+**Docker Compose:**
+- Added port `9095:9095` to gateway service
+- Aligned with existing Prometheus scrape configuration
+
+**Prometheus Configuration:**
+- Gateway already configured in `prometheus.yml`:
+  ```yaml
+  - job_name: 'gateway-service'
+    static_configs:
+      - targets: ['host.docker.internal:9095']
+        labels:
+          service: 'gateway'
+          tier: 'api'
+  ```
+
+#### 5. Testing
+**Status:** ✅ Complete
+
+**Test Suite:**
+- Created `internal/metrics/metrics_test.go`
+- Tests for metrics registration
+- Tests for recording HTTP requests
+- All tests passing ✅
+
+**Build Verification:**
+- ✅ Gateway builds successfully
+- ✅ All existing tests passing
+- ✅ No regressions introduced
+
+### Metrics Exposed
+
+#### Gateway-Specific Metrics
+```promql
+# Total HTTP requests by method, path, and status
+gateway_http_requests_total{method="GET", path="/query", status="200"}
+
+# Request duration histogram by method and path
+gateway_http_request_duration_seconds{method="GET", path="/query"}
+```
+
+#### Example Queries
+```promql
+# Request rate over 5 minutes
+rate(gateway_http_requests_total[5m])
+
+# 95th percentile response time
+histogram_quantile(0.95, rate(gateway_http_request_duration_seconds_bucket[5m]))
+
+# Error rate
+sum(rate(gateway_http_requests_total{status=~"5.."}[5m])) / sum(rate(gateway_http_requests_total[5m]))
+```
+
+### Technical Decisions
+
+#### 1. HTTP Middleware Approach
+**Decision:** Implement metrics collection as HTTP middleware
+
+**Rationale:**
+- Captures all HTTP requests automatically
+- No need to instrument individual handlers
+- Consistent with other services (portfolio, user, transaction)
+- Minimal code changes to existing handlers
+
+#### 2. Metrics Granularity
+**Decision:** Track metrics by method, path, and status code
+
+**Rationale:**
+- **Method:** Distinguish GET, POST, OPTIONS
+- **Path:** Separate `/query`, `/`, `/metrics` endpoints
+- **Status:** Track success (2xx), client errors (4xx), server errors (5xx)
+
+**Trade-offs:**
+- Higher cardinality with path labels
+- Acceptable for gateway with limited endpoints
+- Can aggregate by method/status if needed
+
+#### 3. Port Selection
+**Decision:** Use port 9095 for metrics endpoint
+
+**Rationale:**
+- Consistent with service naming pattern:
+  - User Service: 9096
+  - Transaction Service: 9097
+  - Portfolio Service: 9098
+  - Market Data Service: 9099
+  - Gateway: 9095 (API tier)
+- Already configured in Prometheus
+
+### Documentation Created
+
+1. **Implementation Guide:** `apps/gateway/PROMETHEUS_METRICS.md`
+   - Comprehensive overview
+   - Metrics exposed
+   - Verification steps
+   - Next steps for enhancement
+
+2. **Test Script:** `apps/gateway/test-metrics.sh`
+   - Automated verification script
+   - Checks endpoint accessibility
+   - Validates metrics presence
+   - Generates test traffic
+
+3. **Updated Observability Summary:** `docs/OBSERVABILITY_SUMMARY.md`
+   - Added Gateway section
+   - Documented exposed port and metrics
+
+### Observability Stack Status
+
+All core services now have Prometheus metrics:
+- ✅ **Gateway** (Port 9095) - HTTP request metrics
+- ✅ **User Service** (Port 9096) - gRPC + DB metrics
+- ✅ **Transaction Service** (Port 9097) - gRPC + DB metrics
+- ✅ **Portfolio Service** (Port 9098) - gRPC + DB + Cache metrics
+- ✅ **Market Data Service** (Port 9099) - gRPC + DB metrics
+- ✅ **Login Consent Provider** (Port 3002) - HTTP metrics
+
+### Verification Steps
+
+1. **Check Metrics Endpoint:**
+   ```bash
+   curl http://localhost:9095/metrics
+   ```
+
+2. **Run Test Script:**
+   ```bash
+   cd apps/gateway
+   ./test-metrics.sh
+   ```
+
+3. **Query in Prometheus:**
+   - Navigate to `http://localhost:9081`
+   - Query: `rate(gateway_http_requests_total[5m])`
+
+4. **View in Grafana:**
+   - Navigate to `http://localhost:3001`
+   - Use existing dashboard or create new panels
+
+### Next Steps
+
+1. **Grafana Dashboard Enhancement:**
+   - Add Gateway-specific panels
+   - HTTP request rate by path
+   - Response time percentiles
+   - Error rate visualization
+
+2. **GraphQL-Specific Metrics (Optional):**
+   - Query complexity tracking
+   - Resolver execution time
+   - Query vs Mutation breakdown
+   - Field-level metrics
+
+3. **Alerting Rules:**
+   - High error rate (5xx > threshold)
+   - Slow response times (p95 > threshold)
+   - High request volume
+
+4. **Performance Optimization:**
+   - Monitor metrics overhead
+   - Consider sampling for high-traffic scenarios
+
+### Files Modified/Created
+
+- ✅ `apps/gateway/internal/metrics/metrics.go` (new)
+- ✅ `apps/gateway/internal/metrics/metrics_test.go` (new)
+- ✅ `apps/gateway/internal/middleware/metrics.go` (new)
+- ✅ `apps/gateway/cmd/server/main.go` (modified)
+- ✅ `apps/gateway/go.mod` (modified - added prometheus client)
+- ✅ `apps/gateway/PROMETHEUS_METRICS.md` (new)
+- ✅ `apps/gateway/test-metrics.sh` (new)
+- ✅ `deployments/docker-compose/docker-compose.yml` (modified - added port 9095)
+- ✅ `docs/OBSERVABILITY_SUMMARY.md` (updated)
+
+---
+
+## 2025-12-03 - Post-Mortem: Grafana Metrics Display Issue
+
+### Overview
+Documented and resolved a configuration issue where Prometheus metrics were not displaying in Grafana dashboards. The issue stemmed from datasource UID and metric name mismatches.
+
+### Key Findings
+- **Datasource UID**: Grafana dashboards expected `uid: "prometheus"`, but the provisioning file lacked this explicit ID.
+- **Metric Names**: Dashboards used generic names (e.g., `http_requests_total`) while services exposed namespaced metrics (e.g., `gateway_http_requests_total`).
+
+### Resolution
+- Updated `prometheus.yml` to explicitly set the datasource UID.
+- Corrected dashboard JSON to use namespaced metric queries.
+- Restarted monitoring stack to apply changes.
+
+### Documentation
+- Full details in `docs/POST_MORTEM_METRICS_DISPLAY_ISSUE.md`
+
+---
+
+## Development Metrics
+
+### Code Statistics
+- **Total Services:** 5 (gateway, user, portfolio, transaction, marketdata)
+- **Total Endpoints:** 15+ gRPC RPCs, 5+ GraphQL queries
+- **Database Tables:** 8 tables across 2 schemas
+- **Documentation Files:** 20+ markdown files
+- **Test Coverage:** In progress
+
+### Technology Stack
+- **Backend:** Go 1.21+
+- **Frontend:** React 18 + TypeScript + Vite
+- **API Gateway:** GraphQL (gqlgen)
+- **RPC:** gRPC with Protocol Buffers
+- **Database:** PostgreSQL 16
+- **Caching:** Redis 7
+- **Messaging:** NATS with JetStream
+- **Storage:** MinIO (S3-compatible)
+- **Monitoring:** Prometheus + Grafana
+- **Containerization:** Podman/Docker Compose
+
+---
+
+## Next Steps
+
+### Immediate Priorities
+1. ✅ Complete portfolio performance feature
+2. ⏳ Fix test mocks for GetHistoricalCurrencyRates
+3. ⏳ Implement automated daily snapshot job
+4. ⏳ Add performance metrics calculations
+5. ⏳ Implement Transaction Search Page
+
+### Short-term Goals
+1. Implement custom date range selection
+2. Add benchmark comparison feature
+3. Create performance analytics dashboard
+4. Implement data aggregation for long periods
+
+### Long-term Vision
+1. Real-time portfolio updates via WebSocket
+2. Machine learning for portfolio insights
+3. Tax reporting features
+4. Multi-portfolio support
+5. Social features (portfolio sharing, leaderboards)
+
+---
+
+## Lessons Learned
+
+### What Went Well
+1. **Modular Architecture:** Clean separation of concerns enables rapid feature development
+2. **Repository Pattern:** Easy to swap implementations and test
+3. **gRPC + GraphQL:** Best of both worlds - efficient internal communication, flexible client API
+4. **Documentation-First:** Writing docs alongside code improves clarity
+
+### Challenges Overcome
+1. **Historical Data Complexity:** Solved with fallback logic for missing dates
+2. **Multi-Currency Support:** Implemented historical currency rate tracking
+3. **Performance Optimization:** Database indexing and efficient queries
+4. **Frontend State Management:** Apollo Client handles caching and updates elegantly
+
+### Areas for Improvement
+1. **Test Coverage:** Need comprehensive unit and integration tests
+2. **Error Handling:** More granular error types and better user feedback
+3. **Logging:** Structured logging with correlation IDs
+4. **Observability:** Distributed tracing across services
+
+---
+
+## Contributors
+
+- Oscar Garcia (@garcios) - Lead Developer
+
+---
+
+## License
+
+Portfolio Insights is a personal project for investment tracking and analysis.
 

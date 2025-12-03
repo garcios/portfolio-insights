@@ -1,0 +1,18 @@
+Create a document in docs directory called PLATFORM-UI-SUGGESTION.md that will contain a list of suggestions for the platform-ui application.
+The document should be in markdown format and should be easy to read and understand. The document should be structured in a way that makes it easy to navigate and find the information you need.
+
+The platform-ui application is a web application for admin users.
+
+- It is a web application that allows admin users to manage the following:
+    - User & Access Management
+    - Data & System Configuration
+    - Analytics & Reports
+
+
+- It is a single page application that uses React and TypeScript.
+- It is a modern web application that uses a clean and intuitive user interface.
+- It is a secure web application that uses authentication and authorization.
+- It is a maintainable web application that is easy to update and modify.
+
+The suggestions should include suggested features to be added to the platform-ui application.
+
