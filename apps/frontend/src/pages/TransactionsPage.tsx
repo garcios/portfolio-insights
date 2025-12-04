@@ -1,37 +1,57 @@
 import { useState, useMemo } from 'react';
-import { useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client';
 import { Plus, Upload, Search, Filter, Download } from 'lucide-react';
 import Header from '../components/Header';
 import TransactionsTable from '../components/transactions/TransactionsTable';
 import AddTransactionModal from '../components/transactions/AddTransactionModal';
-import { mockTransactions } from '../mocks/transactions';
-import { Transaction } from '../types/transaction';
+import { Transaction, TransactionFilterInput } from '../types/transaction';
+import { LIST_TRANSACTIONS } from '../graphql/queries';
 import { UPLOAD_TRANSACTION_CSV } from '../graphql/mutations';
 
 const TransactionsPage = () => {
-    // Using mock data for now - will be replaced with GraphQL query
-    const transactions = mockTransactions;
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortConfig, setSortConfig] = useState<{ key: keyof Transaction; direction: 'asc' | 'desc' } | null>({ key: 'date', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Transaction; direction: 'asc' | 'desc' } | null>({ key: 'executedAt', direction: 'desc' });
     const [filterType, setFilterType] = useState<string>('ALL');
 
-    // Filter and Sort Transactions
+    // Build GraphQL filter
+    const graphqlFilter: TransactionFilterInput = useMemo(() => {
+        const filter: TransactionFilterInput = {};
+        if (searchQuery) {
+            filter.symbol = searchQuery;
+        }
+        if (filterType !== 'ALL') {
+            filter.type = filterType as any;
+        }
+        return filter;
+    }, [searchQuery, filterType]);
+
+    // Fetch transactions from GraphQL
+    const { data, loading, error, refetch } = useQuery(LIST_TRANSACTIONS, {
+        variables: {
+            pageSize: 100,
+            filter: Object.keys(graphqlFilter).length > 0 ? graphqlFilter : undefined
+        }
+    });
+
+    // Transform GraphQL data to match component expectations
+    const transactions: Transaction[] = useMemo(() => {
+        if (!data?.listTransactions?.transactions) return [];
+
+        return data.listTransactions.transactions.map((tx: Transaction) => ({
+            ...tx,
+            // Add computed fields for backward compatibility
+            date: tx.executedAt,
+            ticker: tx.symbol,
+            price: tx.pricePerShare,
+            currency: tx.priceCurrency || 'USD',
+            total: tx.quantity * tx.pricePerShare + (tx.brokerage || 0)
+        }));
+    }, [data]);
+
+    // Filter and Sort Transactions (client-side for now)
     const filteredTransactions = useMemo(() => {
         let result = [...transactions];
-
-        // Search Filter
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            result = result.filter(t =>
-                t.ticker.toLowerCase().includes(query)
-            );
-        }
-
-        // Type Filter
-        if (filterType !== 'ALL') {
-            result = result.filter(t => t.type === filterType);
-        }
 
         // Sorting
         if (sortConfig) {
@@ -39,7 +59,7 @@ const TransactionsPage = () => {
                 const aValue = a[sortConfig.key];
                 const bValue = b[sortConfig.key];
 
-                if (aValue === undefined || bValue === undefined) return 0;
+                if (aValue === undefined || aValue === null || bValue === undefined || bValue === null) return 0;
 
                 if (aValue < bValue) {
                     return sortConfig.direction === 'asc' ? -1 : 1;
@@ -52,7 +72,7 @@ const TransactionsPage = () => {
         }
 
         return result;
-    }, [transactions, searchQuery, sortConfig, filterType]);
+    }, [transactions, sortConfig]);
 
     const handleSort = (key: keyof Transaction) => {
         let direction: 'asc' | 'desc' = 'asc';
@@ -77,7 +97,7 @@ const TransactionsPage = () => {
                     });
                     if (data?.uploadTransactionCSV) {
                         alert('File uploaded successfully!');
-                        // Optionally refetch transactions
+                        refetch(); // Refetch transactions after upload
                     }
                 } catch (error) {
                     console.error('Error uploading file:', error);
@@ -87,6 +107,36 @@ const TransactionsPage = () => {
         };
         input.click();
     };
+
+
+    // Show loading state
+    if (loading) {
+        return (
+            <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
+                <Header />
+                <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
+                    <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--color-text-secondary)' }}>
+                        Loading transactions...
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
+                <Header />
+                <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
+                    <div style={{ textAlign: 'center', padding: '64px 0' }}>
+                        <p style={{ color: 'var(--color-danger)', marginBottom: '16px' }}>Error loading transactions</p>
+                        <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.875rem' }}>{error.message}</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
@@ -310,8 +360,7 @@ const TransactionsPage = () => {
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
                 onSuccess={() => {
-                    // Optionally refetch transactions here
-                    // For now, the user can refresh the page
+                    refetch(); // Refetch transactions after adding new transaction
                 }}
             />
         </div>

@@ -158,10 +158,10 @@ const TransactionsTable = ({ transactions, sortConfig, onSort }: TransactionsTab
                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                             >
                                 <td style={{ padding: '12px 16px', color: 'var(--color-text-primary)' }}>
-                                    {formatDate(transaction.date)}
+                                    {transaction.date ? formatDate(transaction.date) : '-'}
                                 </td>
                                 <td style={{ padding: '12px 16px', fontWeight: '600', color: 'var(--color-text-primary)' }}>
-                                    {transaction.ticker}
+                                    {transaction.ticker || transaction.symbol}
                                 </td>
                                 <td style={{ padding: '12px 16px' }}>
                                     <span style={{
@@ -181,10 +181,10 @@ const TransactionsTable = ({ transactions, sortConfig, onSort }: TransactionsTab
                                     {transaction.quantity.toLocaleString()}
                                 </td>
                                 <td style={{ padding: '12px 16px', textAlign: 'right', color: 'var(--color-text-primary)' }}>
-                                    {formatCurrency(transaction.price, transaction.currency)}
+                                    {transaction.price && transaction.currency ? formatCurrency(transaction.price, transaction.currency) : '-'}
                                 </td>
                                 <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', color: 'var(--color-text-primary)' }}>
-                                    {formatCurrency(transaction.total, transaction.currency)}
+                                    {transaction.total && transaction.currency ? formatCurrency(transaction.total, transaction.currency) : '-'}
                                 </td>
                                 <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                                     <button

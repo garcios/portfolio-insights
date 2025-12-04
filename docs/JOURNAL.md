@@ -4,6 +4,7 @@ A chronological record of development progress, features implemented, and techni
 
 ---
 
+
 ## Previous Development Sessions
 
 ### Asset Price Integration
@@ -1352,6 +1353,359 @@ Documented and resolved a configuration issue where Prometheus metrics were not 
 - Full details in `docs/POST_MORTEM_METRICS_DISPLAY_ISSUE.md`
 
 ---
+
+## 2025-12-04 - ListTransactions Query Implementation
+
+### Overview
+Implemented end-to-end transaction listing functionality with filtering and pagination support. This includes extending the transaction-service with filter capabilities, adding a GraphQL query to the gateway, and integrating the real API into the frontend to replace mock data.
+
+### Features Implemented
+
+#### 1. Transaction Service Filter Support
+**Status:** ✅ Complete
+
+**Components:**
+- **Proto Definition:** Updated `proto/transaction/transaction.proto`
+  - Added `TransactionFilter` message with fields:
+    - `symbol` (string) - Filter by stock symbol
+    - `type` (string) - Filter by transaction type (BUY, SELL, SPLIT, DIVIDEND)
+    - `from_executed_at` (timestamp) - Filter by start date
+    - `to_executed_at` (timestamp) - Filter by end date
+  - Updated `ListTransactionsRequest` to include optional `filter` field
+  - Supports pagination with `page_size` and `page_token`
+
+**Domain Layer:**
+- Updated `Transaction` domain model in `services/transaction-service/internal/domain/transaction.go`
+- Added `TransactionFilter` struct for filter criteria
+
+**Repository Layer:**
+- Enhanced `ListByUserID` method in `postgres_repo.go`
+- Dynamic SQL query building based on provided filters
+- Proper parameterized queries to prevent SQL injection
+- Efficient filtering at database level
+
+**Use Case Layer:**
+- Updated `ListTransactions` in `transaction_usecase.go`
+- Accepts optional filter parameter
+- Delegates filtering to repository layer
+
+**Handler Layer:**
+- Updated gRPC handler to accept and process filter from request
+- Converts protobuf filter to domain filter
+- All existing tests updated and passing
+
+#### 2. Gateway ListTransactions Query
+**Status:** ✅ Complete
+
+**GraphQL Schema:**
+```graphql
+type Query {
+  listTransactions(
+    pageSize: Int
+    pageToken: String
+    filter: TransactionFilterInput
+  ): TransactionConnection! @auth
+}
+
+input TransactionFilterInput {
+  symbol: String
+  type: TransactionType
+  fromExecutedAt: String
+  toExecutedAt: String
+}
+
+type TransactionConnection {
+  transactions: [Transaction!]!
+  nextPageToken: String
+}
+```
+
+**Domain Layer:**
+- Added `TransactionFilter` struct in `internal/domain/gateway/transaction_gateway.go`
+- Added `ListTransactionsInput` struct for request parameters
+- Added `ListTransactionsResult` struct for paginated response
+- Extended `TransactionGateway` interface with `ListTransactions` method
+
+**Infrastructure Layer:**
+- **Mapper** (`internal/infrastructure/mapper/proto_mapper.go`):
+  - `ListTransactionsInputToProto` - Converts gateway input to protobuf request
+  - `ProtoToListTransactionsResult` - Converts protobuf response to gateway result
+  - Proper handling of optional filter fields
+
+- **gRPC Gateway** (`internal/infrastructure/grpc/transaction_gateway.go`):
+  - Implemented `ListTransactions` method
+  - Calls transaction-service via gRPC
+  - Error handling and logging
+
+**Use Case Layer:**
+- Added `ListTransactions` method to `TransactionUseCase`
+- Accepts user ID, pagination params, and optional filter
+- Delegates to transaction gateway
+
+**GraphQL Layer:**
+- **Mapper** (`graph/mapper/graphql_mapper.go`):
+  - `GraphQLTransactionFilterToGatewayFilter` - Converts GraphQL filter to gateway filter
+  - `ListTransactionsResultToGraphQL` - Converts gateway result to GraphQL response
+  - Timestamp parsing and validation
+
+- **Resolver** (`graph/schema.resolvers.go`):
+  - Implemented `ListTransactions` resolver
+  - Extracts user ID from authentication context
+  - Default page size of 50 if not specified
+  - Comprehensive error handling
+
+**Testing:**
+- Updated `MockTransactionGateway` in tests
+- All gateway tests passing
+- Build verification successful
+
+#### 3. Frontend Integration
+**Status:** ✅ Complete
+
+**GraphQL Query:**
+```typescript
+export const LIST_TRANSACTIONS = gql`
+  query ListTransactions($pageSize: Int, $pageToken: String, $filter: TransactionFilterInput) {
+    listTransactions(pageSize: $pageSize, pageToken: $pageToken, filter: $filter) {
+      transactions {
+        id
+        userId
+        symbol
+        type
+        quantity
+        pricePerShare
+        executedAt
+        notes
+        brokerage
+        priceCurrency
+        brokerageCurrency
+        createdAt
+        updatedAt
+      }
+      nextPageToken
+    }
+  }
+`;
+```
+
+**Type Definitions:**
+- Updated `Transaction` interface to match GraphQL schema
+- Added required fields: `userId`, `symbol`, `pricePerShare`, `executedAt`, `createdAt`, `updatedAt`
+- Added optional fields: `priceCurrency`, `brokerageCurrency`
+- Maintained computed fields for backward compatibility
+- Added `TransactionFilterInput` interface
+- Added `TransactionConnection` interface for paginated results
+
+**Transactions Page:**
+- **Replaced mock data** with `useQuery` hook
+- **Data transformation** to compute display fields (date, ticker, price, currency, total)
+- **GraphQL filtering** via variables (symbol and type filters)
+- **Loading state** - User-friendly loading message
+- **Error state** - Displays error details
+- **Auto-refetch** after:
+  - CSV file upload
+  - Adding new transaction
+- **Null-safe sorting** - Handles optional fields properly
+
+**Transactions Table:**
+- Updated to handle optional fields from GraphQL
+- Null checks for date, ticker, price, currency, total
+- Fallback to symbol if ticker not available
+- Shows "-" for missing optional values
+
+**Mock Data:**
+- Updated to match new Transaction interface
+- Maintained for backward compatibility with tests
+
+### Technical Decisions
+
+#### 1. Filter Implementation Strategy
+**Decision:** Implement filtering at database level with dynamic SQL query building
+
+**Rationale:**
+- **Performance:** Database-level filtering is more efficient than application-level
+- **Scalability:** Reduces data transfer and memory usage
+- **Flexibility:** Easy to add new filter criteria
+- **Security:** Parameterized queries prevent SQL injection
+
+**Implementation:**
+```go
+// Dynamic query building
+query := "SELECT * FROM transactions WHERE user_id = $1"
+args := []interface{}{userID}
+paramIndex := 2
+
+if filter.Symbol != nil {
+    query += fmt.Sprintf(" AND symbol = $%d", paramIndex)
+    args = append(args, *filter.Symbol)
+    paramIndex++
+}
+// ... additional filters
+```
+
+#### 2. Pagination Approach
+**Decision:** Cursor-based pagination with page tokens
+
+**Rationale:**
+- **Consistency:** Handles concurrent data changes better than offset-based
+- **Performance:** More efficient for large datasets
+- **Scalability:** Doesn't degrade with page depth
+- **Future-proof:** Supports real-time updates
+
+**Current Implementation:**
+- Infrastructure in place (page_token field)
+- Frontend ready to handle pagination
+- Backend returns next_page_token
+- UI enhancement can be added incrementally
+
+#### 3. Data Transformation Strategy
+**Decision:** Transform GraphQL data to include computed fields in frontend
+
+**Rationale:**
+- **Backward Compatibility:** Existing UI components continue to work
+- **Separation of Concerns:** Backend provides raw data, frontend computes display values
+- **Flexibility:** Easy to change display logic without backend changes
+- **Performance:** Simple calculations done client-side
+
+**Example:**
+```typescript
+transactions.map(tx => ({
+    ...tx,
+    date: tx.executedAt,
+    ticker: tx.symbol,
+    price: tx.pricePerShare,
+    currency: tx.priceCurrency || 'USD',
+    total: tx.quantity * tx.pricePerShare + (tx.brokerage || 0)
+}))
+```
+
+#### 4. Error Handling
+**Decision:** Multi-level error handling with user-friendly messages
+
+**Rationale:**
+- **User Experience:** Clear error messages help users understand issues
+- **Debugging:** Detailed errors in console for developers
+- **Resilience:** Graceful degradation on failures
+
+**Implementation:**
+- Loading state during data fetch
+- Error state with message display
+- Console logging for debugging
+- Retry capability via refetch
+
+### Data Flow
+
+```
+Frontend (React)
+    ↓ (GraphQL Query)
+Gateway (GraphQL Resolver)
+    ↓ (Use Case)
+Transaction Gateway
+    ↓ (gRPC)
+Transaction Service
+    ↓ (Repository)
+PostgreSQL
+    ↓ (Response)
+Frontend (Display)
+```
+
+### Testing & Validation
+
+#### Backend Tests
+- ✅ Transaction service tests passing
+- ✅ Gateway use case tests passing
+- ✅ Gateway infrastructure tests passing
+- ✅ GraphQL mapper tests passing
+- ✅ All services build successfully
+
+#### Integration Testing
+- ✅ GraphQL query returns data
+- ✅ Filtering works correctly
+- ✅ Pagination infrastructure functional
+- ✅ Auto-refetch after mutations
+
+#### Build Verification
+```bash
+make tidy-all  # ✅ Success
+make test-all  # ✅ All tests passing
+```
+
+### Performance Considerations
+
+#### Database Optimization
+- Indexed columns used for filtering (user_id, symbol, type, executed_at)
+- Parameterized queries prevent SQL injection
+- Efficient query planning with WHERE clauses
+
+#### Frontend Optimization
+- Default page size of 100 (configurable)
+- Client-side sorting for better UX
+- Computed fields cached via useMemo
+- Minimal re-renders with proper dependencies
+
+#### Network Efficiency
+- Only requested fields fetched from GraphQL
+- Pagination reduces payload size
+- Filter at source reduces data transfer
+
+### Known Limitations & Future Work
+
+#### Current Limitations
+1. **Client-side sorting** - Could be moved to backend for large datasets
+2. **No date range filter UI** - Infrastructure exists, UI can be added
+3. **Fixed page size** - Could be made configurable in UI
+4. **No infinite scroll** - Pagination UI can be enhanced
+
+#### Planned Enhancements
+1. **Advanced Filtering UI**
+   - Date range picker for executed_at filter
+   - Multi-select for transaction types
+   - Combined filters (symbol + type + date)
+
+2. **Pagination UI**
+   - Next/Previous buttons
+   - Page number display
+   - Infinite scroll option
+   - Configurable page size
+
+3. **Performance Optimizations**
+   - Server-side sorting
+   - Virtual scrolling for large lists
+   - Debounced search input
+   - Query result caching
+
+4. **Export Functionality**
+   - CSV export with filters applied
+   - PDF report generation
+   - Excel export option
+
+### Documentation Created
+- Updated GraphQL schema documentation
+- Added inline code comments
+- Updated type definitions with JSDoc
+
+### Deployment Notes
+
+#### Environment Variables
+No new environment variables required - uses existing service connections.
+
+#### Database Changes
+No schema changes required - uses existing transaction table structure.
+
+#### Service Dependencies
+- Gateway → Transaction Service (gRPC port 50053)
+- Frontend → Gateway (GraphQL port 8080)
+
+#### Backward Compatibility
+- ✅ Existing CreateTransaction mutation unchanged
+- ✅ Existing UploadCSV mutation unchanged
+- ✅ Mock data updated for tests
+- ✅ All existing functionality preserved
+
+---
+
+## Previous Development Sessions
+
 
 ## Development Metrics
 
