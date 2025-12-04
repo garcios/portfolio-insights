@@ -140,6 +140,40 @@ func (r *queryResolver) PortfolioPerformance(ctx context.Context, period string)
 	return mapper.PortfolioPerformancePointEntitiesToGraphQL(dataPoints), nil
 }
 
+// ListTransactions is the resolver for the listTransactions field.
+func (r *queryResolver) ListTransactions(ctx context.Context, pageSize *int, pageToken *string, filter *model.TransactionFilterInput) (*model.TransactionConnection, error) {
+	userID, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user ID from context: %w", err)
+	}
+
+	// Convert GraphQL filter to gateway filter
+	gatewayFilter, err := mapper.GraphQLTransactionFilterToGatewayFilter(filter)
+	if err != nil {
+		return nil, fmt.Errorf("invalid filter: %w", err)
+	}
+
+	// Set default page size if not provided
+	size := int32(50)
+	if pageSize != nil {
+		size = int32(*pageSize)
+	}
+
+	// Get page token
+	token := ""
+	if pageToken != nil {
+		token = *pageToken
+	}
+
+	// Call use case
+	result, err := r.Container.TransactionUseCase.ListTransactions(ctx, userID, size, token, gatewayFilter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list transactions: %w", err)
+	}
+
+	return mapper.ListTransactionsResultToGraphQL(result), nil
+}
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 

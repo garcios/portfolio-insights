@@ -6,6 +6,7 @@ import (
 
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/gateway"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/usecase"
 )
 
@@ -148,4 +149,55 @@ func GraphQLNewTransactionToUseCaseInput(input model.NewTransaction) (usecase.Cr
 	}
 
 	return result, nil
+}
+
+// GraphQLTransactionFilterToGatewayFilter converts a GraphQL TransactionFilterInput to a gateway TransactionFilter
+func GraphQLTransactionFilterToGatewayFilter(input *model.TransactionFilterInput) (*gateway.TransactionFilter, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	filter := &gateway.TransactionFilter{}
+
+	if input.Symbol != nil {
+		filter.Symbol = input.Symbol
+	}
+
+	if input.Type != nil {
+		txType := entity.TransactionType(*input.Type)
+		filter.Type = &txType
+	}
+
+	if input.FromExecutedAt != nil {
+		t, err := parseTimestamp(*input.FromExecutedAt)
+		if err != nil {
+			return nil, fmt.Errorf("invalid fromExecutedAt: %w", err)
+		}
+		filter.FromExecutedAt = &t
+	}
+
+	if input.ToExecutedAt != nil {
+		t, err := parseTimestamp(*input.ToExecutedAt)
+		if err != nil {
+			return nil, fmt.Errorf("invalid toExecutedAt: %w", err)
+		}
+		filter.ToExecutedAt = &t
+	}
+
+	return filter, nil
+}
+
+// ListTransactionsResultToGraphQL converts a gateway ListTransactionsResult to a GraphQL TransactionConnection
+func ListTransactionsResultToGraphQL(result *gateway.ListTransactionsResult) *model.TransactionConnection {
+	transactions := make([]*model.Transaction, len(result.Transactions))
+	for i, tx := range result.Transactions {
+		transactions[i] = TransactionEntityToGraphQL(tx)
+	}
+
+	nextPageToken := result.NextPageToken
+
+	return &model.TransactionConnection{
+		Transactions:  transactions,
+		NextPageToken: &nextPageToken,
+	}
 }

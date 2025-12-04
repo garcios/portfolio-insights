@@ -14,6 +14,7 @@ import (
 // MockTransactionGateway is a manual mock for TransactionGateway
 type MockTransactionGateway struct {
 	CreateTransactionFunc func(ctx context.Context, input gateway.CreateTransactionInput) (*entity.Transaction, error)
+	ListTransactionsFunc  func(ctx context.Context, input gateway.ListTransactionsInput) (*gateway.ListTransactionsResult, error)
 }
 
 func (m *MockTransactionGateway) CreateTransaction(ctx context.Context, input gateway.CreateTransactionInput) (*entity.Transaction, error) {
@@ -21,6 +22,13 @@ func (m *MockTransactionGateway) CreateTransaction(ctx context.Context, input ga
 		return m.CreateTransactionFunc(ctx, input)
 	}
 	return nil, nil
+}
+
+func (m *MockTransactionGateway) ListTransactions(ctx context.Context, input gateway.ListTransactionsInput) (*gateway.ListTransactionsResult, error) {
+	if m.ListTransactionsFunc != nil {
+		return m.ListTransactionsFunc(ctx, input)
+	}
+	return &gateway.ListTransactionsResult{}, nil
 }
 
 // MockTransactionFileGateway is a manual mock for TransactionFileGateway

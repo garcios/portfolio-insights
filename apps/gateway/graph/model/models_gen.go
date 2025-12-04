@@ -83,6 +83,18 @@ type Transaction struct {
 	UpdatedAt         string          `json:"updatedAt"`
 }
 
+type TransactionConnection struct {
+	Transactions  []*Transaction `json:"transactions"`
+	NextPageToken *string        `json:"nextPageToken,omitempty"`
+}
+
+type TransactionFilterInput struct {
+	Symbol         *string          `json:"symbol,omitempty"`
+	Type           *TransactionType `json:"type,omitempty"`
+	FromExecutedAt *string          `json:"fromExecutedAt,omitempty"`
+	ToExecutedAt   *string          `json:"toExecutedAt,omitempty"`
+}
+
 type User struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`

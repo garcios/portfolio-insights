@@ -84,3 +84,50 @@ func CreateTransactionInputToProto(input gateway.CreateTransactionInput) *transa
 		BrokerageCurrency: input.BrokerageCurrency,
 	}
 }
+
+// ListTransactionsInputToProto converts a ListTransactionsInput to a protobuf ListTransactionsRequest
+func ListTransactionsInputToProto(input gateway.ListTransactionsInput) *transactionpb.ListTransactionsRequest {
+	req := &transactionpb.ListTransactionsRequest{
+		UserId:    input.UserID,
+		PageSize:  input.PageSize,
+		PageToken: input.PageToken,
+	}
+
+	// Add filter if provided
+	if input.Filter != nil {
+		filter := &transactionpb.TransactionFilter{}
+
+		if input.Filter.Symbol != nil {
+			filter.Symbol = *input.Filter.Symbol
+		}
+
+		if input.Filter.Type != nil {
+			filter.Type = string(*input.Filter.Type)
+		}
+
+		if input.Filter.FromExecutedAt != nil {
+			filter.FromExecutedAt = timestamppb.New(*input.Filter.FromExecutedAt)
+		}
+
+		if input.Filter.ToExecutedAt != nil {
+			filter.ToExecutedAt = timestamppb.New(*input.Filter.ToExecutedAt)
+		}
+
+		req.Filter = filter
+	}
+
+	return req
+}
+
+// ProtoToListTransactionsResult converts a protobuf ListTransactionsResponse to a ListTransactionsResult
+func ProtoToListTransactionsResult(resp *transactionpb.ListTransactionsResponse) *gateway.ListTransactionsResult {
+	transactions := make([]*entity.Transaction, len(resp.Transactions))
+	for i, pb := range resp.Transactions {
+		transactions[i] = ProtoToTransactionEntity(pb)
+	}
+
+	return &gateway.ListTransactionsResult{
+		Transactions:  transactions,
+		NextPageToken: resp.NextPageToken,
+	}
+}

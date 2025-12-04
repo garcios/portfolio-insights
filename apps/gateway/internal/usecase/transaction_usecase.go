@@ -112,3 +112,15 @@ func (uc *TransactionUseCase) validateCreateTransactionInput(input CreateTransac
 
 	return nil
 }
+
+// ListTransactions lists transactions for a user with optional filtering and pagination
+func (uc *TransactionUseCase) ListTransactions(ctx context.Context, userID string, pageSize int32, pageToken string, filter *gateway.TransactionFilter) (*gateway.ListTransactionsResult, error) {
+	input := gateway.ListTransactionsInput{
+		UserID:    userID,
+		PageSize:  pageSize,
+		PageToken: pageToken,
+		Filter:    filter,
+	}
+
+	return uc.transactionGateway.ListTransactions(ctx, input)
+}

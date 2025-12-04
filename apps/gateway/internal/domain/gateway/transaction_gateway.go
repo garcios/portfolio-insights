@@ -22,10 +22,35 @@ type CreateTransactionInput struct {
 	BrokerageCurrency string
 }
 
+// TransactionFilter contains optional filters for listing transactions
+type TransactionFilter struct {
+	Symbol         *string
+	Type           *entity.TransactionType
+	FromExecutedAt *time.Time
+	ToExecutedAt   *time.Time
+}
+
+// ListTransactionsInput contains the data needed to list transactions
+type ListTransactionsInput struct {
+	UserID    string
+	PageSize  int32
+	PageToken string
+	Filter    *TransactionFilter
+}
+
+// ListTransactionsResult contains the result of listing transactions
+type ListTransactionsResult struct {
+	Transactions  []*entity.Transaction
+	NextPageToken string
+}
+
 // TransactionGateway defines the interface for interacting with the transaction service
 type TransactionGateway interface {
 	// CreateTransaction creates a new transaction
 	CreateTransaction(ctx context.Context, input CreateTransactionInput) (*entity.Transaction, error)
+
+	// ListTransactions lists transactions for a user with optional filtering and pagination
+	ListTransactions(ctx context.Context, input ListTransactionsInput) (*ListTransactionsResult, error)
 }
 
 // TransactionFileGateway defines the interface for uploading transaction files

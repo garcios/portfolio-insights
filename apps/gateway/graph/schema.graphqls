@@ -5,6 +5,11 @@ type Query {
   user(id: ID!): User @auth
   portfolio: Portfolio @auth
   portfolioPerformance(period: String!): [PortfolioPerformancePoint!]! @auth
+  listTransactions(
+    pageSize: Int
+    pageToken: String
+    filter: TransactionFilterInput
+  ): TransactionConnection! @auth
 }
 
 type Mutation {
@@ -95,4 +100,16 @@ input NewTransaction {
   brokerage: Float
   priceCurrency: String
   brokerageCurrency: String
+}
+
+input TransactionFilterInput {
+  symbol: String
+  type: TransactionType
+  fromExecutedAt: String
+  toExecutedAt: String
+}
+
+type TransactionConnection {
+  transactions: [Transaction!]!
+  nextPageToken: String
 }

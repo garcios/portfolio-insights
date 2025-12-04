@@ -33,3 +33,15 @@ func (g *TransactionGRPCGateway) CreateTransaction(ctx context.Context, input ga
 
 	return mapper.ProtoToTransactionEntity(resp.Transaction), nil
 }
+
+// ListTransactions lists transactions for a user with optional filtering and pagination
+func (g *TransactionGRPCGateway) ListTransactions(ctx context.Context, input gateway.ListTransactionsInput) (*gateway.ListTransactionsResult, error) {
+	req := mapper.ListTransactionsInputToProto(input)
+
+	resp, err := g.client.ListTransactions(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list transactions: %w", err)
+	}
+
+	return mapper.ProtoToListTransactionsResult(resp), nil
+}
