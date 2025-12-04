@@ -4,8 +4,125 @@ A chronological record of development progress, features implemented, and techni
 
 ---
 
+## 2025-12-04 - DatePicker Component Implementation
+
+### Overview
+Enhanced the transaction filtering UI by implementing a custom DatePicker component to replace native HTML date inputs, providing a more consistent and premium user experience across all browsers.
+
+### Features Implemented
+
+#### 1. Custom DatePicker Component
+**Status:** ✅ Complete
+
+**Component:**
+- **File:** `apps/frontend/src/components/common/DatePicker.tsx`
+- **Type:** Reusable React component
+
+**Features:**
+- **Styled Interface:** Custom-styled wrapper around native date input
+- **Calendar Icon:** Visual indicator using Lucide React icons
+- **Formatted Display:** Shows selected date in readable format (e.g., "Dec 4, 2025")
+- **Placeholder Support:** Displays placeholder text when no date is selected
+- **Min/Max Constraints:** Supports minimum and maximum date restrictions
+- **Hover Effects:** Interactive border color and shadow on hover
+- **Accessibility:** Maintains native date picker functionality for screen readers
+
+**Design Features:**
+- Consistent with application's design system
+- Uses CSS variables for theming
+- Smooth transitions and hover states
+- Calendar icon for visual clarity
+- Formatted date display for better readability
+
+#### 2. TransactionsPage Integration
+**Status:** ✅ Complete
+
+**Changes:**
+- **File:** `apps/frontend/src/pages/TransactionsPage.tsx`
+- Replaced native `<input type="date">` elements with `DatePicker` component
+- Added min/max constraints for date validation (from date ≤ to date)
+- Simplified code by removing inline styling for date inputs
+- Improved user experience with consistent design
+
+**Benefits:**
+- More consistent appearance across browsers
+- Better visual integration with the rest of the UI
+- Enhanced user experience with formatted date display
+- Easier to maintain and extend
+
+### Technical Decisions
+
+#### 1. Wrapper Pattern
+**Decision:** Wrap native HTML date input instead of building a custom calendar UI
+
+**Rationale:**
+- **Browser Compatibility:** Leverages native date picker functionality
+- **Accessibility:** Maintains native accessibility features
+- **Mobile Support:** Uses native mobile date pickers on iOS/Android
+- **Simplicity:** Avoids complex calendar implementation
+- **Performance:** Minimal overhead compared to custom solutions
+
+**Trade-offs:**
+- Limited customization of calendar UI
+- Relies on browser's native date picker
+- Different appearance on different browsers (but consistent wrapper)
+
+#### 2. Streaming Architecture
+**Decision:** Use hidden native input with styled overlay
+
+**Rationale:**
+- **Best of Both Worlds:** Custom appearance + native functionality
+- **Progressive Enhancement:** Works even if JavaScript fails
+- **Accessibility:** Screen readers interact with native input
+- **Mobile Optimized:** Native mobile date pickers still work
+
+**Implementation:**
+- Visible styled div with calendar icon and formatted date
+- Hidden native input positioned absolutely
+- Click on styled div triggers native picker
+- State managed through native input's onChange
+
+#### 3. Date Formatting
+**Decision:** Display dates in localized format (e.g., "Dec 4, 2025")
+
+**Rationale:**
+- **Readability:** More user-friendly than ISO format (2025-12-04)
+- **Localization:** Uses browser's locale for formatting
+- **Consistency:** Matches common date display patterns
+- **Professional:** Looks more polished than raw date strings
+
+### Code Quality
+
+**Component Structure:**
+- Clean, reusable component with clear props interface
+- TypeScript for type safety
+- Proper event handling and state management
+- Click-outside detection for dropdown (future enhancement)
+- Ref management for native input access
+
+**Styling:**
+- Uses CSS variables for theming
+- Consistent with application design system
+- Smooth transitions and animations
+- Responsive hover states
+
+### Build Status
+- ✅ Frontend compiles successfully
+- ✅ No TypeScript errors
+- ✅ Component properly integrated
+- ✅ Date filtering functionality maintained
+
+### Next Steps
+1. **Enhanced Calendar UI:** Consider adding a custom calendar dropdown for more control
+2. **Date Range Presets:** Add quick selection buttons (Today, Last 7 Days, Last 30 Days, etc.)
+3. **Keyboard Navigation:** Enhance keyboard accessibility
+4. **Testing:** Add unit tests for DatePicker component
+
+---
+
 
 ## Previous Development Sessions
+
 
 ### Asset Price Integration
 **Date:** 2025-11-27
@@ -1751,6 +1868,85 @@ No schema changes required - uses existing transaction table structure.
 3. Tax reporting features
 4. Multi-portfolio support
 5. Social features (portfolio sharing, leaderboards)
+
+---
+
+## 2025-12-04 - Transaction Date Filters
+
+### Overview
+Added date range filtering functionality to the Transactions page in the frontend application, allowing users to filter transactions by "From" and "To" dates.
+
+### Features Implemented
+
+#### 1. Date Filter UI Components
+**Status:** ✅ Complete
+
+**Components:**
+- **Date Inputs:** Added two HTML5 date input fields in the filters toolbar
+  - "From" date filter with label
+  - "To" date filter with label
+- **Styling:** Consistent with existing design system
+  - Matches border, background, and text colors
+  - Proper spacing and alignment with other filter controls
+  - Responsive layout with flexbox wrapping
+
+#### 2. Filter State Management
+**Status:** ✅ Complete
+
+**Implementation:**
+- Added `fromDate` and `toDate` state variables using `useState`
+- Updated `graphqlFilter` memo to include date filters
+- Proper ISO-8601 timestamp conversion:
+  - `fromDate`: Converts to start of day (00:00:00)
+  - `toDate`: Converts to end of day (23:59:59.999)
+- Filter dependencies properly tracked in `useMemo`
+
+#### 3. Clear Filters Functionality
+**Status:** ✅ Complete
+
+**Features:**
+- Added `clearFilters` helper function
+- Resets all filters: search query, type filter, and date filters
+- New "Clear Filters" button in the toolbar
+- Hover effects for better UX
+- Positioned next to Export button
+
+### Technical Details
+
+**File Modified:**
+- `apps/frontend/src/pages/TransactionsPage.tsx`
+
+**GraphQL Integration:**
+- Leverages existing `TransactionFilterInput` type which already supports:
+  - `fromExecutedAt?: string`
+  - `toExecutedAt?: string`
+- No backend changes required - filters are already supported
+
+**Date Handling:**
+- User selects date in local timezone
+- Converted to ISO-8601 format for GraphQL
+- "To" date includes full day (23:59:59.999) to capture all transactions on that date
+
+### User Experience Improvements
+
+1. **Flexible Filtering:**
+   - Users can filter by date range, transaction type, and symbol simultaneously
+   - All filters work together (AND logic)
+
+2. **Easy Reset:**
+   - Single-click "Clear Filters" button
+   - Resets all filters to default state
+
+3. **Responsive Design:**
+   - Filters wrap on smaller screens
+   - Maintains usability on mobile devices
+
+### Next Steps
+
+1. **Date Presets:** Add quick date range buttons (Last 7 days, Last 30 days, This Year, etc.)
+2. **Validation:** Add validation to ensure "From" date is not after "To" date
+3. **URL State:** Persist filter state in URL query parameters for shareable links
+4. **Export with Filters:** Update Export functionality to respect active filters
 
 ---
 

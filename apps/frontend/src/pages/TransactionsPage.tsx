@@ -4,6 +4,7 @@ import { Plus, Upload, Search, Filter, Download } from 'lucide-react';
 import Header from '../components/Header';
 import TransactionsTable from '../components/transactions/TransactionsTable';
 import AddTransactionModal from '../components/transactions/AddTransactionModal';
+import DatePicker from '../components/common/DatePicker';
 import { Transaction, TransactionFilterInput } from '../types/transaction';
 import { LIST_TRANSACTIONS } from '../graphql/queries';
 import { UPLOAD_TRANSACTION_CSV } from '../graphql/mutations';
@@ -13,6 +14,8 @@ const TransactionsPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Transaction; direction: 'asc' | 'desc' } | null>({ key: 'executedAt', direction: 'desc' });
     const [filterType, setFilterType] = useState<string>('ALL');
+    const [fromDate, setFromDate] = useState<string>('');
+    const [toDate, setToDate] = useState<string>('');
 
     // Build GraphQL filter
     const graphqlFilter: TransactionFilterInput = useMemo(() => {
@@ -23,8 +26,17 @@ const TransactionsPage = () => {
         if (filterType !== 'ALL') {
             filter.type = filterType as any;
         }
+        if (fromDate) {
+            filter.fromExecutedAt = new Date(fromDate).toISOString();
+        }
+        if (toDate) {
+            // Set to end of day for the "to" date
+            const toDateTime = new Date(toDate);
+            toDateTime.setHours(23, 59, 59, 999);
+            filter.toExecutedAt = toDateTime.toISOString();
+        }
         return filter;
-    }, [searchQuery, filterType]);
+    }, [searchQuery, filterType, fromDate, toDate]);
 
     // Fetch transactions from GraphQL
     const { data, loading, error, refetch } = useQuery(LIST_TRANSACTIONS, {
@@ -80,6 +92,13 @@ const TransactionsPage = () => {
             direction = 'desc';
         }
         setSortConfig({ key, direction });
+    };
+
+    const clearFilters = () => {
+        setSearchQuery('');
+        setFilterType('ALL');
+        setFromDate('');
+        setToDate('');
     };
 
     const [uploadTransactionCSV] = useMutation(UPLOAD_TRANSACTION_CSV);
@@ -245,7 +264,7 @@ const TransactionsPage = () => {
                             />
                         </div>
 
-                        <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                             <div style={{ position: 'relative' }}>
                                 <select
                                     value={filterType}
@@ -280,6 +299,51 @@ const TransactionsPage = () => {
                                     }}
                                 />
                             </div>
+
+                            <DatePicker
+                                id="from-date"
+                                label="From:"
+                                value={fromDate}
+                                onChange={setFromDate}
+                                placeholder="Start date"
+                                max={toDate || undefined}
+                            />
+
+                            <DatePicker
+                                id="to-date"
+                                label="To:"
+                                value={toDate}
+                                onChange={setToDate}
+                                placeholder="End date"
+                                min={fromDate || undefined}
+                            />
+
+                            <button
+                                onClick={clearFilters}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--color-border)',
+                                    background: 'var(--color-bg-primary)',
+                                    color: 'var(--color-text-secondary)',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'var(--color-bg-hover)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'var(--color-bg-primary)';
+                                }}
+                            >
+                                <Filter size={16} />
+                                Clear Filters
+                            </button>
 
                             <button
                                 style={{
