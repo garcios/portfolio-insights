@@ -78,9 +78,14 @@ func (h *TransactionHandler) ListTransactions(ctx context.Context, req *pb.ListT
 	// Simple pagination logic for now
 	limit := int(req.PageSize)
 	if limit <= 0 {
-		limit = 10
+		limit = 100
 	}
-	offset := 0 // TODO: Implement proper pagination with page_token
+
+	// Decode page_token → offset
+	offset, err := decodeOffset(req.PageToken)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid page_token")
+	}
 
 	filter := domain.TransactionFilter{}
 	if req.Filter != nil {
@@ -94,6 +99,7 @@ func (h *TransactionHandler) ListTransactions(ctx context.Context, req *pb.ListT
 		}
 	}
 
+	// Query limit+offset
 	txns, err := h.usecase.ListTransactions(ctx, req.UserId, filter, limit, offset)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list transactions: %v", err)
@@ -104,9 +110,15 @@ func (h *TransactionHandler) ListTransactions(ctx context.Context, req *pb.ListT
 		protoTxns = append(protoTxns, mapDomainToProto(txn))
 	}
 
+	// Compute NextPageToken
+	nextToken := ""
+	if len(txns) == limit {
+		nextToken = encodeOffset(offset + limit)
+	}
+
 	return &pb.ListTransactionsResponse{
 		Transactions:  protoTxns,
-		NextPageToken: "", // TODO
+		NextPageToken: nextToken,
 	}, nil
 }
 
