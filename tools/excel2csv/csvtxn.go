@@ -32,11 +32,15 @@ type BrokerTransaction struct {
 
 // Transaction represents the output transaction format
 type Transaction struct {
-	Symbol        string
-	ExecutedAt    string
-	Quantity      float64
-	PricePerShare float64
-	Type          string
+	Symbol         string
+	ExecutedAt     string
+	Quantity       float64
+	PricePerShare  float64
+	Type           string
+	Brokerage      float64
+	Notes          string
+	PriceCurrency  string
+	BrokerCurrency string
 }
 
 func main() {
@@ -147,7 +151,7 @@ func convertCSV(inputFile, outputFile string) error {
 	defer writer.Flush()
 
 	// Write header
-	header := []string{"symbol", "executed_at", "quantity", "price_per_share", "type"}
+	header := []string{"symbol", "executed_at", "quantity", "price_per_share", "type", "brokerage", "notes", "price_currency", "brokerage_currency"}
 	if err := writer.Write(header); err != nil {
 		return fmt.Errorf("failed to write header: %w", err)
 	}
@@ -160,6 +164,10 @@ func convertCSV(inputFile, outputFile string) error {
 			formatFloat(tx.Quantity),
 			formatFloat(tx.PricePerShare),
 			tx.Type,
+			formatFloat(tx.Brokerage),
+			tx.Notes,
+			tx.PriceCurrency,
+			tx.BrokerCurrency,
 		}
 		if err := writer.Write(record); err != nil {
 			return fmt.Errorf("failed to write transaction: %w", err)
@@ -203,6 +211,8 @@ func convertTransaction(bt BrokerTransaction) (Transaction, error) {
 		return tx, fmt.Errorf("quantity cannot be zero")
 	}
 
+	tx.Notes = "System Upload"
+
 	// Handle negative quantities (SELL transactions)
 	isNegative := quantity < 0
 	absQuantity := quantity
@@ -239,6 +249,18 @@ func convertTransaction(bt BrokerTransaction) (Transaction, error) {
 		// Default to BUY for positive quantities if action is unclear
 		tx.Type = "BUY"
 	}
+
+	if tx.Type != "SPLIT" {
+		// Fee
+		fee, err := parseNumber(bt.Fee)
+		if err != nil {
+			return tx, fmt.Errorf("invalid fee: %w", err)
+		}
+		tx.Brokerage = fee
+		tx.BrokerCurrency = bt.FeeCurrency
+	}
+
+	tx.PriceCurrency = bt.Currency
 
 	return tx, nil
 }
