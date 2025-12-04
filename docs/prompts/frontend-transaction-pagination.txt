@@ -1,0 +1,6 @@
+Implement the pagination in transaction list page.
+Use the state pageToken to determine if more pages are available.
+If pageToken is empty, that means no more pages are availabe.
+
+Use the browser agent test and during login allow me to enter the credentials.
+

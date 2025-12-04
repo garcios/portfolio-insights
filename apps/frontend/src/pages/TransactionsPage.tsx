@@ -263,17 +263,18 @@ const TransactionsPage = () => {
                 </div>
 
                 <div className="card" style={{ padding: '24px' }}>
-                    {/* Filters Toolbar */}
+                    {/* Filters Toolbar - Single Row */}
                     <div style={{
                         display: 'flex',
-                        gap: '16px',
+                        gap: '12px',
                         marginBottom: '24px',
-                        flexWrap: 'wrap'
+                        flexWrap: 'wrap',
+                        alignItems: 'center'
                     }}>
+                        {/* Search Ticker - Narrower width */}
                         <div style={{
                             position: 'relative',
-                            flex: '1',
-                            minWidth: '240px'
+                            width: '200px'
                         }}>
                             <Search
                                 size={18}
@@ -302,106 +303,108 @@ const TransactionsPage = () => {
                             />
                         </div>
 
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                            <div style={{ position: 'relative' }}>
-                                <select
-                                    value={filterType}
-                                    onChange={(e) => setFilterType(e.target.value)}
-                                    style={{
-                                        appearance: 'none',
-                                        padding: '10px 36px 10px 16px',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--color-border)',
-                                        background: 'var(--color-bg-primary)',
-                                        color: 'var(--color-text-primary)',
-                                        fontSize: '0.875rem',
-                                        cursor: 'pointer',
-                                        minWidth: '140px'
-                                    }}
-                                >
-                                    <option value="ALL">All Types</option>
-                                    <option value="BUY">Buy</option>
-                                    <option value="SELL">Sell</option>
-                                    <option value="SPLIT">Split</option>
-                                    <option value="DIVIDEND">Dividend</option>
-                                </select>
-                                <Filter
-                                    size={16}
-                                    style={{
-                                        position: 'absolute',
-                                        right: '12px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        color: 'var(--color-text-tertiary)',
-                                        pointerEvents: 'none'
-                                    }}
-                                />
-                            </div>
-
-                            <DatePicker
-                                id="from-date"
-                                label="From:"
-                                value={fromDate}
-                                onChange={setFromDate}
-                                placeholder="Start date"
-                                max={toDate || undefined}
-                            />
-
-                            <DatePicker
-                                id="to-date"
-                                label="To:"
-                                value={toDate}
-                                onChange={setToDate}
-                                placeholder="End date"
-                                min={fromDate || undefined}
-                            />
-
-                            <button
-                                onClick={clearFilters}
+                        {/* All Types Filter */}
+                        <div style={{ position: 'relative' }}>
+                            <select
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value)}
                                 style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '10px 16px',
+                                    appearance: 'none',
+                                    padding: '10px 36px 10px 16px',
                                     borderRadius: '8px',
                                     border: '1px solid var(--color-border)',
                                     background: 'var(--color-bg-primary)',
-                                    color: 'var(--color-text-secondary)',
+                                    color: 'var(--color-text-primary)',
                                     fontSize: '0.875rem',
-                                    fontWeight: '500',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'var(--color-bg-hover)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'var(--color-bg-primary)';
+                                    minWidth: '140px'
                                 }}
                             >
-                                <Filter size={16} />
-                                Clear Filters
-                            </button>
-
-                            <button
+                                <option value="ALL">All Types</option>
+                                <option value="BUY">Buy</option>
+                                <option value="SELL">Sell</option>
+                                <option value="SPLIT">Split</option>
+                                <option value="DIVIDEND">Dividend</option>
+                            </select>
+                            <Filter
+                                size={16}
                                 style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '10px 16px',
-                                    borderRadius: '8px',
-                                    border: '1px solid var(--color-border)',
-                                    background: 'var(--color-bg-primary)',
-                                    color: 'var(--color-text-secondary)',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '500',
-                                    cursor: 'pointer'
+                                    position: 'absolute',
+                                    right: '12px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    color: 'var(--color-text-tertiary)',
+                                    pointerEvents: 'none'
                                 }}
-                            >
-                                <Download size={16} />
-                                Export
-                            </button>
+                            />
                         </div>
+
+                        {/* Date Filters */}
+                        <DatePicker
+                            id="from-date"
+                            value={fromDate}
+                            onChange={setFromDate}
+                            placeholder="Start date"
+                            max={toDate || undefined}
+                        />
+
+                        <DatePicker
+                            id="to-date"
+                            value={toDate}
+                            onChange={setToDate}
+                            placeholder="End date"
+                            min={fromDate || undefined}
+                        />
+
+                        {/* Spacer to push buttons to the right */}
+                        <div style={{ flex: 1 }} />
+
+                        {/* Action Buttons - Right aligned */}
+                        <button
+                            onClick={clearFilters}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 16px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--color-border)',
+                                background: 'var(--color-bg-primary)',
+                                color: 'var(--color-text-secondary)',
+                                fontSize: '0.875rem',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--color-bg-hover)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'var(--color-bg-primary)';
+                            }}
+                        >
+                            <Filter size={16} />
+                            Clear Filters
+                        </button>
+
+                        <button
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 16px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--color-border)',
+                                background: 'var(--color-bg-primary)',
+                                color: 'var(--color-text-secondary)',
+                                fontSize: '0.875rem',
+                                fontWeight: '500',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <Download size={16} />
+                            Export
+                        </button>
                     </div>
 
                     <TransactionsTable
