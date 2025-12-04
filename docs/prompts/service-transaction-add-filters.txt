@@ -1,0 +1,15 @@
+
+In proto/transaction/transaction.proto, add the following filter message called TransactionFilter to the ListTransactionsRequest message as follows:
+
+
+message TransactionFilter {
+  string symbol = 1;
+  string type = 2;
+  google.protobuf.Timestamp from_executed_at = 3;
+  google.protobuf.Timestamp to_executed_at = 4;
+}
+  
+
+Modify transaction-service server to accept the TransactionFilter message as a parameter to the ListTransactions method.
+The server should use the filter to filter the transactions before returning them.   
+

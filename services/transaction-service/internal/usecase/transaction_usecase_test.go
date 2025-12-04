@@ -48,10 +48,22 @@ func (m *MockTransactionRepository) GetByID(ctx context.Context, id string) (*do
 	return nil, errors.New("not found")
 }
 
-func (m *MockTransactionRepository) ListByUserID(ctx context.Context, userID string, limit, offset int) ([]*domain.Transaction, error) {
+func (m *MockTransactionRepository) ListByUserID(ctx context.Context, userID string, filter domain.TransactionFilter, limit, offset int) ([]*domain.Transaction, error) {
 	var result []*domain.Transaction
 	for _, tx := range m.transactions {
 		if tx.UserID == userID {
+			if filter.Symbol != "" && tx.Symbol != filter.Symbol {
+				continue
+			}
+			if filter.Type != "" && tx.Type != filter.Type {
+				continue
+			}
+			if !filter.FromExecutedAt.IsZero() && tx.ExecutedAt.Before(filter.FromExecutedAt) {
+				continue
+			}
+			if !filter.ToExecutedAt.IsZero() && tx.ExecutedAt.After(filter.ToExecutedAt) {
+				continue
+			}
 			result = append(result, tx)
 		}
 	}
@@ -299,7 +311,7 @@ func TestListTransactions(t *testing.T) {
 	uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-2", Symbol: "MSFT", Type: "BUY", Quantity: 20, PricePerShare: 300.0, ExecutedAt: time.Now()})
 
 	t.Run("FilterByUser", func(t *testing.T) {
-		txs, err := uc.ListTransactions(context.Background(), "user-1", 10, 0)
+		txs, err := uc.ListTransactions(context.Background(), "user-1", domain.TransactionFilter{}, 10, 0)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -309,7 +321,7 @@ func TestListTransactions(t *testing.T) {
 	})
 
 	t.Run("Pagination", func(t *testing.T) {
-		txs, err := uc.ListTransactions(context.Background(), "user-1", 1, 0)
+		txs, err := uc.ListTransactions(context.Background(), "user-1", domain.TransactionFilter{}, 1, 0)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -319,12 +331,26 @@ func TestListTransactions(t *testing.T) {
 	})
 
 	t.Run("EmptyResult", func(t *testing.T) {
-		txs, err := uc.ListTransactions(context.Background(), "user-999", 10, 0)
+		txs, err := uc.ListTransactions(context.Background(), "user-999", domain.TransactionFilter{}, 10, 0)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
 		if len(txs) != 0 {
 			t.Errorf("expected 0 transactions for non-existent user, got %d", len(txs))
+		}
+	})
+
+	t.Run("FilterBySymbol", func(t *testing.T) {
+		filter := domain.TransactionFilter{Symbol: "AAPL"}
+		txs, err := uc.ListTransactions(context.Background(), "user-1", filter, 10, 0)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if len(txs) != 1 {
+			t.Errorf("expected 1 transaction for user-1 with symbol AAPL, got %d", len(txs))
+		}
+		if txs[0].Symbol != "AAPL" {
+			t.Errorf("expected symbol AAPL, got %s", txs[0].Symbol)
 		}
 	})
 }

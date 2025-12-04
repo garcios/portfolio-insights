@@ -32,7 +32,7 @@ func (m *MockTransactionUsecase) GetTransaction(ctx context.Context, id string) 
 	return nil, errors.New("not found")
 }
 
-func (m *MockTransactionUsecase) ListTransactions(ctx context.Context, userID string, limit, offset int) ([]*domain.Transaction, error) {
+func (m *MockTransactionUsecase) ListTransactions(ctx context.Context, userID string, filter domain.TransactionFilter, limit, offset int) ([]*domain.Transaction, error) {
 	return nil, nil
 }
 
@@ -79,6 +79,26 @@ func TestCreateTransactionHandler(t *testing.T) {
 		_, err := handler.CreateTransaction(context.Background(), req)
 		if err == nil {
 			t.Error("expected error, got nil")
+		}
+	})
+}
+
+func TestListTransactionsHandler(t *testing.T) {
+	mockUC := &MockTransactionUsecase{
+		transactions: make(map[string]*domain.Transaction),
+	}
+	handler := NewTransactionHandler(mockUC)
+
+	t.Run("Success", func(t *testing.T) {
+		req := &pb.ListTransactionsRequest{
+			UserId: "user-1",
+			Filter: &pb.TransactionFilter{
+				Symbol: "AAPL",
+			},
+		}
+		_, err := handler.ListTransactions(context.Background(), req)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
 		}
 	})
 }

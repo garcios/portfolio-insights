@@ -104,8 +104,8 @@ func (uc *transactionUsecase) GetTransaction(ctx context.Context, id string) (*d
 	return uc.repo.GetByID(ctx, id)
 }
 
-func (uc *transactionUsecase) ListTransactions(ctx context.Context, userID string, limit, offset int) ([]*domain.Transaction, error) {
-	return uc.repo.ListByUserID(ctx, userID, limit, offset)
+func (uc *transactionUsecase) ListTransactions(ctx context.Context, userID string, filter domain.TransactionFilter, limit, offset int) ([]*domain.Transaction, error) {
+	return uc.repo.ListByUserID(ctx, userID, filter, limit, offset)
 }
 
 func (uc *transactionUsecase) UpdateTransaction(ctx context.Context, txn *domain.Transaction) error {

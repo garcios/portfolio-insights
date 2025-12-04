@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/domain"
 )
@@ -130,15 +131,40 @@ func (r *postgresTransactionRepo) GetByID(ctx context.Context, id string) (*doma
 	return &txn, nil
 }
 
-func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID string, limit, offset int) ([]*domain.Transaction, error) {
+func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID string, filter domain.TransactionFilter, limit, offset int) ([]*domain.Transaction, error) {
 	query := `
 		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
 		FROM txn.transactions
 		WHERE user_id = $1
-		ORDER BY executed_at DESC
-		LIMIT $2 OFFSET $3
 	`
-	rows, err := r.db.QueryContext(ctx, query, userID, limit, offset)
+	args := []interface{}{userID}
+	argIdx := 2
+
+	if filter.Symbol != "" {
+		query += fmt.Sprintf(" AND symbol = $%d", argIdx)
+		args = append(args, filter.Symbol)
+		argIdx++
+	}
+	if filter.Type != "" {
+		query += fmt.Sprintf(" AND type = $%d", argIdx)
+		args = append(args, filter.Type)
+		argIdx++
+	}
+	if !filter.FromExecutedAt.IsZero() {
+		query += fmt.Sprintf(" AND executed_at >= $%d", argIdx)
+		args = append(args, filter.FromExecutedAt)
+		argIdx++
+	}
+	if !filter.ToExecutedAt.IsZero() {
+		query += fmt.Sprintf(" AND executed_at <= $%d", argIdx)
+		args = append(args, filter.ToExecutedAt)
+		argIdx++
+	}
+
+	query += fmt.Sprintf(" ORDER BY executed_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

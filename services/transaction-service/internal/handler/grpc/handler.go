@@ -82,7 +82,19 @@ func (h *TransactionHandler) ListTransactions(ctx context.Context, req *pb.ListT
 	}
 	offset := 0 // TODO: Implement proper pagination with page_token
 
-	txns, err := h.usecase.ListTransactions(ctx, req.UserId, limit, offset)
+	filter := domain.TransactionFilter{}
+	if req.Filter != nil {
+		filter.Symbol = req.Filter.Symbol
+		filter.Type = req.Filter.Type
+		if req.Filter.FromExecutedAt != nil {
+			filter.FromExecutedAt = req.Filter.FromExecutedAt.AsTime()
+		}
+		if req.Filter.ToExecutedAt != nil {
+			filter.ToExecutedAt = req.Filter.ToExecutedAt.AsTime()
+		}
+	}
+
+	txns, err := h.usecase.ListTransactions(ctx, req.UserId, filter, limit, offset)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list transactions: %v", err)
 	}

@@ -21,11 +21,18 @@ type Transaction struct {
 	BrokerageCurrency string    `json:"brokerage_currency"`
 }
 
+type TransactionFilter struct {
+	Symbol         string
+	Type           string
+	FromExecutedAt time.Time
+	ToExecutedAt   time.Time
+}
+
 type TransactionRepository interface {
 	Create(ctx context.Context, transaction *Transaction) error
 	BulkCreate(ctx context.Context, transactions []*Transaction) error
 	GetByID(ctx context.Context, id string) (*Transaction, error)
-	ListByUserID(ctx context.Context, userID string, limit, offset int) ([]*Transaction, error)
+	ListByUserID(ctx context.Context, userID string, filter TransactionFilter, limit, offset int) ([]*Transaction, error)
 	Update(ctx context.Context, transaction *Transaction) error
 	Delete(ctx context.Context, id string) error
 }
@@ -45,7 +52,7 @@ type EventPublisher interface {
 type TransactionUsecase interface {
 	CreateTransaction(ctx context.Context, txn *Transaction) error
 	GetTransaction(ctx context.Context, id string) (*Transaction, error)
-	ListTransactions(ctx context.Context, userID string, limit, offset int) ([]*Transaction, error)
+	ListTransactions(ctx context.Context, userID string, filter TransactionFilter, limit, offset int) ([]*Transaction, error)
 	UpdateTransaction(ctx context.Context, txn *Transaction) error
 	DeleteTransaction(ctx context.Context, id string) error
 }
