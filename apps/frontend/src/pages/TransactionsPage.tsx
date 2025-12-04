@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
 import { Plus, Upload, Search, Filter, Download } from 'lucide-react';
 import Header from '../components/Header';
@@ -16,6 +16,9 @@ const TransactionsPage = () => {
     const [filterType, setFilterType] = useState<string>('ALL');
     const [fromDate, setFromDate] = useState<string>('');
     const [toDate, setToDate] = useState<string>('');
+    const [currentPageToken, setCurrentPageToken] = useState<string>('');
+    const [pageTokenHistory, setPageTokenHistory] = useState<string[]>([]);
+    const [nextPageToken, setNextPageToken] = useState<string>('');
 
     // Build GraphQL filter
     const graphqlFilter: TransactionFilterInput = useMemo(() => {
@@ -41,10 +44,28 @@ const TransactionsPage = () => {
     // Fetch transactions from GraphQL
     const { data, loading, error, refetch } = useQuery(LIST_TRANSACTIONS, {
         variables: {
-            pageSize: 100,
+            pageSize: 25,
+            pageToken: currentPageToken || undefined,
             filter: Object.keys(graphqlFilter).length > 0 ? graphqlFilter : undefined
         }
     });
+
+    // Update nextPageToken when data changes
+    useEffect(() => {
+        if (data?.listTransactions?.nextPageToken) {
+            setNextPageToken(data.listTransactions.nextPageToken);
+        } else {
+            setNextPageToken('');
+        }
+    }, [data]);
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPageToken('');
+        setPageTokenHistory([]);
+        setNextPageToken('');
+    }, [graphqlFilter]);
+
 
     // Transform GraphQL data to match component expectations
     const transactions: Transaction[] = useMemo(() => {
@@ -99,6 +120,23 @@ const TransactionsPage = () => {
         setFilterType('ALL');
         setFromDate('');
         setToDate('');
+    };
+
+    const loadNextPage = () => {
+        if (nextPageToken) {
+            // Save current page token to history before moving to next page
+            setPageTokenHistory(prev => [...prev, currentPageToken]);
+            setCurrentPageToken(nextPageToken);
+        }
+    };
+
+    const loadPreviousPage = () => {
+        if (pageTokenHistory.length > 0) {
+            // Get the previous page token from history
+            const previousToken = pageTokenHistory[pageTokenHistory.length - 1];
+            setPageTokenHistory(prev => prev.slice(0, -1));
+            setCurrentPageToken(previousToken);
+        }
     };
 
     const [uploadTransactionCSV] = useMutation(UPLOAD_TRANSACTION_CSV);
@@ -372,7 +410,7 @@ const TransactionsPage = () => {
                         onSort={handleSort}
                     />
 
-                    {/* Pagination (Mock) */}
+                    {/* Pagination */}
                     <div style={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -384,33 +422,57 @@ const TransactionsPage = () => {
                         fontSize: '0.875rem'
                     }}>
                         <div>
-                            Showing {filteredTransactions.length > 0 ? 1 : 0} to {filteredTransactions.length} of {filteredTransactions.length} results
+                            Showing {filteredTransactions.length} results {nextPageToken ? '(more available)' : ''}
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button
-                                disabled
+                                onClick={loadPreviousPage}
+                                disabled={pageTokenHistory.length === 0}
                                 style={{
                                     padding: '6px 12px',
                                     borderRadius: '6px',
                                     border: '1px solid var(--color-border)',
-                                    background: 'var(--color-bg-tertiary)',
-                                    color: 'var(--color-text-tertiary)',
-                                    cursor: 'not-allowed',
-                                    fontSize: '0.875rem'
+                                    background: pageTokenHistory.length === 0 ? 'var(--color-bg-tertiary)' : 'var(--color-bg-primary)',
+                                    color: pageTokenHistory.length === 0 ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)',
+                                    cursor: pageTokenHistory.length === 0 ? 'not-allowed' : 'pointer',
+                                    fontSize: '0.875rem',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (pageTokenHistory.length > 0) {
+                                        e.currentTarget.style.background = 'var(--color-bg-hover)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (pageTokenHistory.length > 0) {
+                                        e.currentTarget.style.background = 'var(--color-bg-primary)';
+                                    }
                                 }}
                             >
                                 Previous
                             </button>
                             <button
-                                disabled
+                                onClick={loadNextPage}
+                                disabled={!nextPageToken}
                                 style={{
                                     padding: '6px 12px',
                                     borderRadius: '6px',
                                     border: '1px solid var(--color-border)',
-                                    background: 'var(--color-bg-tertiary)',
-                                    color: 'var(--color-text-tertiary)',
-                                    cursor: 'not-allowed',
-                                    fontSize: '0.875rem'
+                                    background: !nextPageToken ? 'var(--color-bg-tertiary)' : 'var(--color-bg-primary)',
+                                    color: !nextPageToken ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)',
+                                    cursor: !nextPageToken ? 'not-allowed' : 'pointer',
+                                    fontSize: '0.875rem',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (nextPageToken) {
+                                        e.currentTarget.style.background = 'var(--color-bg-hover)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (nextPageToken) {
+                                        e.currentTarget.style.background = 'var(--color-bg-primary)';
+                                    }
                                 }}
                             >
                                 Next
