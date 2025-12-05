@@ -1,3 +1,4 @@
+// Package repository implements data access for the transaction service.
 package repository
 
 import (
@@ -12,6 +13,7 @@ type postgresTransactionRepo struct {
 	db *sql.DB
 }
 
+// NewPostgresTransactionRepository creates a new PostgreSQL transaction repository.
 func NewPostgresTransactionRepository(db *sql.DB) domain.TransactionRepository {
 	return &postgresTransactionRepo{db: db}
 }
@@ -45,7 +47,12 @@ func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions [
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+			// Just log or ignore if already committed
+			fmt.Printf("failed to rollback transaction: %v\n", err)
+		}
+	}()
 
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency)
@@ -54,7 +61,11 @@ func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions [
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
+	defer func() {
+		if err := stmt.Close(); err != nil {
+			fmt.Printf("failed to close statement: %v\n", err)
+		}
+	}()
 
 	for _, txn := range transactions {
 		_, err = stmt.ExecContext(ctx,
@@ -168,7 +179,11 @@ func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID strin
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			fmt.Printf("failed to close rows: %v\n", err)
+		}
+	}()
 
 	var transactions []*domain.Transaction
 	for rows.Next() {

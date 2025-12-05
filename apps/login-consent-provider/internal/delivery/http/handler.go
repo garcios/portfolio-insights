@@ -1,3 +1,4 @@
+// Package http implements the HTTP handlers for the login and consent provider.
 package http
 
 import (
@@ -10,17 +11,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Handler handles HTTP requests for login and consent.
 type Handler struct {
 	authUseCase *usecase.AuthUseCase
 }
 
+// NewHandler creates a new Handler.
 func NewHandler(authUseCase *usecase.AuthUseCase) *Handler {
 	return &Handler{
 		authUseCase: authUseCase,
 	}
 }
 
-// Login GET - Display login form
+// LoginGet handles the GET request for the login page.
+// Display login form
 func (h *Handler) LoginGet(c *gin.Context) {
 	challenge := c.Query("login_challenge")
 	if challenge == "" {
@@ -60,7 +64,8 @@ func (h *Handler) LoginGet(c *gin.Context) {
 	})
 }
 
-// Login POST - Process login form
+// LoginPost handles the POST request for the login page.
+// Process login form
 func (h *Handler) LoginPost(c *gin.Context) {
 	challenge := c.PostForm("challenge")
 	email := c.PostForm("email")
@@ -90,7 +95,9 @@ func (h *Handler) LoginPost(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Set("user_id", user.ID)
 	session.Set("email", user.Email)
-	session.Save()
+	if err := session.Save(); err != nil {
+		log.Printf("Failed to save session: %v", err)
+	}
 
 	// Accept login with Hydra
 	redirectTo, err := h.authUseCase.AcceptLogin(challenge, user.ID, remember)
@@ -105,7 +112,8 @@ func (h *Handler) LoginPost(c *gin.Context) {
 	c.Redirect(http.StatusFound, redirectTo)
 }
 
-// Consent GET - Display consent form
+// ConsentGet handles the GET request for the consent page.
+// Display consent form
 func (h *Handler) ConsentGet(c *gin.Context) {
 	challenge := c.Query("consent_challenge")
 	if challenge == "" {
@@ -151,7 +159,8 @@ func (h *Handler) ConsentGet(c *gin.Context) {
 	})
 }
 
-// Consent POST - Process consent form
+// ConsentPost handles the POST request for the consent page.
+// Process consent form
 func (h *Handler) ConsentPost(c *gin.Context) {
 	challenge := c.PostForm("challenge")
 	submit := c.PostForm("submit")
@@ -201,7 +210,8 @@ func (h *Handler) ConsentPost(c *gin.Context) {
 	c.Redirect(http.StatusFound, redirectTo)
 }
 
-// Logout GET - Display logout confirmation
+// LogoutGet handles the GET request for the logout page.
+// Display logout confirmation
 func (h *Handler) LogoutGet(c *gin.Context) {
 	challenge := c.Query("logout_challenge")
 	if challenge == "" {
@@ -216,14 +226,17 @@ func (h *Handler) LogoutGet(c *gin.Context) {
 	})
 }
 
-// Logout POST - Process logout
+// LogoutPost handles the POST request for the logout page.
+// Process logout
 func (h *Handler) LogoutPost(c *gin.Context) {
 	challenge := c.PostForm("challenge")
 
 	// Clear session
 	session := sessions.Default(c)
 	session.Clear()
-	session.Save()
+	if err := session.Save(); err != nil {
+		log.Printf("Failed to save session: %v", err)
+	}
 
 	// Accept logout with Hydra
 	redirectTo, err := h.authUseCase.AcceptLogout(challenge)
@@ -238,7 +251,8 @@ func (h *Handler) LogoutPost(c *gin.Context) {
 	c.Redirect(http.StatusFound, redirectTo)
 }
 
-// Error GET - Display error page
+// ErrorGet handles the GET request for the error page.
+// Display error page
 func (h *Handler) ErrorGet(c *gin.Context) {
 	errorMsg := c.Query("error")
 	errorDesc := c.Query("error_description")

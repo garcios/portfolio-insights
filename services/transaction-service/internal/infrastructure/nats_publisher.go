@@ -1,3 +1,4 @@
+// Package infrastructure provides external service implementations and configuration.
 package infrastructure
 
 import (
@@ -12,9 +13,11 @@ import (
 )
 
 const (
+	// TransactionCreatedSubject is the NATS subject for transaction created events.
 	TransactionCreatedSubject = "transaction-service.transaction.created"
 )
 
+// TransactionCreatedEvent represents the event payload for a created transaction.
 type TransactionCreatedEvent struct {
 	TransactionID string    `json:"transaction_id"`
 	UserID        string    `json:"user_id"`
@@ -29,6 +32,7 @@ type natsEventPublisher struct {
 	nc *nats.Conn
 }
 
+// NewNATSEventPublisher creates a new NATS event publisher.
 func NewNATSEventPublisher() (domain.EventPublisher, error) {
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {

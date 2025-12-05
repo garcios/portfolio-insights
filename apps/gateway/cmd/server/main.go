@@ -1,3 +1,4 @@
+// Package main is the entry point for the gateway application.
 package main
 
 import (
@@ -42,7 +43,11 @@ func main() {
 		l.Error("Failed to connect to portfolio service", "error", err)
 		os.Exit(1)
 	}
-	defer portfolioConn.Close()
+	defer func() {
+		if err := portfolioConn.Close(); err != nil {
+			l.Error("Failed to close portfolio connection", "error", err)
+		}
+	}()
 
 	portfolioClient := portfoliopb.NewPortfolioServiceClient(portfolioConn)
 
@@ -57,7 +62,11 @@ func main() {
 		l.Error("Failed to connect to user service", "error", err)
 		os.Exit(1)
 	}
-	defer userConn.Close()
+	defer func() {
+		if err := userConn.Close(); err != nil {
+			l.Error("Failed to close user connection", "error", err)
+		}
+	}()
 
 	userClient := userpb.NewUserServiceClient(userConn)
 
@@ -72,7 +81,11 @@ func main() {
 		l.Error("Failed to connect to transaction service", "error", err)
 		os.Exit(1)
 	}
-	defer transactionConn.Close()
+	defer func() {
+		if err := transactionConn.Close(); err != nil {
+			l.Error("Failed to close transaction connection", "error", err)
+		}
+	}()
 
 	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 

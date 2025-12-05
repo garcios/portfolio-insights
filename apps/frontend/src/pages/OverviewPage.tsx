@@ -134,7 +134,7 @@ const OverviewPage = () => {
     };
 
     // Transform performance data from API
-    const performance: PortfolioPerformance[] = performanceData?.portfolioPerformance?.map((point: any) => ({
+    const performance: PortfolioPerformance[] = performanceData?.portfolioPerformance?.map((point: { timestamp: string; value: number }) => ({
         date: point.timestamp.split('T')[0], // Convert ISO timestamp to date
         value: point.value,
     })) || [];

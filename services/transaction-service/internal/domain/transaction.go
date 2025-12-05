@@ -1,3 +1,4 @@
+// Package domain defines the business entities and interfaces for the transaction service.
 package domain
 
 import (
@@ -5,6 +6,7 @@ import (
 	"time"
 )
 
+// Transaction represents a financial transaction.
 type Transaction struct {
 	ID                string    `json:"id"`
 	UserID            string    `json:"user_id"`
@@ -21,6 +23,7 @@ type Transaction struct {
 	BrokerageCurrency string    `json:"brokerage_currency"`
 }
 
+// TransactionFilter defines filters for listing transactions.
 type TransactionFilter struct {
 	Symbol         string
 	Type           string
@@ -28,6 +31,7 @@ type TransactionFilter struct {
 	ToExecutedAt   time.Time
 }
 
+// TransactionRepository defines the interface for transaction storage.
 type TransactionRepository interface {
 	Create(ctx context.Context, transaction *Transaction) error
 	BulkCreate(ctx context.Context, transactions []*Transaction) error
@@ -37,18 +41,22 @@ type TransactionRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+// UserGateway defines the interface for communicating with the user service.
 type UserGateway interface {
 	Exists(ctx context.Context, userID string) (bool, error)
 }
 
+// MarketDataGateway defines the interface for communicating with the market data service.
 type MarketDataGateway interface {
 	Exists(ctx context.Context, symbol string) (bool, error)
 }
 
+// EventPublisher defines the interface for publishing events.
 type EventPublisher interface {
 	PublishTransactionCreated(ctx context.Context, transaction *Transaction) error
 }
 
+// TransactionUsecase defines the interface for transaction business logic.
 type TransactionUsecase interface {
 	CreateTransaction(ctx context.Context, txn *Transaction) error
 	GetTransaction(ctx context.Context, id string) (*Transaction, error)

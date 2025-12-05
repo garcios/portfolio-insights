@@ -1,3 +1,4 @@
+// Package grpc implements gRPC clients and infrastructure.
 package grpc
 
 import (
@@ -24,7 +25,7 @@ type UserServiceClient struct {
 
 // NewUserServiceClient creates a new user service client
 func NewUserServiceClient(userServiceAddr string) (*UserServiceClient, error) {
-	conn, err := grpc.Dial(userServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(userServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to user service: %w", err)
 	}

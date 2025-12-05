@@ -1,3 +1,4 @@
+// Package grpc implements gRPC handlers for the portfolio service.
 package grpc
 
 import (
@@ -14,12 +15,14 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// PortfolioHandler implements the gRPC portfolio service.
 type PortfolioHandler struct {
 	pb.UnimplementedPortfolioServiceServer
 	portfolioUsecase usecase.PortfolioUsecase
 	historyRepo      domain.PortfolioHistoryRepository
 }
 
+// NewPortfolioHandler creates a new portfolio handler.
 func NewPortfolioHandler(
 	portfolioUsecase usecase.PortfolioUsecase,
 	historyRepo domain.PortfolioHistoryRepository,
@@ -173,6 +176,7 @@ func (h *PortfolioHandler) BackfillHistory(
 	}, nil
 }
 
+// BackfillResult represents the result of a backfill operation.
 type BackfillResult struct {
 	Created       int
 	Skipped       int

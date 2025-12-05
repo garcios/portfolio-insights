@@ -1,3 +1,4 @@
+// Package middleware provides gRPC middleware for the transaction service.
 package middleware
 
 import (
@@ -9,7 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// UnaryServerInterceptor returns a gRPC unary server interceptor for metrics
+// UnaryServerInterceptor returns a gRPC unary server interceptor for metrics.
 func UnaryServerInterceptor(serviceName string) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,

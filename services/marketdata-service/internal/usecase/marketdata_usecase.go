@@ -1,3 +1,4 @@
+// Package usecase implements the business logic for the marketdata service.
 package usecase
 
 import (
@@ -11,6 +12,7 @@ type marketDataUsecase struct {
 	repo domain.MarketDataRepository
 }
 
+// NewMarketDataUsecase creates a new market data usecase.
 func NewMarketDataUsecase(repo domain.MarketDataRepository) domain.MarketDataUsecase {
 	return &marketDataUsecase{repo: repo}
 }

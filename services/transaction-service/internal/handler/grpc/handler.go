@@ -1,3 +1,4 @@
+// Package grpc implements gRPC handlers for the transaction service.
 package grpc
 
 import (
@@ -11,15 +12,18 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// TransactionHandler implements the gRPC transaction service.
 type TransactionHandler struct {
 	pb.UnimplementedTransactionServiceServer
 	usecase domain.TransactionUsecase
 }
 
+// NewTransactionHandler creates a new transaction handler.
 func NewTransactionHandler(usecase domain.TransactionUsecase) *TransactionHandler {
 	return &TransactionHandler{usecase: usecase}
 }
 
+// CreateTransaction handles the creation of a new transaction.
 func (h *TransactionHandler) CreateTransaction(ctx context.Context, req *pb.CreateTransactionRequest) (*pb.CreateTransactionResponse, error) {
 	// Validate required fields
 	if req.UserId == "" {
@@ -60,6 +64,7 @@ func (h *TransactionHandler) CreateTransaction(ctx context.Context, req *pb.Crea
 	}, nil
 }
 
+// GetTransaction retrieves a transaction by ID.
 func (h *TransactionHandler) GetTransaction(ctx context.Context, req *pb.GetTransactionRequest) (*pb.GetTransactionResponse, error) {
 	txn, err := h.usecase.GetTransaction(ctx, req.Id)
 	if err != nil {
@@ -74,6 +79,7 @@ func (h *TransactionHandler) GetTransaction(ctx context.Context, req *pb.GetTran
 	}, nil
 }
 
+// ListTransactions lists transactions for a user.
 func (h *TransactionHandler) ListTransactions(ctx context.Context, req *pb.ListTransactionsRequest) (*pb.ListTransactionsResponse, error) {
 	// Simple pagination logic for now
 	limit := int(req.PageSize)
@@ -122,6 +128,7 @@ func (h *TransactionHandler) ListTransactions(ctx context.Context, req *pb.ListT
 	}, nil
 }
 
+// UpdateTransaction updates an existing transaction.
 func (h *TransactionHandler) UpdateTransaction(ctx context.Context, req *pb.UpdateTransactionRequest) (*pb.UpdateTransactionResponse, error) {
 	txn := &domain.Transaction{
 		ID:                req.Id,
@@ -145,6 +152,7 @@ func (h *TransactionHandler) UpdateTransaction(ctx context.Context, req *pb.Upda
 	}, nil
 }
 
+// DeleteTransaction deletes a transaction by ID.
 func (h *TransactionHandler) DeleteTransaction(ctx context.Context, req *pb.DeleteTransactionRequest) (*pb.DeleteTransactionResponse, error) {
 	err := h.usecase.DeleteTransaction(ctx, req.Id)
 	if err == sql.ErrNoRows {

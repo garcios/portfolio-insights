@@ -1,3 +1,4 @@
+// Package client implements the EODHD API client.
 package client
 
 import (
@@ -172,7 +173,10 @@ func (c *eodhd) doRequest(ctx context.Context, url string, result interface{}) e
 
 		// Handle response
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			// Ignore close error on read
+			_ = closeErr
+		}
 
 		if err != nil {
 			lastErr = fmt.Errorf("failed to read response body: %w", err)

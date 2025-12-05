@@ -15,6 +15,7 @@ type userGateway struct {
 	client userpb.UserServiceClient
 }
 
+// NewUserGateway creates a new user gateway.
 func NewUserGateway() (domain.UserGateway, error) {
 	host := os.Getenv("USER_SERVICE_HOST")
 	port := os.Getenv("USER_SERVICE_PORT")
@@ -27,8 +28,7 @@ func NewUserGateway() (domain.UserGateway, error) {
 	}
 
 	target := fmt.Sprintf("%s:%s", host, port)
-	// Using Dial for compatibility if NewClient is not available or behaves differently in this env
-	conn, err := grpc.Dial(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to user service: %w", err)
 	}

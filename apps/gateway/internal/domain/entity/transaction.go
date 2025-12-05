@@ -1,3 +1,4 @@
+// Package entity defines the domain entities for the gateway.
 package entity
 
 import "time"
@@ -6,9 +7,13 @@ import "time"
 type TransactionType string
 
 const (
-	TransactionTypeBuy      TransactionType = "BUY"
-	TransactionTypeSell     TransactionType = "SELL"
-	TransactionTypeSplit    TransactionType = "SPLIT"
+	// TransactionTypeBuy represents a buy transaction.
+	TransactionTypeBuy TransactionType = "BUY"
+	// TransactionTypeSell represents a sell transaction.
+	TransactionTypeSell TransactionType = "SELL"
+	// TransactionTypeSplit represents a split transaction.
+	TransactionTypeSplit TransactionType = "SPLIT"
+	// TransactionTypeDividend represents a dividend transaction.
 	TransactionTypeDividend TransactionType = "DIVIDEND"
 )
 

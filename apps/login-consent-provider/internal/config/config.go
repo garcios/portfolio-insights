@@ -1,7 +1,9 @@
+// Package config functions to load configuration.
 package config
 
 import "os"
 
+// Config holds the application configuration.
 type Config struct {
 	Port            string
 	HydraAdminURL   string
@@ -10,6 +12,7 @@ type Config struct {
 	LogLevel        string
 }
 
+// Load loads the configuration from environment variables.
 func Load() *Config {
 	return &Config{
 		Port:            getEnv("PORT", "3001"),

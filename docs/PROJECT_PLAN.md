@@ -15,7 +15,7 @@
 - [x] **Frontend Auth**: Create Login/Signup pages and store JWT in local storage/cookies.
 
 ### Week 2: Market Data Service (The Data Engine)
-- [ ] **External API Integration**: Choose a provider (Yahoo Finance, AlphaVantage, or CoinGecko) and implement a client in `marketdata-service`.
+- [x] **External API Integration**: Choose a provider (Yahoo Finance, AlphaVantage, or CoinGecko) and implement a client in `marketdata-service`.
 - [x] **Data Ingestion**: Create a background worker (Cron job or Go routine) to fetch and update asset prices daily.
 - [x] **gRPC Endpoints**: Implement `GetAsset`, `GetLatestPrice`, `GetHistoricalPrices`.
 - [x] **DB Integration**: Store data in `marketdata.assets` and `marketdata.asset_prices`.

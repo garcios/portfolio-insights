@@ -1,3 +1,4 @@
+// Package metrics defines Prometheus metrics for the transaction service.
 package metrics
 
 import (
@@ -6,7 +7,7 @@ import (
 )
 
 var (
-	// Transaction Business Metrics
+	// TransactionsCreatedTotal counts the total number of transactions created.
 	TransactionsCreatedTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "transactions_created_total",
@@ -15,6 +16,7 @@ var (
 		[]string{"type"}, // BUY or SELL
 	)
 
+	// TransactionValueTotal tracks the total transaction value in USD.
 	TransactionValueTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "transaction_value_total",
@@ -23,6 +25,7 @@ var (
 		[]string{"type"},
 	)
 
+	// TransactionProcessingDuration histograms the time spent processing transaction business logic.
 	TransactionProcessingDuration = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "transaction_processing_duration_seconds",
@@ -31,7 +34,7 @@ var (
 		},
 	)
 
-	// External Service Call Metrics
+	// UserValidationDuration histograms the time spent validating users via gRPC.
 	UserValidationDuration = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "user_validation_duration_seconds",
@@ -40,6 +43,7 @@ var (
 		},
 	)
 
+	// AssetValidationDuration histograms the time spent validating assets via gRPC.
 	AssetValidationDuration = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "asset_validation_duration_seconds",
@@ -48,7 +52,7 @@ var (
 		},
 	)
 
-	// NATS Publishing Metrics
+	// NATSPublishTotal counts the total number of NATS messages published.
 	NATSPublishTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "nats_publish_total",
@@ -57,6 +61,7 @@ var (
 		[]string{"subject", "status"}, // status: success, failed
 	)
 
+	// NATSPublishDuration histograms the time spent publishing NATS messages.
 	NATSPublishDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "nats_publish_duration_seconds",

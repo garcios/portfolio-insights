@@ -1,3 +1,4 @@
+// Package infrastructure provides external service implementations and configuration.
 package infrastructure
 
 import (
@@ -8,6 +9,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// NewPostgresDB creates a new PostgreSQL database connection.
 func NewPostgresDB() (*sql.DB, error) {
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")

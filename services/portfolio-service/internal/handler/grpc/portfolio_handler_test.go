@@ -478,8 +478,14 @@ func TestGetHoldings_CalculationsWithZeroCost(t *testing.T) {
 
 func TestBackfillHistory_Success(t *testing.T) {
 	// Setup
-	os.Setenv("ADMIN_TOKEN", "secret-token")
-	defer os.Unsetenv("ADMIN_TOKEN")
+	if err := os.Setenv("ADMIN_TOKEN", "secret-token"); err != nil {
+		t.Fatalf("failed to set env var: %v", err)
+	}
+	defer func() {
+		if err := os.Unsetenv("ADMIN_TOKEN"); err != nil {
+			t.Errorf("failed to unset env var: %v", err)
+		}
+	}()
 
 	mockUC := &mockPortfolioUsecase{
 		summary: &domain.PortfolioSummary{

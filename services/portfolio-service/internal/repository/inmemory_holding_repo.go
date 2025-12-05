@@ -1,3 +1,4 @@
+// Package repository implements data access for the portfolio service.
 package repository
 
 import (
@@ -7,17 +8,20 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 )
 
+// InMemoryHoldingRepository implements an in-memory holding repository.
 type InMemoryHoldingRepository struct {
 	mu       sync.RWMutex
 	holdings map[string]*domain.Holding // key: userID:symbol
 }
 
+// NewInMemoryHoldingRepository creates a new in-memory holding repository.
 func NewInMemoryHoldingRepository() *InMemoryHoldingRepository {
 	return &InMemoryHoldingRepository{
 		holdings: make(map[string]*domain.Holding),
 	}
 }
 
+// Upsert inserts or updates a holding.
 func (r *InMemoryHoldingRepository) Upsert(holding *domain.Holding) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -27,6 +31,7 @@ func (r *InMemoryHoldingRepository) Upsert(holding *domain.Holding) error {
 	return nil
 }
 
+// GetByUserAndSymbol retrieves a holding by user ID and symbol.
 func (r *InMemoryHoldingRepository) GetByUserAndSymbol(userID, symbol string) (*domain.Holding, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -39,6 +44,7 @@ func (r *InMemoryHoldingRepository) GetByUserAndSymbol(userID, symbol string) (*
 	return holding, nil
 }
 
+// ListByUser retrieves all holdings for a user.
 func (r *InMemoryHoldingRepository) ListByUser(userID string) ([]*domain.Holding, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

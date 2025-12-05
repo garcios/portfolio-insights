@@ -1,3 +1,4 @@
+// Package infrastructure provides external service implementations and configuration.
 package infrastructure
 
 import (
@@ -28,6 +29,7 @@ type CachedAsset struct {
 	CachedAt time.Time `json:"cached_at"`
 }
 
+// NewAssetCache creates a new asset cache.
 func NewAssetCache(client *redis.Client) *AssetCache {
 	// Default TTL: 24 hours (assets don't change frequently)
 	ttl := 24 * time.Hour

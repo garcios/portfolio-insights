@@ -1,3 +1,4 @@
+// Package gateway defines the gateway interfaces.
 package gateway
 
 import (

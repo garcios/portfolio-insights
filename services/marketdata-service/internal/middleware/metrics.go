@@ -1,3 +1,4 @@
+// Package middleware implements gRPC middleware.
 package middleware
 
 import (

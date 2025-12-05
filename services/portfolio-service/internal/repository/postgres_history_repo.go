@@ -13,21 +13,12 @@ type postgresHistoryRepo struct {
 	db *sql.DB
 }
 
+// NewPostgresHistoryRepository creates a new PostgreSQL history repository.
 func NewPostgresHistoryRepository(db *sql.DB) domain.PortfolioHistoryRepository {
 	return &postgresHistoryRepo{db: db}
 }
 
 func (r *postgresHistoryRepo) CreateSnapshot(ctx context.Context, snapshot *domain.PortfolioSnapshot) error {
-	query := `
-		INSERT INTO investments.portfolio_history 
-			(user_id, total_value, total_cost_basis, timestamp)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (user_id, timestamp) 
-		DO UPDATE SET 
-			total_value = EXCLUDED.total_value,
-			total_cost_basis = EXCLUDED.total_cost_basis,
-			timestamp = EXCLUDED.timestamp
-	`
 	// Note: The ON CONFLICT clause requires a unique constraint on (user_id, timestamp).
 	// If the constraint is on (user_id, DATE(timestamp)), the conflict target needs to match that index/constraint definition.
 	// Assuming the index is just on (user_id, timestamp) for now or we rely on exact timestamp matches.
@@ -44,7 +35,7 @@ func (r *postgresHistoryRepo) CreateSnapshot(ctx context.Context, snapshot *doma
 	// Let's use simple INSERT for now as per the schema provided in the doc.
 	// If we want upsert behavior, we'd need a unique constraint.
 
-	query = `
+	query := `
 		INSERT INTO investments.portfolio_history 
 			(user_id, total_value, total_cost_basis, timestamp)
 		VALUES ($1, $2, $3, $4)
@@ -71,7 +62,11 @@ func (r *postgresHistoryRepo) GetHistory(ctx context.Context, userID string, fro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			fmt.Printf("failed to close rows: %v\n", closeErr)
+		}
+	}()
 
 	var snapshots []*domain.PortfolioSnapshot
 	for rows.Next() {
@@ -135,7 +130,11 @@ func (r *postgresHistoryRepo) GetAllUserIDs(ctx context.Context) ([]string, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			fmt.Printf("failed to close rows: %v\n", closeErr)
+		}
+	}()
 
 	var userIDs []string
 	for rows.Next() {

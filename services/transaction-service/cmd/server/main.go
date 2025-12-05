@@ -1,3 +1,4 @@
+// Package main is the entry point for the transaction-service.
 package main
 
 import (
@@ -29,7 +30,11 @@ func main() {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			l.Error("failed to close database", "error", err)
+		}
+	}()
 
 	// Initialize Repository
 	repo := repository.NewPostgresTransactionRepository(db)
@@ -88,7 +93,9 @@ func main() {
 		httpMux.Handle("/metrics", promhttp.Handler())
 		httpMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
+			if _, err := w.Write([]byte("OK")); err != nil {
+				l.Error("failed to write health response", "error", err)
+			}
 		})
 
 		l.Info("HTTP server listening on port " + httpPort)

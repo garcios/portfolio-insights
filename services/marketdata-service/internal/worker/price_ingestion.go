@@ -16,12 +16,14 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+// PriceIngestionWorker handles the ingestion of price data from files.
 type PriceIngestionWorker struct {
 	repo        domain.MarketDataRepository
 	minioClient *minio.Client
 	bucketName  string
 }
 
+// NewPriceIngestionWorker creates a new price ingestion worker.
 func NewPriceIngestionWorker(repo domain.MarketDataRepository) (*PriceIngestionWorker, error) {
 	endpoint := os.Getenv("MINIO_ENDPOINT")
 	accessKeyID := os.Getenv("MINIO_ACCESS_KEY")
@@ -51,6 +53,7 @@ func NewPriceIngestionWorker(repo domain.MarketDataRepository) (*PriceIngestionW
 	}, nil
 }
 
+// Start starts the price ingestion worker.
 func (w *PriceIngestionWorker) Start(ctx context.Context) {
 	go func() {
 		log.Println("Price Worker: Starting ingestion worker...")
@@ -117,7 +120,11 @@ func (w *PriceIngestionWorker) processFile(ctx context.Context, objectKey string
 		status = "failure"
 		return fmt.Errorf("failed to get object: %w", err)
 	}
-	defer object.Close()
+	defer func() {
+		if err := object.Close(); err != nil {
+			log.Printf("Price Worker: Error closing object: %v", err)
+		}
+	}()
 
 	reader := csv.NewReader(object)
 	_, err = reader.Read() // Skip header

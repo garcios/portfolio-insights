@@ -9,10 +9,12 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 )
 
+// PostgresHoldingRepository implements a PostgreSQL holding repository.
 type PostgresHoldingRepository struct {
 	db *sql.DB
 }
 
+// NewPostgresHoldingRepository creates a new PostgreSQL holding repository.
 func NewPostgresHoldingRepository(db *sql.DB) *PostgresHoldingRepository {
 	return &PostgresHoldingRepository{db: db}
 }
@@ -106,7 +108,11 @@ func (r *PostgresHoldingRepository) ListByUser(userID string) ([]*domain.Holding
 		metrics.RecordDatabaseQuery("list_by_user", "holdings", time.Since(start).Seconds(), err)
 		return nil, fmt.Errorf("failed to list holdings: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			metrics.RecordDatabaseQuery("list_by_user_close", "holdings", 0, closeErr)
+		}
+	}()
 
 	var holdings []*domain.Holding
 	for rows.Next() {

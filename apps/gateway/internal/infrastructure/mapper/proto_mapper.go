@@ -1,3 +1,4 @@
+// Package mapper provides functions to map between domain entities and Proto models.
 package mapper
 
 import (

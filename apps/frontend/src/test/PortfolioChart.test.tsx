@@ -8,7 +8,9 @@ vi.mock('recharts', () => {
     const OriginalModule = vi.importActual('recharts');
     return {
         ...OriginalModule,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         AreaChart: ({ children }: any) => <div data-testid="area-chart">{children}</div>,
         Area: () => <div data-testid="area" />,
         XAxis: () => <div data-testid="x-axis" />,

@@ -1,3 +1,4 @@
+// Package mapper provides functions to map between domain entities and GraphQL models.
 package mapper
 
 import (

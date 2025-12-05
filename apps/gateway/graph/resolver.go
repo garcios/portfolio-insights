@@ -1,3 +1,4 @@
+// Package graph implements the GraphQL resolvers.
 package graph
 
 // This file will not be regenerated automatically.
@@ -8,6 +9,7 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
 )
 
+// Resolver is the root resolver for the GraphQL schema.
 type Resolver struct {
 	Container *container.Container
 }

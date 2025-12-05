@@ -15,6 +15,7 @@ type marketDataGateway struct {
 	client marketdatapb.MarketDataServiceClient
 }
 
+// NewMarketDataGateway creates a new market data gateway.
 func NewMarketDataGateway() (domain.MarketDataGateway, error) {
 	host := os.Getenv("MARKETDATA_SERVICE_HOST")
 	port := os.Getenv("MARKETDATA_SERVICE_PORT")
@@ -27,7 +28,7 @@ func NewMarketDataGateway() (domain.MarketDataGateway, error) {
 	}
 
 	target := fmt.Sprintf("%s:%s", host, port)
-	conn, err := grpc.Dial(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to marketdata service: %w", err)
 	}

@@ -16,9 +16,11 @@ import (
 )
 
 const (
+	// TransactionCreatedSubject is the NATS subject for transaction created events.
 	TransactionCreatedSubject = "transaction-service.transaction.created"
 )
 
+// TransactionCreatedEvent represents the event payload for a created transaction.
 type TransactionCreatedEvent struct {
 	TransactionID string    `json:"transaction_id"`
 	UserID        string    `json:"user_id"`
@@ -29,6 +31,7 @@ type TransactionCreatedEvent struct {
 	ExecutedAt    time.Time `json:"executed_at"`
 }
 
+// NATSSubscriber subscribes to NATS events.
 type NATSSubscriber struct {
 	nc                *nats.Conn
 	sub               *nats.Subscription
@@ -38,6 +41,7 @@ type NATSSubscriber struct {
 	logger            *slog.Logger
 }
 
+// NewNATSSubscriber creates a new NATS subscriber.
 func NewNATSSubscriber(repo domain.HoldingRepository, marketDataGateway *MarketDataGateway, assetCache *AssetCache, l *slog.Logger) (*NATSSubscriber, error) {
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {
@@ -60,6 +64,7 @@ func NewNATSSubscriber(repo domain.HoldingRepository, marketDataGateway *MarketD
 	return subscriber, nil
 }
 
+// Start starts subscribing to the NATS subject.
 func (s *NATSSubscriber) Start() error {
 	var err error
 	s.sub, err = s.nc.Subscribe(TransactionCreatedSubject, s.handleTransactionCreated)
@@ -71,9 +76,12 @@ func (s *NATSSubscriber) Start() error {
 	return nil
 }
 
+// Stop stops the NATS subscriber.
 func (s *NATSSubscriber) Stop() {
 	if s.sub != nil {
-		s.sub.Unsubscribe()
+		if err := s.sub.Unsubscribe(); err != nil {
+			s.logger.Error("failed to unsubscribe from NATS", "error", err)
+		}
 	}
 	if s.nc != nil {
 		s.nc.Close()

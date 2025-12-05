@@ -1,3 +1,4 @@
+// Package metrics defines Prometheus metrics for the portfolio service.
 package metrics
 
 import (
@@ -6,7 +7,7 @@ import (
 )
 
 var (
-	// gRPC Metrics
+	// GrpcRequestsTotal counts the total number of gRPC requests.
 	GrpcRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "portfolio_grpc_requests_total",
@@ -15,6 +16,7 @@ var (
 		[]string{"method", "status"},
 	)
 
+	// GrpcRequestDuration histograms the duration of gRPC requests in seconds.
 	GrpcRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "portfolio_grpc_request_duration_seconds",
@@ -24,7 +26,7 @@ var (
 		[]string{"method"},
 	)
 
-	// Business Metrics
+	// HoldingsTotal gauges the total number of holdings across all users.
 	HoldingsTotal = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "portfolio_holdings_total",
@@ -32,6 +34,7 @@ var (
 		},
 	)
 
+	// HoldingsByUser gauges the number of holdings per user.
 	HoldingsByUser = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "portfolio_holdings_by_user",
@@ -40,6 +43,7 @@ var (
 		[]string{"user_id"},
 	)
 
+	// PortfolioValue gauges the total portfolio value in USD.
 	PortfolioValue = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "portfolio_total_value",
@@ -48,7 +52,7 @@ var (
 		[]string{"user_id"},
 	)
 
-	// Cache Metrics
+	// CacheHitsTotal counts the total number of cache hits.
 	CacheHitsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "portfolio_cache_hits_total",
@@ -57,6 +61,7 @@ var (
 		[]string{"cache_type"},
 	)
 
+	// CacheMissesTotal counts the total number of cache misses.
 	CacheMissesTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "portfolio_cache_misses_total",
@@ -65,6 +70,7 @@ var (
 		[]string{"cache_type"},
 	)
 
+	// CacheOperationDuration histograms the duration of cache operations in seconds.
 	CacheOperationDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "portfolio_cache_operation_duration_seconds",
@@ -74,7 +80,7 @@ var (
 		[]string{"operation", "cache_type"},
 	)
 
-	// Database Metrics
+	// DatabaseQueriesTotal counts the total number of database queries.
 	DatabaseQueriesTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "portfolio_database_queries_total",
@@ -83,6 +89,7 @@ var (
 		[]string{"operation", "table"},
 	)
 
+	// DatabaseQueryDuration histograms the duration of database queries in seconds.
 	DatabaseQueryDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "portfolio_database_query_duration_seconds",
@@ -92,6 +99,7 @@ var (
 		[]string{"operation", "table"},
 	)
 
+	// DatabaseErrorsTotal counts the total number of database errors.
 	DatabaseErrorsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "portfolio_database_errors_total",
@@ -100,7 +108,7 @@ var (
 		[]string{"operation", "table"},
 	)
 
-	// Market Data Metrics
+	// MarketDataRequestsTotal counts the total number of market data requests.
 	MarketDataRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "portfolio_marketdata_requests_total",
@@ -109,6 +117,7 @@ var (
 		[]string{"operation", "status"},
 	)
 
+	// MarketDataRequestDuration histograms the duration of market data requests in seconds.
 	MarketDataRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "portfolio_marketdata_request_duration_seconds",
@@ -118,6 +127,7 @@ var (
 		[]string{"operation"},
 	)
 
+	// PricesFetched counts the total number of prices fetched.
 	PricesFetched = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "portfolio_prices_fetched_total",
@@ -126,7 +136,7 @@ var (
 		[]string{"source"}, // "cache" or "service"
 	)
 
-	// NATS Metrics
+	// NatsMessagesConsumed counts the total number of NATS messages consumed.
 	NatsMessagesConsumed = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "portfolio_nats_messages_consumed_total",
@@ -135,6 +145,7 @@ var (
 		[]string{"subject", "status"},
 	)
 
+	// NatsMessageProcessingDuration histograms the duration of NATS message processing in seconds.
 	NatsMessageProcessingDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "portfolio_nats_message_processing_duration_seconds",
@@ -144,7 +155,7 @@ var (
 		[]string{"subject"},
 	)
 
-	// Error Metrics
+	// ErrorsTotal counts the total number of errors.
 	ErrorsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "portfolio_errors_total",

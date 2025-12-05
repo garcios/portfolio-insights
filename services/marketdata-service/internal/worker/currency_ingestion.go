@@ -1,3 +1,4 @@
+// Package worker implements background workers.
 package worker
 
 import (
@@ -16,12 +17,14 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+// CurrencyIngestionWorker handles the ingestion of currency rates from files.
 type CurrencyIngestionWorker struct {
 	repo        domain.MarketDataRepository
 	minioClient *minio.Client
 	bucketName  string
 }
 
+// NewCurrencyIngestionWorker creates a new currency ingestion worker.
 func NewCurrencyIngestionWorker(repo domain.MarketDataRepository) (*CurrencyIngestionWorker, error) {
 	endpoint := os.Getenv("MINIO_ENDPOINT")
 	accessKeyID := os.Getenv("MINIO_ACCESS_KEY")
@@ -51,6 +54,7 @@ func NewCurrencyIngestionWorker(repo domain.MarketDataRepository) (*CurrencyInge
 	}, nil
 }
 
+// Start starts the currency ingestion worker.
 func (w *CurrencyIngestionWorker) Start(ctx context.Context) {
 	go func() {
 		log.Println("Currency Worker: Starting ingestion worker...")
@@ -113,7 +117,11 @@ func (w *CurrencyIngestionWorker) processFile(ctx context.Context, objectKey str
 		status = "failure"
 		return fmt.Errorf("failed to get object: %w", err)
 	}
-	defer object.Close()
+	defer func() {
+		if err := object.Close(); err != nil {
+			log.Printf("Currency Worker: Error closing object: %v", err)
+		}
+	}()
 
 	// Parse CSV
 	reader := csv.NewReader(object)

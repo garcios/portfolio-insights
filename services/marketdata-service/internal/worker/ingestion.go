@@ -13,12 +13,14 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+// IngestionWorker handles the ingestion of market data from files.
 type IngestionWorker struct {
 	repo        domain.MarketDataRepository
 	minioClient *minio.Client
 	bucketName  string
 }
 
+// NewIngestionWorker creates a new ingestion worker.
 func NewIngestionWorker(repo domain.MarketDataRepository) (*IngestionWorker, error) {
 	endpoint := os.Getenv("MINIO_ENDPOINT")
 	accessKeyID := os.Getenv("MINIO_ACCESS_KEY")
@@ -48,6 +50,7 @@ func NewIngestionWorker(repo domain.MarketDataRepository) (*IngestionWorker, err
 	}, nil
 }
 
+// Start starts the ingestion worker.
 func (w *IngestionWorker) Start(ctx context.Context) {
 	go func() {
 		log.Println("Starting ingestion worker...")
@@ -99,7 +102,11 @@ func (w *IngestionWorker) processFile(ctx context.Context, objectKey string) err
 	if err != nil {
 		return fmt.Errorf("failed to get object: %w", err)
 	}
-	defer object.Close()
+	defer func() {
+		if err := object.Close(); err != nil {
+			log.Printf("Ingestion Worker: Error closing object: %v", err)
+		}
+	}()
 
 	reader := csv.NewReader(object)
 	_, err = reader.Read() // Skip header

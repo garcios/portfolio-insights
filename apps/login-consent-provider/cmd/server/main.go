@@ -1,3 +1,4 @@
+// Package main is the entry point for the login and consent provider application.
 package main
 
 import (
@@ -31,7 +32,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to connect to user service: %v", err)
 	}
-	defer userClient.Close()
+	defer func() {
+		if err := userClient.Close(); err != nil {
+			log.Printf("Error closing user client: %v", err)
+		}
+	}()
 
 	// Initialize Hydra client
 	httpClient := &http.Client{Timeout: 10 * time.Second}

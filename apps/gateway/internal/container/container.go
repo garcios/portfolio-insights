@@ -1,3 +1,4 @@
+// Package container provides dependency injection.
 package container
 
 import (

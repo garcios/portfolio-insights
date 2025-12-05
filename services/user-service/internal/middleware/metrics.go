@@ -1,3 +1,4 @@
+// Package middleware provides HTTP and gRPC middleware.
 package middleware
 
 import (

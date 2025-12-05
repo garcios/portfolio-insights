@@ -1,3 +1,4 @@
+// Package infrastructure provides external service implementations and configuration.
 package infrastructure
 
 import (
@@ -11,6 +12,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// DBConfig holds the configuration for the database connection.
 type DBConfig struct {
 	Host     string
 	Port     string
@@ -20,7 +22,7 @@ type DBConfig struct {
 	SSLMode  string
 }
 
-// LoadDBConfigFromEnv loads database configuration from environment variables
+// LoadDBConfigFromEnv loads database configuration from environment variables.
 func LoadDBConfigFromEnv() *DBConfig {
 	return &DBConfig{
 		Host:     getEnv("DB_HOST", "localhost"),
@@ -32,7 +34,7 @@ func LoadDBConfigFromEnv() *DBConfig {
 	}
 }
 
-// NewPostgresDB creates a new PostgreSQL database connection
+// NewPostgresDB creates a new PostgreSQL database connection.
 func NewPostgresDB() (*sql.DB, error) {
 	config := LoadDBConfigFromEnv()
 

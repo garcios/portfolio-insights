@@ -1,3 +1,4 @@
+// Package hydra implements a client for the Hydra administrative API.
 package hydra
 
 import (
@@ -10,11 +11,13 @@ import (
 	"github.com/garcios/portfolio-insights/apps/login-consent-provider/internal/domain"
 )
 
+// HydraClient is a client for the Hydra API.
 type HydraClient struct {
 	adminURL   string
 	httpClient *http.Client
 }
 
+// NewHydraClient creates a new HydraClient.
 func NewHydraClient(adminURL string, httpClient *http.Client) *HydraClient {
 	return &HydraClient{
 		adminURL:   adminURL,
@@ -22,13 +25,16 @@ func NewHydraClient(adminURL string, httpClient *http.Client) *HydraClient {
 	}
 }
 
+// GetLoginRequest retrieves information about a login request.
 func (h *HydraClient) GetLoginRequest(challenge string) (*domain.LoginRequest, error) {
 	url := fmt.Sprintf("%s/admin/oauth2/auth/requests/login?login_challenge=%s", h.adminURL, challenge)
 	resp, err := h.httpClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -43,6 +49,7 @@ func (h *HydraClient) GetLoginRequest(challenge string) (*domain.LoginRequest, e
 	return &loginReq, nil
 }
 
+// AcceptLogin accepts a login request.
 func (h *HydraClient) AcceptLogin(challenge, subject string, remember bool) (string, error) {
 	acceptReq := domain.AcceptLoginRequest{
 		Subject:     subject,
@@ -66,7 +73,9 @@ func (h *HydraClient) AcceptLogin(challenge, subject string, remember bool) (str
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -81,13 +90,16 @@ func (h *HydraClient) AcceptLogin(challenge, subject string, remember bool) (str
 	return acceptResp.RedirectTo, nil
 }
 
+// GetConsentRequest retrieves information about a consent request.
 func (h *HydraClient) GetConsentRequest(challenge string) (*domain.ConsentRequest, error) {
 	url := fmt.Sprintf("%s/admin/oauth2/auth/requests/consent?consent_challenge=%s", h.adminURL, challenge)
 	resp, err := h.httpClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -102,6 +114,7 @@ func (h *HydraClient) GetConsentRequest(challenge string) (*domain.ConsentReques
 	return &consentReq, nil
 }
 
+// AcceptConsent accepts a consent request.
 func (h *HydraClient) AcceptConsent(challenge string, grantScope, grantAudience []string, user *domain.User, remember bool) (string, error) {
 	acceptReq := domain.AcceptConsentRequest{
 		GrantScope:               grantScope,
@@ -138,7 +151,9 @@ func (h *HydraClient) AcceptConsent(challenge string, grantScope, grantAudience 
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -153,6 +168,7 @@ func (h *HydraClient) AcceptConsent(challenge string, grantScope, grantAudience 
 	return acceptResp.RedirectTo, nil
 }
 
+// RejectConsent rejects a consent request.
 func (h *HydraClient) RejectConsent(challenge, reason string) (string, error) {
 	rejectReq := map[string]interface{}{
 		"error":             "access_denied",
@@ -175,7 +191,9 @@ func (h *HydraClient) RejectConsent(challenge, reason string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -190,6 +208,7 @@ func (h *HydraClient) RejectConsent(challenge, reason string) (string, error) {
 	return rejectResp.RedirectTo, nil
 }
 
+// AcceptLogout accepts a logout request.
 func (h *HydraClient) AcceptLogout(challenge string) (string, error) {
 	url := fmt.Sprintf("%s/admin/oauth2/auth/requests/logout/accept?logout_challenge=%s", h.adminURL, challenge)
 	req, err := http.NewRequest("PUT", url, nil)
@@ -201,7 +220,9 @@ func (h *HydraClient) AcceptLogout(challenge string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

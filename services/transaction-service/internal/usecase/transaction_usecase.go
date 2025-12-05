@@ -1,3 +1,4 @@
+// Package usecase implements the business logic for the transaction service.
 package usecase
 
 import (
@@ -17,6 +18,7 @@ type transactionUsecase struct {
 	eventPublisher    domain.EventPublisher
 }
 
+// NewTransactionUsecase creates a new transaction usecase.
 func NewTransactionUsecase(repo domain.TransactionRepository, userGateway domain.UserGateway, marketDataGateway domain.MarketDataGateway, eventPublisher domain.EventPublisher) domain.TransactionUsecase {
 	return &transactionUsecase{
 		repo:              repo,

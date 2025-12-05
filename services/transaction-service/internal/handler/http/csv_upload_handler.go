@@ -1,3 +1,4 @@
+// Package http implements HTTP handlers for the transaction service.
 package http
 
 import (
@@ -9,16 +10,19 @@ import (
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/domain"
 )
 
+// CSVUploadHandler handles CSV upload requests.
 type CSVUploadHandler struct {
 	usecase domain.CSVUploadUsecase
 }
 
+// NewCSVUploadHandler creates a new CSV upload handler.
 func NewCSVUploadHandler(usecase domain.CSVUploadUsecase) *CSVUploadHandler {
 	return &CSVUploadHandler{
 		usecase: usecase,
 	}
 }
 
+// CSVUploadResponse represents the response for a CSV upload.
 type CSVUploadResponse struct {
 	TotalRecords      int                   `json:"total_records"`
 	SuccessfulRecords int                   `json:"successful_records"`
@@ -26,12 +30,14 @@ type CSVUploadResponse struct {
 	Errors            []CSVRowErrorResponse `json:"errors,omitempty"`
 }
 
+// CSVRowErrorResponse represents an error for a specific row in the CSV.
 type CSVRowErrorResponse struct {
 	RowNumber int               `json:"row_number"`
 	Row       map[string]string `json:"row,omitempty"`
 	Error     string            `json:"error"`
 }
 
+// UploadCSV handles the CSV file upload.
 func (h *CSVUploadHandler) UploadCSV(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -61,7 +67,11 @@ func (h *CSVUploadHandler) UploadCSV(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to get file: %v", err), http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("failed to close file: %v\n", err)
+		}
+	}()
 
 	// Validate file type
 	if header.Header.Get("Content-Type") != "text/csv" && !isCsvFilename(header.Filename) {
@@ -107,7 +117,9 @@ func (h *CSVUploadHandler) UploadCSV(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		fmt.Printf("failed to encode response: %v\n", err)
+	}
 }
 
 func isCsvFilename(filename string) bool {

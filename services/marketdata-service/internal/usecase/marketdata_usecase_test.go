@@ -339,7 +339,7 @@ func TestGetHistoricalCurrencyRates(t *testing.T) {
 			t.Fatalf("expected no error, got %v", err)
 		}
 		// Mock returns nil, so we expect empty slice
-		if rates != nil && len(rates) != 0 {
+		if len(rates) != 0 {
 			t.Errorf("expected empty rates, got %d", len(rates))
 		}
 	})

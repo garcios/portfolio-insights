@@ -1,3 +1,4 @@
+// Package main is the entry point for the portfolio-service.
 package main
 
 import (
@@ -39,7 +40,11 @@ func main() {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			l.Error("failed to close database connection", "error", err)
+		}
+	}()
 
 	l.Info("Successfully connected to PostgreSQL database")
 
@@ -88,7 +93,11 @@ func main() {
 		l.Error("failed to create marketdata gateway", "error", err)
 		os.Exit(1)
 	}
-	defer marketDataGateway.Close()
+	defer func() {
+		if err := marketDataGateway.Close(); err != nil {
+			l.Error("failed to close market data gateway", "error", err)
+		}
+	}()
 
 	// Initialize Usecase
 	portfolioUsecase := usecase.NewPortfolioUsecase(repo, marketDataGateway)

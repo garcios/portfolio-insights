@@ -1,3 +1,4 @@
+// Package repository implements the market data repository.
 package repository
 
 import (
@@ -14,6 +15,7 @@ type postgresMarketDataRepo struct {
 	db *sql.DB
 }
 
+// NewPostgresMarketDataRepository creates a new PostgreSQL market data repository.
 func NewPostgresMarketDataRepository(db *sql.DB) domain.MarketDataRepository {
 	return &postgresMarketDataRepo{db: db}
 }
@@ -57,7 +59,11 @@ func (r *postgresMarketDataRepo) ListAssets(limit, offset int) ([]*domain.Asset,
 		metrics.RecordDatabaseQuery("list_assets", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			metrics.RecordDatabaseQuery("list_assets_close", "assets", 0, closeErr)
+		}
+	}()
 
 	var assets []*domain.Asset
 	for rows.Next() {
@@ -112,7 +118,11 @@ func (r *postgresMarketDataRepo) GetAllAssetIDs() (map[string]string, error) {
 		metrics.RecordDatabaseQuery("get_all_asset_ids", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			metrics.RecordDatabaseQuery("get_all_asset_ids_close", "assets", 0, closeErr)
+		}
+	}()
 
 	assetMap := make(map[string]string)
 	for rows.Next() {
@@ -203,7 +213,11 @@ func (r *postgresMarketDataRepo) GetLatestPrices(symbols []string) (map[string]*
 		metrics.RecordDatabaseQuery("get_latest_prices_batch", "asset_prices", time.Since(start).Seconds(), err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			metrics.RecordDatabaseQuery("get_latest_prices_batch_close", "asset_prices", 0, closeErr)
+		}
+	}()
 
 	prices := make(map[string]*domain.AssetPrice)
 	for rows.Next() {
@@ -236,7 +250,11 @@ func (r *postgresMarketDataRepo) GetHistoricalPrices(symbol string, start, end t
 		metrics.RecordDatabaseQuery("get_historical_prices", "asset_prices", time.Since(startTime).Seconds(), err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			metrics.RecordDatabaseQuery("get_historical_prices_close", "asset_prices", 0, closeErr)
+		}
+	}()
 
 	var prices []*domain.AssetPrice
 	for rows.Next() {
@@ -359,7 +377,11 @@ func (r *postgresMarketDataRepo) GetHistoricalCurrencyRates(baseCurrency, target
 		metrics.RecordDatabaseQuery("get_historical_currency_rates", "currency_rates", time.Since(startTime).Seconds(), err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			metrics.RecordDatabaseQuery("get_historical_currency_rates_close", "currency_rates", 0, closeErr)
+		}
+	}()
 
 	var rates []*domain.CurrencyRate
 	for rows.Next() {
@@ -395,7 +417,11 @@ func (r *postgresMarketDataRepo) GetAssetsRequiringPriceUpdate(staleDuration tim
 		metrics.RecordDatabaseQuery("get_assets_requiring_update", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			metrics.RecordDatabaseQuery("get_assets_requiring_update_close", "assets", 0, closeErr)
+		}
+	}()
 
 	var assets []*domain.Asset
 	for rows.Next() {
@@ -469,7 +495,11 @@ func (r *postgresMarketDataRepo) GetMissingPriceDates(assetID string, start, end
 		metrics.RecordDatabaseQuery("get_missing_price_dates", "asset_prices", time.Since(startTime).Seconds(), err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			metrics.RecordDatabaseQuery("get_missing_price_dates_close", "asset_prices", 0, closeErr)
+		}
+	}()
 
 	var dates []time.Time
 	for rows.Next() {
@@ -495,7 +525,11 @@ func (r *postgresMarketDataRepo) GetTargetCurrencies() ([]string, error) {
 		metrics.RecordDatabaseQuery("get_target_currencies", "currency_rates", time.Since(start).Seconds(), err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			metrics.RecordDatabaseQuery("get_target_currencies_close", "currency_rates", 0, closeErr)
+		}
+	}()
 
 	var currencies []string
 	for rows.Next() {

@@ -1,3 +1,4 @@
+// Package usecase implements the business logic for the portfolio service.
 package usecase
 
 import (
@@ -15,6 +16,7 @@ type PortfolioUsecase interface {
 	GetHistoricalPortfolioSummary(ctx context.Context, userID string, date time.Time) (*domain.PortfolioSummary, error)
 }
 
+// PriceData represents a price point for an asset.
 type PriceData struct {
 	Price     float64
 	Timestamp time.Time
@@ -35,6 +37,7 @@ type MarketDataGateway interface {
 	GetCurrencyRateOnDate(ctx context.Context, baseCurrency, targetCurrency string, date time.Time) (float64, error)
 }
 
+// NewPortfolioUsecase creates a new portfolio usecase.
 func NewPortfolioUsecase(holdingRepo domain.HoldingRepository, marketDataGateway MarketDataGateway) PortfolioUsecase {
 	return &portfolioUsecase{
 		holdingRepo:       holdingRepo,
@@ -140,18 +143,20 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	// Determine the reference date for "yesterday"
 	// If we have recent price data, use that as the anchor.
 	// Otherwise, default to time.Now()
-	anchorDate := time.Now()
-	for _, h := range holdings {
-		if !h.PriceLastUpdated.IsZero() && h.PriceLastUpdated.After(anchorDate.Add(-24*time.Hour)) {
-			// If we have a price update from "today" (or recent), use it.
-			// But wait, if the price is from "yesterday" (UTC), we want to compare with "day before yesterday".
-			// Let's use the latest price timestamp as the "current" time.
-			if h.PriceLastUpdated.After(anchorDate) {
-				// This shouldn't happen if anchorDate is Now(), unless clock skew.
+	// anchorDate := time.Now()
+	/*
+		for _, h := range holdings {
+			if !h.PriceLastUpdated.IsZero() && h.PriceLastUpdated.After(anchorDate.Add(-24*time.Hour)) {
+				// If we have a price update from "today" (or recent), use it.
+				// But wait, if the price is from "yesterday" (UTC), we want to compare with "day before yesterday".
+				// Let's use the latest price timestamp as the "current" time.
+				if h.PriceLastUpdated.After(anchorDate) {
+					// This shouldn't happen if anchorDate is Now(), unless clock skew.
+				}
+				// We want the max timestamp?
 			}
-			// We want the max timestamp?
 		}
-	}
+	*/
 	// Actually, simpler: Find the latest PriceLastUpdated.
 	var latestUpdate time.Time
 	for _, h := range holdings {

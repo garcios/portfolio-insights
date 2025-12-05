@@ -1,3 +1,4 @@
+// Package usecase implements the business logic for the gateway.
 package usecase
 
 import (

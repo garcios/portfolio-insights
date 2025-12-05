@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { X } from 'lucide-react';
 import { TransactionType } from '../../types/transaction';
@@ -23,31 +23,26 @@ const AddTransactionModal = ({ isOpen, onClose, onSuccess }: AddTransactionModal
         brokerageCurrency: ''
     });
 
-    const [total, setTotal] = useState(0);
     const [addTransaction, { loading, error }] = useMutation(CREATE_TRANSACTION);
 
     // Calculate total automatically
-    useEffect(() => {
-        const qty = Number(formData.quantity) || 0;
-        const price = Number(formData.price) || 0;
-        const brokerage = Number(formData.brokerage) || 0;
+    const qty = Number(formData.quantity) || 0;
+    const price = Number(formData.price) || 0;
+    const brokerage = Number(formData.brokerage) || 0;
+    let total = 0;
 
-        // For BUY: (qty * price) + brokerage
-        // For SELL: (qty * price) - brokerage
-        // For SPLIT: 0 (usually just quantity adjustment)
-        // For DIVIDEND: (qty * price) (price here is dividend per share)
+    // For BUY: (qty * price) + brokerage
+    // For SELL: (qty * price) - brokerage
+    // For SPLIT: 0 (usually just quantity adjustment)
+    // For DIVIDEND: (qty * price) (price here is dividend per share)
 
-        let calculatedTotal = 0;
-        if (formData.type === 'BUY') {
-            calculatedTotal = (qty * price) + brokerage;
-        } else if (formData.type === 'SELL') {
-            calculatedTotal = (qty * price) - brokerage;
-        } else if (formData.type === 'DIVIDEND') {
-            calculatedTotal = (qty * price);
-        }
-
-        setTotal(calculatedTotal);
-    }, [formData.quantity, formData.price, formData.brokerage, formData.type]);
+    if (formData.type === 'BUY') {
+        total = (qty * price) + brokerage;
+    } else if (formData.type === 'SELL') {
+        total = (qty * price) - brokerage;
+    } else if (formData.type === 'DIVIDEND') {
+        total = (qty * price);
+    }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;

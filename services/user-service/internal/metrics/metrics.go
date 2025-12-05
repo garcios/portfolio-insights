@@ -1,3 +1,4 @@
+// Package metrics defines the Prometheus metrics for the user service.
 package metrics
 
 import (
@@ -6,7 +7,7 @@ import (
 )
 
 var (
-	// gRPC Metrics
+	// GrpcRequestsTotal counts the total number of gRPC requests.
 	GrpcRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "user_grpc_requests_total",
@@ -15,6 +16,7 @@ var (
 		[]string{"method", "status"},
 	)
 
+	// GrpcRequestDuration histograms the duration of gRPC requests in seconds.
 	GrpcRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "user_grpc_request_duration_seconds",
@@ -24,7 +26,7 @@ var (
 		[]string{"method"},
 	)
 
-	// Database Metrics
+	// DatabaseQueriesTotal counts the total number of database queries.
 	DatabaseQueriesTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "user_database_queries_total",
@@ -33,6 +35,7 @@ var (
 		[]string{"operation", "table"},
 	)
 
+	// DatabaseQueryDuration histograms the duration of database queries in seconds.
 	DatabaseQueryDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "user_database_query_duration_seconds",
@@ -42,6 +45,7 @@ var (
 		[]string{"operation", "table"},
 	)
 
+	// DatabaseErrorsTotal counts the total number of database errors.
 	DatabaseErrorsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "user_database_errors_total",
@@ -50,7 +54,7 @@ var (
 		[]string{"operation", "table"},
 	)
 
-	// Business Metrics
+	// UsersCreatedTotal counts the total number of users created.
 	UsersCreatedTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "user_users_created_total",
@@ -58,6 +62,7 @@ var (
 		},
 	)
 
+	// TotalUsers tracks the total number of users in the system.
 	TotalUsers = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "user_total_users",

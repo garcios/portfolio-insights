@@ -306,9 +306,16 @@ func TestListTransactions(t *testing.T) {
 	uc := NewTransactionUsecase(repo, userGateway, marketGateway, eventPublisher)
 
 	// Create multiple transactions
-	uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-1", Symbol: "AAPL", Type: "BUY", Quantity: 10, PricePerShare: 150.0, ExecutedAt: time.Now()})
-	uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-1", Symbol: "GOOGL", Type: "BUY", Quantity: 5, PricePerShare: 2500.0, ExecutedAt: time.Now()})
-	uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-2", Symbol: "MSFT", Type: "BUY", Quantity: 20, PricePerShare: 300.0, ExecutedAt: time.Now()})
+	// Create multiple transactions
+	if err := uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-1", Symbol: "AAPL", Type: "BUY", Quantity: 10, PricePerShare: 150.0, ExecutedAt: time.Now()}); err != nil {
+		t.Fatalf("failed to create transaction: %v", err)
+	}
+	if err := uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-1", Symbol: "GOOGL", Type: "BUY", Quantity: 5, PricePerShare: 2500.0, ExecutedAt: time.Now()}); err != nil {
+		t.Fatalf("failed to create transaction: %v", err)
+	}
+	if err := uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-2", Symbol: "MSFT", Type: "BUY", Quantity: 20, PricePerShare: 300.0, ExecutedAt: time.Now()}); err != nil {
+		t.Fatalf("failed to create transaction: %v", err)
+	}
 
 	t.Run("FilterByUser", func(t *testing.T) {
 		txs, err := uc.ListTransactions(context.Background(), "user-1", domain.TransactionFilter{}, 10, 0)

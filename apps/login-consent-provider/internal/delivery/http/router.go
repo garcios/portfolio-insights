@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+// NewRouter creates and configures the Gin engine with all routes and middleware.
 func NewRouter(handler *Handler, sessionStore sessions.Store) *gin.Engine {
 	router := gin.Default()
 

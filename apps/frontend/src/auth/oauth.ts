@@ -241,6 +241,7 @@ export function isTokenExpired(tokens: AuthTokens): boolean {
 /**
  * Decode JWT token (without verification - for display purposes only)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function decodeJWT(token: string): any {
     try {
         const parts = token.split('.');

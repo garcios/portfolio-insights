@@ -1,3 +1,4 @@
+// Package repository implements data access for the user domain.
 package repository
 
 import (
@@ -13,6 +14,7 @@ type userRepository struct {
 	db *sql.DB
 }
 
+// NewUserRepository creates a new user repository.
 func NewUserRepository(db *sql.DB) domain.UserRepository {
 	return &userRepository{db: db}
 }

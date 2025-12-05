@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import Header from '../Header';
 
 describe('Header', () => {
@@ -10,14 +11,22 @@ describe('Header', () => {
     });
 
     it('renders the app logo and title', () => {
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         expect(screen.getByText('Portfolio Insights')).toBeInTheDocument();
         expect(screen.getByText('Real-time portfolio tracking')).toBeInTheDocument();
     });
 
     it('renders all navigation links', () => {
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         expect(screen.getByText('Overview')).toBeInTheDocument();
         expect(screen.getByText('Transactions')).toBeInTheDocument();
@@ -25,35 +34,55 @@ describe('Header', () => {
     });
 
     it('highlights the current page', () => {
-        render(<Header currentPage="transactions" />);
+        render(
+            <MemoryRouter initialEntries={['/transactions']}>
+                <Header />
+            </MemoryRouter>
+        );
 
         const transactionsLink = screen.getByText('Transactions');
         expect(transactionsLink).toHaveAttribute('aria-current', 'page');
     });
 
     it('defaults to overview page when currentPage is not provided', () => {
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const overviewLink = screen.getByText('Overview');
         expect(overviewLink).toHaveAttribute('aria-current', 'page');
     });
 
     it('renders user menu', () => {
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const userMenuButton = screen.getByRole('button', { name: 'User menu' });
         expect(userMenuButton).toBeInTheDocument();
     });
 
     it('renders mobile menu toggle button', () => {
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const mobileMenuButton = screen.getByLabelText('Open menu');
         expect(mobileMenuButton).toBeInTheDocument();
     });
 
     it('mobile menu is closed by default', () => {
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         // Mobile menu should not be visible initially
         expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).not.toBeInTheDocument();
@@ -61,7 +90,11 @@ describe('Header', () => {
 
     it('opens mobile menu when toggle button is clicked', async () => {
         const user = userEvent.setup();
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const mobileMenuButton = screen.getByLabelText('Open menu');
         await user.click(mobileMenuButton);
@@ -71,7 +104,11 @@ describe('Header', () => {
 
     it('closes mobile menu when toggle button is clicked again', async () => {
         const user = userEvent.setup();
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const openButton = screen.getByLabelText('Open menu');
         await user.click(openButton);
@@ -86,7 +123,11 @@ describe('Header', () => {
 
     it('updates mobile menu button aria-expanded attribute', async () => {
         const user = userEvent.setup();
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const mobileMenuButton = screen.getByLabelText('Open menu');
         expect(mobileMenuButton).toHaveAttribute('aria-expanded', 'false');
@@ -98,14 +139,22 @@ describe('Header', () => {
     });
 
     it('has correct aria-controls attribute on mobile menu button', () => {
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const mobileMenuButton = screen.getByLabelText('Open menu');
         expect(mobileMenuButton).toHaveAttribute('aria-controls', 'mobile-menu');
     });
 
     it('renders main navigation with correct aria-label', () => {
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const mainNav = screen.getByRole('navigation', { name: 'Main navigation' });
         expect(mainNav).toBeInTheDocument();
@@ -113,7 +162,11 @@ describe('Header', () => {
 
     it('passes correct props to MobileMenu', async () => {
         const user = userEvent.setup();
-        render(<Header currentPage="fundamentals" />);
+        render(
+            <MemoryRouter initialEntries={['/fundamentals']}>
+                <Header />
+            </MemoryRouter>
+        );
 
         const mobileMenuButton = screen.getByLabelText('Open menu');
         await user.click(mobileMenuButton);
@@ -127,7 +180,11 @@ describe('Header', () => {
 
     it('closes mobile menu when a nav link is clicked', async () => {
         const user = userEvent.setup();
-        render(<Header />);
+        render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         // Open mobile menu
         const openButton = screen.getByLabelText('Open menu');
@@ -145,7 +202,11 @@ describe('Header', () => {
     });
 
     it('renders logo icon', () => {
-        const { container } = render(<Header />);
+        const { container } = render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         // Check for Wallet icon (SVG)
         const svgs = container.querySelectorAll('svg');
@@ -153,7 +214,11 @@ describe('Header', () => {
     });
 
     it('has sticky positioning', () => {
-        const { container } = render(<Header />);
+        const { container } = render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const header = container.querySelector('header');
         expect(header).toHaveStyle({
@@ -163,7 +228,11 @@ describe('Header', () => {
     });
 
     it('applies correct z-index for stacking', () => {
-        const { container } = render(<Header />);
+        const { container } = render(
+            <MemoryRouter>
+                <Header />
+            </MemoryRouter>
+        );
 
         const header = container.querySelector('header');
         expect(header).toHaveStyle({

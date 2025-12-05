@@ -1,3 +1,4 @@
+// Package main is the entry point for the marketdata service.
 package main
 
 import (
@@ -32,7 +33,11 @@ func main() {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			l.Error("failed to close database connection", "error", err)
+		}
+	}()
 
 	// Initialize Repository
 	repo := repository.NewPostgresMarketDataRepository(db)
@@ -123,7 +128,7 @@ func main() {
 			}()
 
 			w.WriteHeader(http.StatusAccepted)
-			w.Write([]byte("Currency sync triggered"))
+			_, _ = w.Write([]byte("Currency sync triggered"))
 		})
 
 		l.Info("HTTP server listening on :9099")

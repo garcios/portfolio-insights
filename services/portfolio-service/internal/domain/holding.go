@@ -1,3 +1,4 @@
+// Package domain defines the domain models and interfaces for the portfolio service.
 package domain
 
 import "time"

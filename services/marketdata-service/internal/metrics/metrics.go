@@ -1,3 +1,4 @@
+// Package metrics defines Prometheus metrics for the marketdata service.
 package metrics
 
 import (
@@ -6,7 +7,7 @@ import (
 )
 
 var (
-	// gRPC Metrics
+	// GrpcRequestsTotal counts the total number of gRPC requests.
 	GrpcRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "marketdata_grpc_requests_total",
@@ -15,6 +16,7 @@ var (
 		[]string{"method", "status"},
 	)
 
+	// GrpcRequestDuration histograms the duration of gRPC requests in seconds.
 	GrpcRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "marketdata_grpc_request_duration_seconds",
@@ -24,7 +26,7 @@ var (
 		[]string{"method"},
 	)
 
-	// Database Metrics
+	// DatabaseQueriesTotal counts the total number of database queries.
 	DatabaseQueriesTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "marketdata_database_queries_total",
@@ -33,6 +35,7 @@ var (
 		[]string{"operation", "table"},
 	)
 
+	// DatabaseQueryDuration histograms the duration of database queries in seconds.
 	DatabaseQueryDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "marketdata_database_query_duration_seconds",
@@ -42,6 +45,7 @@ var (
 		[]string{"operation", "table"},
 	)
 
+	// DatabaseErrorsTotal counts the total number of database errors.
 	DatabaseErrorsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "marketdata_database_errors_total",
@@ -50,7 +54,7 @@ var (
 		[]string{"operation", "table"},
 	)
 
-	// Ingestion Metrics
+	// IngestionJobsTotal counts the total number of ingestion jobs.
 	IngestionJobsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "marketdata_ingestion_jobs_total",
@@ -59,6 +63,7 @@ var (
 		[]string{"type", "status"},
 	)
 
+	// IngestionDuration histograms the duration of ingestion jobs in seconds.
 	IngestionDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "marketdata_ingestion_duration_seconds",
@@ -68,6 +73,7 @@ var (
 		[]string{"type"},
 	)
 
+	// PricesIngestedTotal counts the total number of price records ingested.
 	PricesIngestedTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "marketdata_prices_ingested_total",
@@ -75,6 +81,7 @@ var (
 		},
 	)
 
+	// CurrenciesIngestedTotal counts the total number of currency rates ingested.
 	CurrenciesIngestedTotal = promauto.NewCounter(
 		prometheus.CounterOpts{
 			Name: "marketdata_currencies_ingested_total",
@@ -82,7 +89,7 @@ var (
 		},
 	)
 
-	// Business Metrics
+	// TotalAssets gauges the total number of assets in the system.
 	TotalAssets = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "marketdata_total_assets",
@@ -90,6 +97,7 @@ var (
 		},
 	)
 
+	// TotalPrices gauges the total number of price records in the system.
 	TotalPrices = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "marketdata_total_prices",

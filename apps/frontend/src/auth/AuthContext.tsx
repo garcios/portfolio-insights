@@ -38,6 +38,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [tokens, setTokens] = useState<AuthTokens | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
+    const extractUser = (authTokens: AuthTokens) => {
+        if (!authTokens.idToken) return;
+
+        const decoded = decodeJWT(authTokens.idToken);
+        if (decoded) {
+            setUser({
+                id: decoded.sub,
+                email: decoded.email,
+                username: decoded.username,
+            });
+        }
+    };
+
+    const logout = () => {
+        setUser(null);
+        setTokens(null);
+        oauthLogout();
+    };
+
+    const login = async () => {
+        const authUrl = await buildAuthorizationURL();
+        window.location.href = authUrl;
+    };
+
     // Initialize auth state from stored tokens
     useEffect(() => {
         const initAuth = async () => {
@@ -101,30 +125,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return () => clearInterval(interval);
     }, [tokens]);
 
-    const extractUser = (authTokens: AuthTokens) => {
-        if (!authTokens.idToken) return;
-
-        const decoded = decodeJWT(authTokens.idToken);
-        if (decoded) {
-            setUser({
-                id: decoded.sub,
-                email: decoded.email,
-                username: decoded.username,
-            });
-        }
-    };
-
-    const login = async () => {
-        const authUrl = await buildAuthorizationURL();
-        window.location.href = authUrl;
-    };
-
-    const logout = () => {
-        setUser(null);
-        setTokens(null);
-        oauthLogout();
-    };
-
     const handleCallback = async (code: string, state: string) => {
         try {
             const newTokens = await exchangeCodeForTokens(code, state);
@@ -150,6 +150,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     const context = useContext(AuthContext);
     if (context === undefined) {

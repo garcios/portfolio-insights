@@ -1,3 +1,4 @@
+// Package usecase implements business logic for transaction management and CSV processing.
 package usecase
 
 import (
@@ -19,6 +20,7 @@ type csvUploadUsecase struct {
 	eventPublisher domain.EventPublisher
 }
 
+// NewCSVUploadUsecase creates a new CSV upload usecase.
 func NewCSVUploadUsecase(
 	repo domain.TransactionRepository,
 	userGateway domain.UserGateway,

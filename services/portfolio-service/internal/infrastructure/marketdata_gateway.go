@@ -15,6 +15,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 )
 
+// MarketDataGateway acts as a gateway to the marketdata service.
 type MarketDataGateway struct {
 	client     pb.MarketDataServiceClient
 	conn       *grpc.ClientConn
@@ -22,6 +23,7 @@ type MarketDataGateway struct {
 	assetCache *AssetCache
 }
 
+// NewMarketDataGateway creates a new market data gateway.
 func NewMarketDataGateway(cache *PriceCache, assetCache *AssetCache) (*MarketDataGateway, error) {
 	marketDataAddr := os.Getenv("MARKETDATA_SERVICE_ADDR")
 	if marketDataAddr == "" {
@@ -46,6 +48,7 @@ func NewMarketDataGateway(cache *PriceCache, assetCache *AssetCache) (*MarketDat
 	}, nil
 }
 
+// Close closes the connection to the marketdata service.
 func (g *MarketDataGateway) Close() error {
 	if g.conn != nil {
 		return g.conn.Close()

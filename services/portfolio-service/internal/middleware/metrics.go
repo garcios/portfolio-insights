@@ -1,3 +1,4 @@
+// Package middleware provides metrics middleware for the portfolio service.
 package middleware
 
 import (

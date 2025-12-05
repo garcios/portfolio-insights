@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	// HTTP Metrics
+	// HTTPRequestsTotal counts the total number of HTTP requests.
 	HTTPRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
@@ -15,6 +15,7 @@ var (
 		[]string{"service", "handler", "method", "status_code"},
 	)
 
+	// HTTPRequestDuration histograms the HTTP request latency in seconds.
 	HTTPRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
@@ -24,6 +25,7 @@ var (
 		[]string{"service", "handler", "method", "status_code"},
 	)
 
+	// HTTPInFlightRequests gauges the current number of in-flight HTTP requests.
 	HTTPInFlightRequests = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "http_in_flight_requests",
@@ -32,7 +34,7 @@ var (
 		[]string{"service", "handler"},
 	)
 
-	// gRPC Metrics
+	// GRPCRequestsTotal counts the total number of gRPC requests.
 	GRPCRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "grpc_requests_total",
@@ -41,6 +43,7 @@ var (
 		[]string{"service", "method", "status"},
 	)
 
+	// GRPCRequestDuration histograms the gRPC request latency in seconds.
 	GRPCRequestDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "grpc_request_duration_seconds",

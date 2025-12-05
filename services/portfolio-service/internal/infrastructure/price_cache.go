@@ -25,6 +25,7 @@ type CachedPrice struct {
 	CachedAt  time.Time `json:"cached_at"`
 }
 
+// NewPriceCache creates a new price cache.
 func NewPriceCache(client *redis.Client) *PriceCache {
 	// Default TTL: 60 seconds
 	ttl := 60 * time.Second
@@ -91,7 +92,8 @@ func (pc *PriceCache) GetMultiple(ctx context.Context, symbols []string) (map[st
 
 	_, err := pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
-		// Ignore redis.Nil as it just means some keys don't exist
+		// Log error but continue to return any successful partial results
+		fmt.Printf("Redis pipeline error: %v\n", err)
 	}
 
 	// Parse results

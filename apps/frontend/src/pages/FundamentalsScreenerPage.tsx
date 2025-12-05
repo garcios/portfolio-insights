@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, CSSProperties } from 'react';
 import { ArrowDown, ArrowUp, Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
@@ -189,7 +189,7 @@ const FundamentalsScreenerPage = () => {
                                         onClick={() => handleSort(col.key as SortKey)}
                                         style={{
                                             padding: '12px 16px',
-                                            textAlign: col.align as any,
+                                            textAlign: col.align as CSSProperties['textAlign'],
                                             color: 'var(--color-text-secondary)',
                                             fontWeight: '600',
                                             cursor: 'pointer',
@@ -268,7 +268,7 @@ const FundamentalsScreenerPage = () => {
                 </div>
 
                 <div style={{ marginTop: '16px', textAlign: 'right', fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>
-                    Data as of {new Date(mockFundamentals[0]?.lastUpdated || Date.now()).toLocaleString()}
+                    Data as of {new Date(mockFundamentals[0]?.lastUpdated || '2024-12-04').toLocaleString()}
                 </div>
             </main>
         </div>

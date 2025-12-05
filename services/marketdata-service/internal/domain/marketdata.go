@@ -1,7 +1,9 @@
+// Package domain defines the domain models and interfaces for the marketdata service.
 package domain
 
 import "time"
 
+// Asset represents a financial asset.
 type Asset struct {
 	ID        string
 	Symbol    string
@@ -13,6 +15,7 @@ type Asset struct {
 	UpdatedAt time.Time
 }
 
+// AssetPrice represents a price point for an asset.
 type AssetPrice struct {
 	ID        string
 	AssetID   string
@@ -21,6 +24,7 @@ type AssetPrice struct {
 	CreatedAt time.Time
 }
 
+// CurrencyRate represents an exchange rate between two currencies.
 type CurrencyRate struct {
 	ID             string
 	BaseCurrency   string
@@ -30,6 +34,7 @@ type CurrencyRate struct {
 	CreatedAt      time.Time
 }
 
+// MarketDataRepository defines the interface for market data persistence.
 type MarketDataRepository interface {
 	// Asset operations
 	GetAssetBySymbol(symbol string) (*Asset, error)
@@ -60,6 +65,7 @@ type MarketDataRepository interface {
 	GetLatestCurrencyRateTimestamp(baseCurrency, targetCurrency string) (*time.Time, error)
 }
 
+// MarketDataUsecase defines the business logic for market data operations.
 type MarketDataUsecase interface {
 	GetAsset(symbol string) (*Asset, error)
 	ListAssets(pageSize int, pageToken string) ([]*Asset, string, error)

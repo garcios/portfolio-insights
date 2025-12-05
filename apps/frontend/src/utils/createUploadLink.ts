@@ -5,32 +5,7 @@ export const createUploadLink = (options: { uri: string }) => {
         return new Observable((observer) => {
             const { variables, operationName } = operation;
 
-            // Check if there are any files in variables
-            const files = new Map<File, string[]>();
 
-            const extractFiles = (tree: any, path: string[] = []) => {
-                if (!tree) return;
-
-                if (tree instanceof File) {
-                    const existing = files.get(tree);
-                    if (existing) {
-                        existing.push(path.join('.'));
-                    } else {
-                        files.set(tree, [path.join('.')]);
-                    }
-                    return null; // Replace file with null in variables
-                }
-
-                if (typeof tree === 'object') {
-                    const newTree: any = Array.isArray(tree) ? [] : {};
-                    for (const key in tree) {
-                        newTree[key] = extractFiles(tree[key], [...path, key]);
-                    }
-                    return newTree;
-                }
-
-                return tree;
-            };
 
             // We need to traverse the original variables to find files because JSON.stringify/parse loses File objects
             // But wait, we can't easily traverse and replace in one go if we want to keep the structure for JSON.
@@ -45,6 +20,7 @@ export const createUploadLink = (options: { uri: string }) => {
             const map: Record<string, string[]> = {};
             const uploads: File[] = [];
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const scanAndReplace = (obj: any, path: string): any => {
                 if (obj instanceof File) {
                     const index = uploads.length;
@@ -58,6 +34,7 @@ export const createUploadLink = (options: { uri: string }) => {
                 }
 
                 if (obj && typeof obj === 'object') {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const result: any = {};
                     for (const key in obj) {
                         // Handle the root case where path is empty

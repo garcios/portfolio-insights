@@ -1,3 +1,4 @@
+// Package middleware implements middleware for the gateway.
 package middleware
 
 import (
@@ -13,6 +14,7 @@ type responseWriter struct {
 	statusCode int
 }
 
+// NewResponseWriter creates a new response writer.
 func NewResponseWriter(w http.ResponseWriter) *responseWriter {
 	return &responseWriter{w, http.StatusOK}
 }
@@ -22,6 +24,7 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
+// MetricsMiddleware records metrics for each request.
 func MetricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

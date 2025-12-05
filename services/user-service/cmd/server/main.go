@@ -1,3 +1,4 @@
+// Package main is the entry point for the user-service
 package main
 
 import (
@@ -37,7 +38,11 @@ func main() {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			l.Error("failed to close database", "error", err)
+		}
+	}()
 
 	// Repository
 	repo := repository.NewUserRepository(db)

@@ -1,3 +1,4 @@
+// Package http implements HTTP gateways/clients.
 package http
 
 import (
@@ -43,8 +44,12 @@ func (g *TransactionHTTPGateway) UploadCSV(ctx context.Context, userID string, f
 	// Run the multipart writing in a goroutine
 	errChan := make(chan error, 1)
 	go func() {
-		defer bodyWriter.Close()
-		defer multipartWriter.Close()
+		defer func() {
+			_ = bodyWriter.Close()
+		}()
+		defer func() {
+			_ = multipartWriter.Close()
+		}()
 
 		// Create the form file field
 		part, err := multipartWriter.CreateFormFile("file", filename)
@@ -77,7 +82,9 @@ func (g *TransactionHTTPGateway) UploadCSV(ctx context.Context, userID string, f
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// Check response status
 	if resp.StatusCode != http.StatusOK {

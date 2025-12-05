@@ -1,3 +1,4 @@
+// Package grpc implements gRPC handlers for the marketdata service.
 package grpc
 
 import (
@@ -11,15 +12,18 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// MarketDataHandler implements the gRPC market data service.
 type MarketDataHandler struct {
 	pb.UnimplementedMarketDataServiceServer
 	usecase domain.MarketDataUsecase
 }
 
+// NewMarketDataHandler creates a new market data handler.
 func NewMarketDataHandler(usecase domain.MarketDataUsecase) *MarketDataHandler {
 	return &MarketDataHandler{usecase: usecase}
 }
 
+// GetAsset retrieves an asset by symbol.
 func (h *MarketDataHandler) GetAsset(ctx context.Context, req *pb.GetAssetRequest) (*pb.GetAssetResponse, error) {
 	symbol := req.GetSymbol()
 	if symbol == "" {
@@ -46,6 +50,7 @@ func (h *MarketDataHandler) GetAsset(ctx context.Context, req *pb.GetAssetReques
 	}, nil
 }
 
+// ListAssets lists assets with pagination.
 func (h *MarketDataHandler) ListAssets(ctx context.Context, req *pb.ListAssetsRequest) (*pb.ListAssetsResponse, error) {
 	pageSize := int(req.GetPageSize())
 	if pageSize <= 0 {
@@ -78,6 +83,7 @@ func (h *MarketDataHandler) ListAssets(ctx context.Context, req *pb.ListAssetsRe
 	}, nil
 }
 
+// GetLatestPrice retrieves the latest price for an asset.
 func (h *MarketDataHandler) GetLatestPrice(ctx context.Context, req *pb.GetLatestPriceRequest) (*pb.GetLatestPriceResponse, error) {
 	symbol := req.GetSymbol()
 	if symbol == "" {
@@ -101,6 +107,7 @@ func (h *MarketDataHandler) GetLatestPrice(ctx context.Context, req *pb.GetLates
 	}, nil
 }
 
+// GetLatestPrices retrieves the latest prices for multiple assets.
 func (h *MarketDataHandler) GetLatestPrices(ctx context.Context, req *pb.GetLatestPricesRequest) (*pb.GetLatestPricesResponse, error) {
 	symbols := req.GetSymbols()
 	if len(symbols) == 0 {
@@ -127,6 +134,7 @@ func (h *MarketDataHandler) GetLatestPrices(ctx context.Context, req *pb.GetLate
 	}, nil
 }
 
+// GetHistoricalPrices retrieves historical prices for an asset.
 func (h *MarketDataHandler) GetHistoricalPrices(ctx context.Context, req *pb.GetHistoricalPricesRequest) (*pb.GetHistoricalPricesResponse, error) {
 	symbol := req.GetSymbol()
 	if symbol == "" {
@@ -161,6 +169,7 @@ func (h *MarketDataHandler) GetHistoricalPrices(ctx context.Context, req *pb.Get
 	return &pb.GetHistoricalPricesResponse{Prices: pbPrices}, nil
 }
 
+// GetLatestCurrencyRate retrieves the latest currency exchange rate.
 func (h *MarketDataHandler) GetLatestCurrencyRate(ctx context.Context, req *pb.GetLatestCurrencyRateRequest) (*pb.GetLatestCurrencyRateResponse, error) {
 	baseCurrency := req.GetBaseCurrency()
 	targetCurrency := req.GetTargetCurrency()
@@ -192,6 +201,7 @@ func (h *MarketDataHandler) GetLatestCurrencyRate(ctx context.Context, req *pb.G
 	}, nil
 }
 
+// GetHistoricalCurrencyRates retrieves historical currency exchange rates.
 func (h *MarketDataHandler) GetHistoricalCurrencyRates(ctx context.Context, req *pb.GetHistoricalCurrencyRatesRequest) (*pb.GetHistoricalCurrencyRatesResponse, error) {
 	baseCurrency := req.GetBaseCurrency()
 	targetCurrency := req.GetTargetCurrency()

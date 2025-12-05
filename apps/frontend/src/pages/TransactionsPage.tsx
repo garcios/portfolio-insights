@@ -19,16 +19,25 @@ const TransactionsPage = () => {
     const [toDate, setToDate] = useState<string>('');
     const [currentPageToken, setCurrentPageToken] = useState<string>('');
     const [pageTokenHistory, setPageTokenHistory] = useState<string[]>([]);
-    const [nextPageToken, setNextPageToken] = useState<string>('');
+
+
 
     // Debounce search query to prevent losing focus on every keystroke
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearchQuery(searchQuery);
+            setCurrentPageToken('');
+            setPageTokenHistory([]);
         }, 2000);
 
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>, val: string) => {
+        setter(val);
+        setCurrentPageToken('');
+        setPageTokenHistory([]);
+    };
 
     // Build GraphQL filter
     const graphqlFilter: TransactionFilterInput = useMemo(() => {
@@ -37,6 +46,7 @@ const TransactionsPage = () => {
             filter.symbol = debouncedSearchQuery;
         }
         if (filterType !== 'ALL') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             filter.type = filterType as any;
         }
         if (fromDate) {
@@ -60,22 +70,8 @@ const TransactionsPage = () => {
         }
     });
 
-    // Update nextPageToken when data changes
-    useEffect(() => {
-        if (data?.listTransactions?.nextPageToken) {
-            setNextPageToken(data.listTransactions.nextPageToken);
-        } else {
-            setNextPageToken('');
-        }
-    }, [data]);
-
-    // Reset pagination when filters change
-    useEffect(() => {
-        setCurrentPageToken('');
-        setPageTokenHistory([]);
-        setNextPageToken('');
-    }, [debouncedSearchQuery, filterType, fromDate, toDate]);
-
+    // Derive nextPageToken directly from data
+    const nextPageToken = data?.listTransactions?.nextPageToken || '';
 
     // Transform GraphQL data to match component expectations
     const transactions: Transaction[] = useMemo(() => {
@@ -94,7 +90,7 @@ const TransactionsPage = () => {
 
     // Filter and Sort Transactions (client-side for now)
     const filteredTransactions = useMemo(() => {
-        let result = [...transactions];
+        const result = [...transactions];
 
         // Sorting
         if (sortConfig) {
@@ -130,6 +126,8 @@ const TransactionsPage = () => {
         setFilterType('ALL');
         setFromDate('');
         setToDate('');
+        setCurrentPageToken('');
+        setPageTokenHistory([]);
     };
 
     const loadNextPage = () => {
@@ -317,7 +315,7 @@ const TransactionsPage = () => {
                         <div style={{ position: 'relative' }}>
                             <select
                                 value={filterType}
-                                onChange={(e) => setFilterType(e.target.value)}
+                                onChange={(e) => handleFilterChange(setFilterType, e.target.value)}
                                 style={{
                                     appearance: 'none',
                                     padding: '10px 36px 10px 16px',
@@ -353,7 +351,7 @@ const TransactionsPage = () => {
                         <DatePicker
                             id="from-date"
                             value={fromDate}
-                            onChange={setFromDate}
+                            onChange={(val) => handleFilterChange(setFromDate, val)}
                             placeholder="Start date"
                             max={toDate || undefined}
                         />
@@ -361,7 +359,7 @@ const TransactionsPage = () => {
                         <DatePicker
                             id="to-date"
                             value={toDate}
-                            onChange={setToDate}
+                            onChange={(val) => handleFilterChange(setToDate, val)}
                             placeholder="End date"
                             min={fromDate || undefined}
                         />
