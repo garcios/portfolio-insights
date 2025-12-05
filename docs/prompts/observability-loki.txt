@@ -1,0 +1,26 @@
+Please create a detailed, step-by-step integration plan for adding Grafana Loki to my existing observability stack.
+
+1. Existing Stack Context
+
+Current Metrics System: Prometheus  (running in podman).
+
+Current Tracing System: Jaeger.
+
+
+Target Infrastructure Environment: Podman.
+
+2. Loki Component Selection
+
+Loki Agent Choice: ?.
+
+Loki Storage Backend: MinIO/filesystem.
+
+3. Key Integration Goals
+
+Goal 1 (Log Collection): Focus on collecting logs from containers, and a specific custom application that uses JSON logging.
+
+Goal 2 (Labeling Strategy): Ensure the app labels are consistently applied to all logs, matching my Prometheus service discovery.
+
+Goal 3 (LogQL/Querying): Provide steps on setting up a combined Grafana dashboard that uses both my existing Prometheus data source and the new Loki data source for cross-querying.
+
+Goal 4 (Deployment/Resiliency): Recommend the deployment mode (Single Binary vs. Microservices) suitable for handling a projected 1TB of log ingestion per day, with clear HA setup.
