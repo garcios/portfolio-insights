@@ -2084,3 +2084,16 @@ Added date range filtering functionality to the Transactions page in the fronten
 
 Portfolio Insights is a personal project for investment tracking and analysis.
 
+
+## 2025-12-05 - Unit Test Fixes
+
+### Overview
+Fixed unit tests in `services/marketdata-service` that were failing due to missing methods in the `MockMarketDataRepository`.
+
+### Changes
+- **File:** `services/marketdata-service/internal/usecase/marketdata_usecase_test.go`
+- **Fix:** Added missing methods `GetTargetCurrencies` and `GetLatestCurrencyRateTimestamp` to `MockMarketDataRepository` to satisfy the `domain.MarketDataRepository` interface.
+
+### Verification
+- Ran `go test ./internal/... -v` in `services/marketdata-service`.
+- All tests passed successfully.

@@ -129,6 +129,14 @@ func (m *MockMarketDataRepository) GetMissingPriceDates(assetID string, start, e
 	return nil, nil
 }
 
+func (m *MockMarketDataRepository) GetTargetCurrencies() ([]string, error) {
+	return nil, nil
+}
+
+func (m *MockMarketDataRepository) GetLatestCurrencyRateTimestamp(baseCurrency, targetCurrency string) (*time.Time, error) {
+	return nil, nil
+}
+
 func TestGetAsset(t *testing.T) {
 	repo := NewMockRepo()
 	repo.assets["AAPL"] = &domain.Asset{Symbol: "AAPL", Name: "Apple Inc.", Type: "stock"}
