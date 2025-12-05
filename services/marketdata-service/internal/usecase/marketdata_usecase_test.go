@@ -116,6 +116,19 @@ func (m *MockMarketDataRepository) GetHistoricalCurrencyRates(baseCurrency, targ
 	return nil, nil
 }
 
+// EODHD price sync methods
+func (m *MockMarketDataRepository) GetAssetsRequiringPriceUpdate(staleDuration time.Duration) ([]*domain.Asset, error) {
+	return nil, nil
+}
+
+func (m *MockMarketDataRepository) GetLatestPriceTimestamp(assetID string) (*time.Time, error) {
+	return nil, nil
+}
+
+func (m *MockMarketDataRepository) GetMissingPriceDates(assetID string, start, end time.Time) ([]time.Time, error) {
+	return nil, nil
+}
+
 func TestGetAsset(t *testing.T) {
 	repo := NewMockRepo()
 	repo.assets["AAPL"] = &domain.Asset{Symbol: "AAPL", Name: "Apple Inc.", Type: "stock"}

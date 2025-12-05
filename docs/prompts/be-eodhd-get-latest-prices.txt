@@ -1,0 +1,40 @@
+Suggest a complete strategy for retrieving the latest asset prices from the EODHD API and inserting or updating them in the marketdata.asset_prices table.
+
+Context
+
+EODHD API endpoint example:
+https://eodhd.com/api/real-time/AAPL.US?api_token=demo&fmt=json
+
+```json
+[
+  {
+    "date": "2022-01-03",
+    "open": 177.83,
+    "high": 182.88,
+    "low": 177.71,
+    "close": 182.01,
+    "adjusted_close": 178.2703,
+    "volume": 104487900
+  },
+  {
+    "date": "2022-01-04",
+    "open": 182.63,
+    "high": 182.94,
+    "low": 179.12,
+    "close": 179.7,
+    "adjusted_close": 176.0078,
+    "volume": 99310400
+  }
+]
+```
+
+Requirements
+	•	Implement the Golang code in the marketdata-service.
+	•	Read from the marketdata.asset_prices table to determine which dates or tickers require updates.
+	•	Retrieve the API token from the environment variable EODHD_API_TOKEN.
+	•	Make a GET request to:
+		https://eodhd.com/api/real-time/{TICKER}.{EXCHANGE}?api_token=${EODHD_API_TOKEN}&fmt=json
+	•	Example: AAPL.US → Ticker: AAPL, Exchange: US
+	•	Parse the JSON response and insert or update rows in marketdata.asset_prices.
+	•	Provide an HTTP endpoint that triggers this job on demand.
+	•	Outline any recommended error handling, logging, or retry logic.

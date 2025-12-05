@@ -371,3 +371,114 @@ func (r *postgresMarketDataRepo) GetHistoricalCurrencyRates(baseCurrency, target
 	}
 	return rates, nil
 }
+
+// GetAssetsRequiringPriceUpdate returns assets that need price updates based on staleness
+func (r *postgresMarketDataRepo) GetAssetsRequiringPriceUpdate(staleDuration time.Duration) ([]*domain.Asset, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_assets_requiring_update", "assets", time.Since(start).Seconds(), nil)
+	}()
+
+	staleThreshold := time.Now().Add(-staleDuration)
+
+	query := `
+		SELECT a.id, a.symbol, a.name, a.type, a.exchange, a.currency, a.created_at, a.updated_at
+		FROM marketdata.assets a
+		LEFT JOIN marketdata.asset_prices p ON a.id = p.asset_id
+		GROUP BY a.id, a.symbol, a.name, a.type, a.exchange, a.currency, a.created_at, a.updated_at
+		HAVING MAX(p.timestamp) IS NULL OR MAX(p.timestamp) < $1
+		ORDER BY MAX(p.timestamp) ASC NULLS FIRST
+	`
+
+	rows, err := r.db.Query(query, staleThreshold)
+	if err != nil {
+		metrics.RecordDatabaseQuery("get_assets_requiring_update", "assets", time.Since(start).Seconds(), err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var assets []*domain.Asset
+	for rows.Next() {
+		var asset domain.Asset
+		if err := rows.Scan(&asset.ID, &asset.Symbol, &asset.Name, &asset.Type, &asset.Exchange, &asset.Currency, &asset.CreatedAt, &asset.UpdatedAt); err != nil {
+			return nil, err
+		}
+		assets = append(assets, &asset)
+	}
+
+	return assets, nil
+}
+
+// GetLatestPriceTimestamp returns the most recent price timestamp for an asset
+func (r *postgresMarketDataRepo) GetLatestPriceTimestamp(assetID string) (*time.Time, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_latest_price_timestamp", "asset_prices", time.Since(start).Seconds(), nil)
+	}()
+
+	query := `
+		SELECT MAX(timestamp) as latest_timestamp
+		FROM marketdata.asset_prices
+		WHERE asset_id = $1
+	`
+
+	var timestamp *time.Time
+	err := r.db.QueryRow(query, assetID).Scan(&timestamp)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		metrics.RecordDatabaseQuery("get_latest_price_timestamp", "asset_prices", time.Since(start).Seconds(), err)
+		return nil, err
+	}
+
+	return timestamp, nil
+}
+
+// GetMissingPriceDates returns dates where prices are missing for an asset within a date range
+func (r *postgresMarketDataRepo) GetMissingPriceDates(assetID string, start, end time.Time) ([]time.Time, error) {
+	startTime := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_missing_price_dates", "asset_prices", time.Since(startTime).Seconds(), nil)
+	}()
+
+	query := `
+		WITH date_series AS (
+			SELECT generate_series(
+				$1::date,
+				$2::date,
+				'1 day'::interval
+			)::date AS date
+		),
+		existing_prices AS (
+			SELECT DATE(timestamp) as price_date
+			FROM marketdata.asset_prices
+			WHERE asset_id = $3
+			AND timestamp >= $1
+			AND timestamp <= $2
+		)
+		SELECT ds.date
+		FROM date_series ds
+		LEFT JOIN existing_prices ep ON ds.date = ep.price_date
+		WHERE ep.price_date IS NULL
+		ORDER BY ds.date
+	`
+
+	rows, err := r.db.Query(query, start, end, assetID)
+	if err != nil {
+		metrics.RecordDatabaseQuery("get_missing_price_dates", "asset_prices", time.Since(startTime).Seconds(), err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var dates []time.Time
+	for rows.Next() {
+		var date time.Time
+		if err := rows.Scan(&date); err != nil {
+			return nil, err
+		}
+		dates = append(dates, date)
+	}
+
+	return dates, nil
+}

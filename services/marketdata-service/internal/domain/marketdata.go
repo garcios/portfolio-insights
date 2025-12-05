@@ -49,6 +49,11 @@ type MarketDataRepository interface {
 	InsertCurrencyRates(rates []*CurrencyRate) error // For worker
 	GetLatestCurrencyRate(baseCurrency, targetCurrency string) (*CurrencyRate, error)
 	GetHistoricalCurrencyRates(baseCurrency, targetCurrency string, start, end time.Time) ([]*CurrencyRate, error)
+
+	// EODHD price sync operations
+	GetAssetsRequiringPriceUpdate(staleDuration time.Duration) ([]*Asset, error)    // For EODHD sync worker
+	GetLatestPriceTimestamp(assetID string) (*time.Time, error)                     // For EODHD sync worker
+	GetMissingPriceDates(assetID string, start, end time.Time) ([]time.Time, error) // For EODHD sync worker
 }
 
 type MarketDataUsecase interface {

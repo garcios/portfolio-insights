@@ -93,6 +93,17 @@ func main() {
 	currencyWorker.Start(ctx)
 	l.Info("Ingestion workers started (assets, prices, currency rates)")
 
+	// Initialize Price Sync Worker
+	priceSyncWorker, err := worker.NewEODHDPriceSyncWorker(repo)
+	if err != nil {
+		l.Error("failed to create price sync worker", "error", err)
+		os.Exit(1)
+	}
+
+	// Start Price Sync Worker
+	priceSyncWorker.Start(ctx)
+	l.Info("Price sync worker started")
+
 	// Start gRPC Server
 	lis, err := net.Listen("tcp", ":50054")
 	if err != nil {
