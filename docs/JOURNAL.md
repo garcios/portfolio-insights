@@ -4,6 +4,108 @@ A chronological record of development progress, features implemented, and techni
 
 ---
 
+## 2025-12-05 - Currency Rate Sync Implementation
+
+### Overview
+Implemented a background worker and HTTP endpoint to synchronize currency exchange rates from the EODHD API, ensuring the application has up-to-date conversion rates for multi-currency portfolio tracking.
+
+### Features Implemented
+
+#### 1. Currency Sync Worker
+**Status:** ✅ Complete
+
+**Components:**
+- **Worker:** `services/marketdata-service/internal/worker/eodhd_currency_sync.go`
+- **Repository:** `services/marketdata-service/internal/repository/postgres_repo.go`
+
+**Functionality:**
+- **Target Discovery:** Automatically identifies required currency pairs from `marketdata.currency_rates` table.
+- **API Integration:** Fetches real-time exchange rates from EODHD API.
+- **Data Persistence:** Updates existing rates or inserts new ones with current timestamp.
+- **Error Handling:** Robust error logging and failure management.
+
+#### 2. On-Demand Sync Endpoint
+**Status:** ✅ Complete
+
+**Endpoint:** `POST /sync-currency-rates`
+- **Service:** MarketData Service
+- **Port:** 8082 (HTTP)
+- **Action:** Triggers immediate execution of the currency sync job.
+
+### Technical Details
+
+**Data Flow:**
+1. Worker queries `marketdata.currency_rates` for distinct `target_currency` codes (where `base_currency` is 'USD').
+2. For each target currency, constructs EODHD API request (e.g., `EUR.FOREX`).
+3. Parses JSON response to get the current rate (close price).
+4. Updates the database record with the new rate and `last_updated` timestamp.
+
+**Configuration:**
+- **API Token:** Uses `EODHD_API_TOKEN` environment variable.
+- **Base Currency:** Defaults to USD.
+
+### Next Steps
+1. **Scheduler:** Configure a cron job to run this worker periodically (e.g., daily).
+2. **Backfill:** Implement historical rate fetching for past dates.
+3. **Resilience:** Add retry logic for API rate limits or network failures.
+
+---
+
+## 2025-12-05 - EODHD Price Sync Implementation
+
+### Overview
+Implemented a comprehensive price synchronization strategy to retrieve daily asset prices from the EODHD API, enabling accurate portfolio valuation and historical performance tracking.
+
+### Features Implemented
+
+#### 1. EODHD API Client
+**Status:** ✅ Complete
+
+**Components:**
+- **Client:** `services/marketdata-service/internal/infrastructure/eodhd/client.go`
+- **Domain:** `services/marketdata-service/internal/domain/marketdata.go`
+
+**Capabilities:**
+- **Resilience:** Built-in retry mechanism with exponential backoff.
+- **Rate Limiting:** Respects API limits to prevent blocking.
+- **Data Parsing:** Handles various EODHD response formats (JSON).
+
+#### 2. Price Sync Worker
+**Status:** ✅ Complete
+
+**Components:**
+- **Worker:** `services/marketdata-service/internal/worker/eodhd_price_sync.go`
+- **Repository:** `services/marketdata-service/internal/repository/postgres_repo.go`
+
+**Functionality:**
+- **Gap Detection:** Identifies assets with missing price data for specific dates.
+- **Batch Processing:** Fetches and inserts prices in batches to optimize database performance.
+- **Upsert Logic:** Handles duplicate prevention using `ON CONFLICT` clauses.
+
+#### 3. On-Demand Sync Endpoint
+**Status:** ✅ Complete
+
+**Endpoint:** `POST /sync-prices`
+- **Service:** MarketData Service
+- **Port:** 8082 (HTTP)
+- **Action:** Triggers the price synchronization process for all active assets.
+
+### Technical Details
+
+**Observability:**
+- **Metrics:** Prometheus counters for sync attempts, successes, and failures.
+- **Logging:** Structured logs for debugging sync issues.
+
+**Configuration:**
+- **Environment:** Uses `EODHD_API_TOKEN` for authentication.
+
+### Next Steps
+1. **Scheduled Execution:** Integrate with a cron scheduler for automatic daily updates.
+2. **Historical Backfill:** Extend worker to handle deep history backfilling.
+3. **Data Validation:** Add checks for anomalous price spikes or drops.
+
+---
+
 ## 2025-12-04 - DatePicker Component Implementation
 
 ### Overview
