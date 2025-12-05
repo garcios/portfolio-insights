@@ -141,8 +141,8 @@ func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID strin
 	argIdx := 2
 
 	if filter.Symbol != "" {
-		query += fmt.Sprintf(" AND symbol = $%d", argIdx)
-		args = append(args, filter.Symbol)
+		query += fmt.Sprintf(" AND symbol ILIKE $%d", argIdx)
+		args = append(args, "%"+filter.Symbol+"%")
 		argIdx++
 	}
 	if filter.Type != "" {

@@ -12,6 +12,7 @@ import { UPLOAD_TRANSACTION_CSV } from '../graphql/mutations';
 const TransactionsPage = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: keyof Transaction; direction: 'asc' | 'desc' } | null>({ key: 'executedAt', direction: 'desc' });
     const [filterType, setFilterType] = useState<string>('ALL');
     const [fromDate, setFromDate] = useState<string>('');
@@ -20,11 +21,20 @@ const TransactionsPage = () => {
     const [pageTokenHistory, setPageTokenHistory] = useState<string[]>([]);
     const [nextPageToken, setNextPageToken] = useState<string>('');
 
+    // Debounce search query to prevent losing focus on every keystroke
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
     // Build GraphQL filter
     const graphqlFilter: TransactionFilterInput = useMemo(() => {
         const filter: TransactionFilterInput = {};
-        if (searchQuery) {
-            filter.symbol = searchQuery;
+        if (debouncedSearchQuery) {
+            filter.symbol = debouncedSearchQuery;
         }
         if (filterType !== 'ALL') {
             filter.type = filterType as any;
@@ -39,7 +49,7 @@ const TransactionsPage = () => {
             filter.toExecutedAt = toDateTime.toISOString();
         }
         return filter;
-    }, [searchQuery, filterType, fromDate, toDate]);
+    }, [debouncedSearchQuery, filterType, fromDate, toDate]);
 
     // Fetch transactions from GraphQL
     const { data, loading, error, refetch } = useQuery(LIST_TRANSACTIONS, {
@@ -64,7 +74,7 @@ const TransactionsPage = () => {
         setCurrentPageToken('');
         setPageTokenHistory([]);
         setNextPageToken('');
-    }, [graphqlFilter]);
+    }, [debouncedSearchQuery, filterType, fromDate, toDate]);
 
 
     // Transform GraphQL data to match component expectations
@@ -362,6 +372,7 @@ const TransactionsPage = () => {
                         {/* Action Buttons - Right aligned */}
                         <button
                             onClick={clearFilters}
+                            className="filter-button"
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -376,18 +387,13 @@ const TransactionsPage = () => {
                                 cursor: 'pointer',
                                 transition: 'all 0.2s'
                             }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--color-bg-hover)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'var(--color-bg-primary)';
-                            }}
                         >
                             <Filter size={16} />
                             Clear Filters
                         </button>
 
                         <button
+                            className="filter-button"
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -399,7 +405,8 @@ const TransactionsPage = () => {
                                 color: 'var(--color-text-secondary)',
                                 fontSize: '0.875rem',
                                 fontWeight: '500',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
                             }}
                         >
                             <Download size={16} />
@@ -431,6 +438,7 @@ const TransactionsPage = () => {
                             <button
                                 onClick={loadPreviousPage}
                                 disabled={pageTokenHistory.length === 0}
+                                className="pagination-button"
                                 style={{
                                     padding: '6px 12px',
                                     borderRadius: '6px',
@@ -441,22 +449,13 @@ const TransactionsPage = () => {
                                     fontSize: '0.875rem',
                                     transition: 'all 0.2s'
                                 }}
-                                onMouseEnter={(e) => {
-                                    if (pageTokenHistory.length > 0) {
-                                        e.currentTarget.style.background = 'var(--color-bg-hover)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (pageTokenHistory.length > 0) {
-                                        e.currentTarget.style.background = 'var(--color-bg-primary)';
-                                    }
-                                }}
                             >
                                 Previous
                             </button>
                             <button
                                 onClick={loadNextPage}
                                 disabled={!nextPageToken}
+                                className="pagination-button"
                                 style={{
                                     padding: '6px 12px',
                                     borderRadius: '6px',
@@ -466,16 +465,6 @@ const TransactionsPage = () => {
                                     cursor: !nextPageToken ? 'not-allowed' : 'pointer',
                                     fontSize: '0.875rem',
                                     transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (nextPageToken) {
-                                        e.currentTarget.style.background = 'var(--color-bg-hover)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (nextPageToken) {
-                                        e.currentTarget.style.background = 'var(--color-bg-primary)';
-                                    }
                                 }}
                             >
                                 Next

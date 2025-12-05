@@ -317,3 +317,12 @@ body {
     border-color: var(--color-border-light);
   }
 }
+
+/* Filter and Pagination Button Hover Styles */
+.filter-button:hover {
+  background: var(--color-bg-hover) !important;
+}
+
+.pagination-button:not(:disabled):hover {
+  background: var(--color-bg-hover) !important;
+}
