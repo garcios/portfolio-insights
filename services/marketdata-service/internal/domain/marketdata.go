@@ -54,6 +54,10 @@ type MarketDataRepository interface {
 	GetAssetsRequiringPriceUpdate(staleDuration time.Duration) ([]*Asset, error)    // For EODHD sync worker
 	GetLatestPriceTimestamp(assetID string) (*time.Time, error)                     // For EODHD sync worker
 	GetMissingPriceDates(assetID string, start, end time.Time) ([]time.Time, error) // For EODHD sync worker
+
+	// EODHD currency sync operations
+	GetTargetCurrencies() ([]string, error)
+	GetLatestCurrencyRateTimestamp(baseCurrency, targetCurrency string) (*time.Time, error)
 }
 
 type MarketDataUsecase interface {

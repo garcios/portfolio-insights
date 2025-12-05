@@ -1,0 +1,53 @@
+Implement a worker that retrieves the latest currency rates from the EODHD API and inserts or updates them in the marketdata.currency_rates table.
+
+
+Context
+
+EODHD API endpoint example:
+https://eodhd.com/api/eod/AUD.FOREX?api_token={EODHD_API_TOKEN}&fmt=json&from=2025-12-03
+
+```json
+[
+  {
+    "date": "2025-12-03",
+    "open": 1.523,
+    "high": 1.526,
+    "low": 1.5142,
+    "close": 1.515,
+    "adjusted_close": 1.515,
+    "volume": 0
+  },
+  {
+    "date": "2025-12-04",
+    "open": 1.5147,
+    "high": 1.5156,
+    "low": 1.509,
+    "close": 1.5129,
+    "adjusted_close": 1.5129,
+    "volume": 0
+  },
+  {
+    "date": "2025-12-05",
+    "open": 1.5124,
+    "high": 1.5138,
+    "low": 1.5088,
+    "close": 1.5088,
+    "adjusted_close": 1.5088,
+    "volume": 0
+  }
+]
+```
+
+Requirements
+	•	Implement the Golang code in the marketdata-service.
+	•	Check the current implementation of the worker/eodhd_price_sync.go file, it should be a good starting point.
+	•	Read from the target_currency column of the marketdata.currency_rates table to determine which currencies require updates.
+	•	Retrieve the API token from the environment variable EODHD_API_TOKEN.
+	•	Make a GET request to:
+		https://eodhd.com/api/eod/{CURRENCY}.FOREX?api_token=${EODHD_API_TOKEN}&fmt=json&from={FROM_DATE}&to={TO_DATE}
+	•	Example: AUD.FOREX → target_currency: AUD, Exchange: FOREX
+	•	Parse the JSON response and insert or update rows in marketdata.currency_rates.
+	•	Provide an HTTP endpoint that triggers this job on demand.
+
+
+	

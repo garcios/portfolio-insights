@@ -26,15 +26,6 @@ func main() {
 	l := logger.New()
 	l.Info("Market Data Service starting...")
 
-	// Start Metrics Server
-	go func() {
-		http.Handle("/metrics", promhttp.Handler())
-		l.Info("Metrics server listening on :9099")
-		if err := http.ListenAndServe(":9099", nil); err != nil {
-			l.Error("failed to start metrics server", "error", err)
-		}
-	}()
-
 	// Connect to Database
 	db, err := infrastructure.NewPostgresDB()
 	if err != nil {
@@ -103,6 +94,43 @@ func main() {
 	// Start Price Sync Worker
 	priceSyncWorker.Start(ctx)
 	l.Info("Price sync worker started")
+
+	// Initialize Currency Sync Worker
+	currencySyncWorker, err := worker.NewEODHDCurrencySyncWorker(repo)
+	if err != nil {
+		l.Error("failed to create currency sync worker", "error", err)
+		os.Exit(1)
+	}
+	currencySyncWorker.Start(ctx)
+	l.Info("Currency sync worker started")
+
+	// Start HTTP Server (Metrics + Admin)
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+
+		http.HandleFunc("/sync/currencies", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			// Trigger in background
+			go func() {
+				l.Info("Manual currency sync triggered via HTTP")
+				if err := currencySyncWorker.TriggerSync(context.Background()); err != nil {
+					l.Error("Manual currency sync failed", "error", err)
+				}
+			}()
+
+			w.WriteHeader(http.StatusAccepted)
+			w.Write([]byte("Currency sync triggered"))
+		})
+
+		l.Info("HTTP server listening on :9099")
+		if err := http.ListenAndServe(":9099", nil); err != nil {
+			l.Error("failed to start HTTP server", "error", err)
+		}
+	}()
 
 	// Start gRPC Server
 	lis, err := net.Listen("tcp", ":50054")

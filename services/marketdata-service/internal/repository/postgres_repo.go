@@ -482,3 +482,50 @@ func (r *postgresMarketDataRepo) GetMissingPriceDates(assetID string, start, end
 
 	return dates, nil
 }
+
+func (r *postgresMarketDataRepo) GetTargetCurrencies() ([]string, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_target_currencies", "currency_rates", time.Since(start).Seconds(), nil)
+	}()
+
+	query := `SELECT DISTINCT target_currency FROM marketdata.currency_rates`
+	rows, err := r.db.Query(query)
+	if err != nil {
+		metrics.RecordDatabaseQuery("get_target_currencies", "currency_rates", time.Since(start).Seconds(), err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var currencies []string
+	for rows.Next() {
+		var currency string
+		if err := rows.Scan(&currency); err != nil {
+			return nil, err
+		}
+		currencies = append(currencies, currency)
+	}
+	return currencies, nil
+}
+
+func (r *postgresMarketDataRepo) GetLatestCurrencyRateTimestamp(baseCurrency, targetCurrency string) (*time.Time, error) {
+	start := time.Now()
+	defer func() {
+		metrics.RecordDatabaseQuery("get_latest_currency_rate_timestamp", "currency_rates", time.Since(start).Seconds(), nil)
+	}()
+
+	query := `
+		SELECT MAX(rate_date)
+		FROM marketdata.currency_rates
+		WHERE base_currency = $1 AND target_currency = $2
+	`
+	var timestamp *time.Time
+	err := r.db.QueryRow(query, baseCurrency, targetCurrency).Scan(&timestamp)
+	if err != nil {
+		// If no rows found or value is NULL, it might return nil or error depending on driver.
+		// Usually MAX() returns NULL if no rows match, which Scan handles if destination is *time.Time.
+		metrics.RecordDatabaseQuery("get_latest_currency_rate_timestamp", "currency_rates", time.Since(start).Seconds(), err)
+		return nil, nil // Treat error as nil timestamp (start from beginning)
+	}
+	return timestamp, nil
+}
