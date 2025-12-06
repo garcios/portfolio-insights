@@ -22,6 +22,9 @@ service TransactionService {
   
   // DeleteTransaction removes a transaction from the records.
   rpc DeleteTransaction(DeleteTransactionRequest) returns (DeleteTransactionResponse);
+
+  // GetOldestTransactionForUser retrieves the oldest transaction for a user.
+  rpc GetOldestTransactionForUser(GetOldestTransactionForUserRequest) returns (GetOldestTransactionForUserResponse);
 }
 
 // Transaction represents a financial transaction record.
@@ -168,4 +171,16 @@ message DeleteTransactionRequest {
 message DeleteTransactionResponse {
   // Indicates if the deletion was successful.
   bool success = 1;
+}
+
+// GetOldestTransactionForUserRequest is the request message for GetOldestTransactionForUser.
+message GetOldestTransactionForUserRequest {
+  // The ID of the user.
+  string user_id = 1;
+}
+
+// GetOldestTransactionForUserResponse is the response message for GetOldestTransactionForUser.
+message GetOldestTransactionForUserResponse {
+  // The oldest transaction record.
+  Transaction transaction = 1;
 }

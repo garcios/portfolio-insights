@@ -7,7 +7,44 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	"google.golang.org/grpc"
 )
+
+type mockTransactionClient struct {
+	oldestTx *transactionpb.Transaction
+	err      error
+}
+
+func (m *mockTransactionClient) CreateTransaction(ctx context.Context, in *transactionpb.CreateTransactionRequest, opts ...grpc.CallOption) (*transactionpb.CreateTransactionResponse, error) {
+	return nil, nil
+}
+
+func (m *mockTransactionClient) GetTransaction(ctx context.Context, in *transactionpb.GetTransactionRequest, opts ...grpc.CallOption) (*transactionpb.GetTransactionResponse, error) {
+	return nil, nil
+}
+
+func (m *mockTransactionClient) ListTransactions(ctx context.Context, in *transactionpb.ListTransactionsRequest, opts ...grpc.CallOption) (*transactionpb.ListTransactionsResponse, error) {
+	return nil, nil
+}
+
+func (m *mockTransactionClient) UpdateTransaction(ctx context.Context, in *transactionpb.UpdateTransactionRequest, opts ...grpc.CallOption) (*transactionpb.UpdateTransactionResponse, error) {
+	return nil, nil
+}
+
+func (m *mockTransactionClient) DeleteTransaction(ctx context.Context, in *transactionpb.DeleteTransactionRequest, opts ...grpc.CallOption) (*transactionpb.DeleteTransactionResponse, error) {
+	return nil, nil
+}
+
+func (m *mockTransactionClient) GetOldestTransactionForUser(ctx context.Context, in *transactionpb.GetOldestTransactionForUserRequest, opts ...grpc.CallOption) (*transactionpb.GetOldestTransactionForUserResponse, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return &transactionpb.GetOldestTransactionForUserResponse{
+		Transaction: m.oldestTx,
+	}, nil
+}
 
 type mockPortfolioUsecase struct {
 	summary *domain.PortfolioSummary
@@ -30,6 +67,15 @@ func (m *mockPortfolioUsecase) GetPortfolioSummary(ctx context.Context, userID s
 
 func (m *mockPortfolioUsecase) GetHistoricalPortfolioSummary(ctx context.Context, userID string, date time.Time) (*domain.PortfolioSummary, error) {
 	return nil, nil
+}
+
+func (m *mockPortfolioUsecase) BackfillPortfolioHistory(
+	ctx context.Context,
+	userIDs []string,
+	startDate, endDate time.Time,
+	dryRun bool,
+) usecase.BackfillResult {
+	return usecase.BackfillResult{}
 }
 
 type mockPortfolioHistoryRepository struct {
@@ -77,9 +123,10 @@ func TestSnapshotWorker_CreateSnapshots(t *testing.T) {
 	repo := &mockPortfolioHistoryRepository{
 		userIDs: []string{"user-1", "user-2"},
 	}
+	mockTxClient := &mockTransactionClient{}
 	logger := slog.Default()
 
-	worker := NewSnapshotWorker(uc, repo, logger)
+	worker := NewSnapshotWorker(uc, repo, mockTxClient, logger)
 
 	// Execute via TriggerNow which runs in a goroutine
 	worker.TriggerNow()

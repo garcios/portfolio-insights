@@ -9,11 +9,21 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 )
 
+// BackfillResult represents the result of a backfill operation.
+type BackfillResult struct {
+	Created       int
+	Skipped       int
+	Errors        int
+	ErrorMessages []string
+	Status        string
+}
+
 // PortfolioUsecase defines the business logic for portfolio operations
 type PortfolioUsecase interface {
 	GetHoldings(ctx context.Context, userID string) ([]*domain.Holding, error)
 	GetPortfolioSummary(ctx context.Context, userID string) (*domain.PortfolioSummary, error)
 	GetHistoricalPortfolioSummary(ctx context.Context, userID string, date time.Time) (*domain.PortfolioSummary, error)
+	BackfillPortfolioHistory(ctx context.Context, userIDs []string, startDate, endDate time.Time, dryRun bool) BackfillResult
 }
 
 // PriceData represents a price point for an asset.
@@ -24,6 +34,7 @@ type PriceData struct {
 
 type portfolioUsecase struct {
 	holdingRepo       domain.HoldingRepository
+	historyRepo       domain.PortfolioHistoryRepository
 	marketDataGateway MarketDataGateway
 }
 
@@ -38,9 +49,14 @@ type MarketDataGateway interface {
 }
 
 // NewPortfolioUsecase creates a new portfolio usecase.
-func NewPortfolioUsecase(holdingRepo domain.HoldingRepository, marketDataGateway MarketDataGateway) PortfolioUsecase {
+func NewPortfolioUsecase(
+	holdingRepo domain.HoldingRepository,
+	historyRepo domain.PortfolioHistoryRepository,
+	marketDataGateway MarketDataGateway,
+) PortfolioUsecase {
 	return &portfolioUsecase{
 		holdingRepo:       holdingRepo,
+		historyRepo:       historyRepo,
 		marketDataGateway: marketDataGateway,
 	}
 }
@@ -257,4 +273,86 @@ func (uc *portfolioUsecase) GetHistoricalPortfolioSummary(ctx context.Context, u
 	// Set the currency of the summary
 	summary.Currency = defaultCurrency
 	return summary, nil
+}
+
+// BackfillPortfolioHistory runs the backfill process for the given users and date range
+func (uc *portfolioUsecase) BackfillPortfolioHistory(
+	ctx context.Context,
+	userIDs []string,
+	startDate, endDate time.Time,
+	dryRun bool,
+) BackfillResult {
+	result := BackfillResult{
+		ErrorMessages: []string{},
+	}
+
+	for _, userID := range userIDs {
+		// Backfill for each day in range
+		for date := startDate; !date.After(endDate); date = date.AddDate(0, 0, 1) {
+			// Check if snapshot already exists
+			exists, _ := uc.historyRepo.SnapshotExists(ctx, userID, date)
+			if exists {
+				result.Skipped++
+				continue
+			}
+
+			if dryRun {
+				// In a real logger we would log this
+				result.Created++
+				continue
+			}
+
+			// Create snapshot for this date
+			created, err := uc.createHistoricalSnapshot(ctx, userID, date)
+			if err != nil {
+				result.Errors++
+				result.ErrorMessages = append(result.ErrorMessages,
+					fmt.Sprintf("user=%s date=%s: %v", userID, date.Format("2006-01-02"), err),
+				)
+				continue
+			}
+
+			if created {
+				result.Created++
+			}
+		}
+	}
+
+	// Determine overall status
+	if result.Errors == 0 {
+		result.Status = "success"
+	} else if result.Created > 0 {
+		result.Status = "partial"
+	} else {
+		result.Status = "failed"
+	}
+
+	return result
+}
+
+func (uc *portfolioUsecase) createHistoricalSnapshot(
+	ctx context.Context,
+	userID string,
+	date time.Time,
+) (bool, error) {
+	// Get historical portfolio summary for this user
+	summary, err := uc.GetHistoricalPortfolioSummary(ctx, userID, date)
+	if err != nil {
+		return false, fmt.Errorf("failed to get historical summary: %w", err)
+	}
+
+	// Skip if total value is 0 (likely missing price data)
+	if summary.TotalValue == 0 {
+		return false, nil
+	}
+
+	// Create snapshot with the specified date
+	snapshot := &domain.PortfolioSnapshot{
+		UserID:         userID,
+		TotalValue:     summary.TotalValue,
+		TotalCostBasis: summary.TotalCost,
+		Timestamp:      date,
+	}
+
+	return true, uc.historyRepo.CreateSnapshot(ctx, snapshot)
 }

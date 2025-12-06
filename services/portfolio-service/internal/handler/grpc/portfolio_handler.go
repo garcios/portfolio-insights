@@ -3,7 +3,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -165,7 +164,7 @@ func (h *PortfolioHandler) BackfillHistory(
 	}
 
 	// 4. Run backfill
-	result := h.runBackfill(ctx, userIDs, startDate, endDate, req.DryRun)
+	result := h.portfolioUsecase.BackfillPortfolioHistory(ctx, userIDs, startDate, endDate, req.DryRun)
 
 	return &pb.BackfillHistoryResponse{
 		SnapshotsCreated: int32(result.Created),
@@ -174,97 +173,6 @@ func (h *PortfolioHandler) BackfillHistory(
 		ErrorMessages:    result.ErrorMessages,
 		Status:           result.Status,
 	}, nil
-}
-
-// BackfillResult represents the result of a backfill operation.
-type BackfillResult struct {
-	Created       int
-	Skipped       int
-	Errors        int
-	ErrorMessages []string
-	Status        string
-}
-
-func (h *PortfolioHandler) runBackfill(
-	ctx context.Context,
-	userIDs []string,
-	startDate, endDate time.Time,
-	dryRun bool,
-) BackfillResult {
-	result := BackfillResult{
-		ErrorMessages: []string{},
-	}
-
-	for _, userID := range userIDs {
-		// Backfill for each day in range
-		for date := startDate; !date.After(endDate); date = date.AddDate(0, 0, 1) {
-			// Check if snapshot already exists
-			exists, _ := h.historyRepo.SnapshotExists(ctx, userID, date)
-			if exists {
-				result.Skipped++
-				continue
-			}
-
-			if dryRun {
-				// In a real logger we would log this
-				// h.logger.Info("DRY RUN: Would create snapshot", "user_id", userID, "date", date.Format("2006-01-02"))
-				result.Created++
-				continue
-			}
-
-			// Create snapshot for this date
-			created, err := h.createHistoricalSnapshot(ctx, userID, date)
-			if err != nil {
-				result.Errors++
-				result.ErrorMessages = append(result.ErrorMessages,
-					fmt.Sprintf("user=%s date=%s: %v", userID, date.Format("2006-01-02"), err),
-				)
-				continue
-			}
-
-			if created {
-				result.Created++
-			}
-		}
-	}
-
-	// Determine overall status
-	if result.Errors == 0 {
-		result.Status = "success"
-	} else if result.Created > 0 {
-		result.Status = "partial"
-	} else {
-		result.Status = "failed"
-	}
-
-	return result
-}
-
-func (h *PortfolioHandler) createHistoricalSnapshot(
-	ctx context.Context,
-	userID string,
-	date time.Time,
-) (bool, error) {
-	// Get historical portfolio summary for this user
-	summary, err := h.portfolioUsecase.GetHistoricalPortfolioSummary(ctx, userID, date)
-	if err != nil {
-		return false, fmt.Errorf("failed to get historical summary: %w", err)
-	}
-
-	// Skip if total value is 0 (likely missing price data)
-	if summary.TotalValue == 0 {
-		return false, nil
-	}
-
-	// Create snapshot with the specified date
-	snapshot := &domain.PortfolioSnapshot{
-		UserID:         userID,
-		TotalValue:     summary.TotalValue,
-		TotalCostBasis: summary.TotalCost,
-		Timestamp:      date,
-	}
-
-	return true, h.historyRepo.CreateSnapshot(ctx, snapshot)
 }
 
 func (h *PortfolioHandler) validateAdminToken(token string) bool {

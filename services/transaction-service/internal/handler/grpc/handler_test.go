@@ -49,6 +49,17 @@ func (m *MockTransactionUsecase) DeleteTransaction(ctx context.Context, id strin
 	return nil
 }
 
+func (m *MockTransactionUsecase) GetOldestTransaction(ctx context.Context, userID string) (*domain.Transaction, error) {
+	if userID == "user-1" {
+		return &domain.Transaction{
+			UserID:     userID,
+			Symbol:     "TEST",
+			ExecutedAt: time.Now(),
+		}, nil
+	}
+	return nil, nil
+}
+
 func TestCreateTransactionHandler(t *testing.T) {
 	mockUC := &MockTransactionUsecase{
 		transactions: make(map[string]*domain.Transaction),

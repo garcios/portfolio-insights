@@ -165,6 +165,25 @@ func (h *TransactionHandler) DeleteTransaction(ctx context.Context, req *pb.Dele
 	return &pb.DeleteTransactionResponse{Success: true}, nil
 }
 
+// GetOldestTransactionForUser retrieves the oldest transaction for a user.
+func (h *TransactionHandler) GetOldestTransactionForUser(ctx context.Context, req *pb.GetOldestTransactionForUserRequest) (*pb.GetOldestTransactionForUserResponse, error) {
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	txn, err := h.usecase.GetOldestTransaction(ctx, req.UserId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get oldest transaction: %v", err)
+	}
+	if txn == nil {
+		return nil, status.Errorf(codes.NotFound, "no transactions found for user")
+	}
+
+	return &pb.GetOldestTransactionForUserResponse{
+		Transaction: mapDomainToProto(txn),
+	}, nil
+}
+
 func mapDomainToProto(txn *domain.Transaction) *pb.Transaction {
 	return &pb.Transaction{
 		Id:                txn.ID,

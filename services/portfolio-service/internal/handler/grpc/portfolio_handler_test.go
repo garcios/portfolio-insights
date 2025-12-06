@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,9 +16,10 @@ import (
 
 // Mock PortfolioUsecase
 type mockPortfolioUsecase struct {
-	holdings []*domain.Holding
-	summary  *domain.PortfolioSummary
-	err      error
+	holdings       []*domain.Holding
+	summary        *domain.PortfolioSummary
+	err            error
+	backfillResult usecase.BackfillResult
 }
 
 func (m *mockPortfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*domain.Holding, error) {
@@ -39,6 +41,15 @@ func (m *mockPortfolioUsecase) GetHistoricalPortfolioSummary(ctx context.Context
 		return nil, m.err
 	}
 	return m.summary, nil
+}
+
+func (m *mockPortfolioUsecase) BackfillPortfolioHistory(
+	ctx context.Context,
+	userIDs []string,
+	startDate, endDate time.Time,
+	dryRun bool,
+) usecase.BackfillResult {
+	return m.backfillResult
 }
 
 // Mock PortfolioHistoryRepository
@@ -492,6 +503,10 @@ func TestBackfillHistory_Success(t *testing.T) {
 			UserID:     "user-123",
 			TotalValue: 10000.0,
 			TotalCost:  9000.0,
+		},
+		backfillResult: usecase.BackfillResult{
+			Created: 2,
+			Status:  "success",
 		},
 	}
 	mockRepo := &mockHistoryRepo{}

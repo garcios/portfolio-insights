@@ -88,8 +88,9 @@ services:
       - REDIS_ADDR=redis:6379
       - PRICE_CACHE_TTL_SECONDS=60
       - MARKETDATA_SERVICE_ADDR=marketdata-service:50054
+      - TRANSACTION_SERVICE_ADDR=transaction-service:50053
       - ADMIN_TOKEN=secret
-      - SNAPSHOT_INTERVAL=5m
+      - SNAPSHOT_INTERVAL=24h
     depends_on:
       - postgres
       - nats

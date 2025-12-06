@@ -145,3 +145,7 @@ func (uc *transactionUsecase) DeleteTransaction(ctx context.Context, id string) 
 	// TODO: Publish transaction deleted event
 	return uc.repo.Delete(ctx, id)
 }
+
+func (uc *transactionUsecase) GetOldestTransaction(ctx context.Context, userID string) (*domain.Transaction, error) {
+	return uc.repo.GetOldestByUserID(ctx, userID)
+}

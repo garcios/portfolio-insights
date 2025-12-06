@@ -101,6 +101,18 @@ func (m *MockTransactionRepository) Count() (int, error) {
 	return len(m.transactions), nil
 }
 
+func (m *MockTransactionRepository) GetOldestByUserID(ctx context.Context, userID string) (*domain.Transaction, error) {
+	var oldest *domain.Transaction
+	for _, tx := range m.transactions {
+		if tx.UserID == userID {
+			if oldest == nil || tx.ExecutedAt.Before(oldest.ExecutedAt) {
+				oldest = tx
+			}
+		}
+	}
+	return oldest, nil
+}
+
 // MockUserGateway
 type MockUserGateway struct {
 	exists      bool

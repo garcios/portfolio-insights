@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -54,6 +55,74 @@ func (m *mockHoldingRepository) ListByUser(userID string) ([]*domain.Holding, er
 		}
 	}
 	return holdings, nil
+}
+
+func (m *mockHoldingRepository) Count() (int64, error) {
+	return int64(len(m.holdings)), nil
+}
+
+// Mock PortfolioHistoryRepository
+type mockPortfolioHistoryRepository struct {
+	snapshots map[string]*domain.PortfolioSnapshot
+	err       error
+}
+
+func newMockPortfolioHistoryRepository() *mockPortfolioHistoryRepository {
+	return &mockPortfolioHistoryRepository{
+		snapshots: make(map[string]*domain.PortfolioSnapshot),
+	}
+}
+
+func (m *mockPortfolioHistoryRepository) CreateSnapshot(ctx context.Context, snapshot *domain.PortfolioSnapshot) error {
+	if m.err != nil {
+		return m.err
+	}
+	key := fmt.Sprintf("%s:%s", snapshot.UserID, snapshot.Timestamp.Format("2006-01-02"))
+	m.snapshots[key] = snapshot
+	return nil
+}
+
+func (m *mockPortfolioHistoryRepository) GetHistoryByPeriod(ctx context.Context, userID, period string) ([]*domain.PortfolioSnapshot, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	// For testing, just return all snapshots for user
+	var snapshots []*domain.PortfolioSnapshot
+	for _, s := range m.snapshots {
+		if s.UserID == userID {
+			snapshots = append(snapshots, s)
+		}
+	}
+	return snapshots, nil
+}
+
+func (m *mockPortfolioHistoryRepository) GetHistory(ctx context.Context, userID string, from, to time.Time) ([]*domain.PortfolioSnapshot, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	var snapshots []*domain.PortfolioSnapshot
+	for _, s := range m.snapshots {
+		if s.UserID == userID {
+			if (s.Timestamp.Equal(from) || s.Timestamp.After(from)) && (s.Timestamp.Equal(to) || s.Timestamp.Before(to)) {
+				snapshots = append(snapshots, s)
+			}
+		}
+	}
+	return snapshots, nil
+}
+
+func (m *mockPortfolioHistoryRepository) GetAllUserIDs(ctx context.Context) ([]string, error) {
+	// Not implemented for this mock as it's not used in existing tests yet
+	return []string{}, nil
+}
+
+func (m *mockPortfolioHistoryRepository) SnapshotExists(ctx context.Context, userID string, date time.Time) (bool, error) {
+	if m.err != nil {
+		return false, m.err
+	}
+	key := fmt.Sprintf("%s:%s", userID, date.Format("2006-01-02"))
+	_, exists := m.snapshots[key]
+	return exists, nil
 }
 
 // Mock MarketDataGateway
@@ -140,11 +209,16 @@ func (m *mockMarketDataGateway) GetCurrencyRateOnDate(ctx context.Context, baseC
 	return 1.0, nil
 }
 
+func (m *mockMarketDataGateway) Close() error {
+	return nil
+}
+
 func TestGetHoldings_Success(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Add test holdings
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
@@ -204,8 +278,9 @@ func TestGetHoldings_Success(t *testing.T) {
 func TestGetHoldings_EmptyHoldings(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Execute
 	ctx := context.Background()
@@ -225,8 +300,9 @@ func TestGetHoldings_RepositoryError(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
 	repo.err = errors.New("database error")
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Execute
 	ctx := context.Background()
@@ -245,9 +321,10 @@ func TestGetHoldings_RepositoryError(t *testing.T) {
 func TestGetHoldings_MarketDataError(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
 	marketData.err = errors.New("market data service unavailable")
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Add test holding
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
@@ -280,8 +357,9 @@ func TestGetHoldings_MarketDataError(t *testing.T) {
 func TestGetPortfolioSummary_Success(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Add test holdings
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
@@ -344,8 +422,9 @@ func TestGetPortfolioSummary_Success(t *testing.T) {
 func TestGetPortfolioSummary_EmptyPortfolio(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Execute
 	ctx := context.Background()
@@ -376,8 +455,9 @@ func TestGetPortfolioSummary_EmptyPortfolio(t *testing.T) {
 func TestGetPortfolioSummary_ZeroCostBasis(t *testing.T) {
 	// Setup - edge case where cost basis is 0 (shouldn't happen in practice)
 	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Add test holding with zero cost
 	repo.holdings["user-123:FREE"] = &domain.Holding{
@@ -409,8 +489,9 @@ func TestGetPortfolioSummary_RepositoryError(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
 	repo.err = errors.New("database error")
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Execute
 	ctx := context.Background()
@@ -425,6 +506,7 @@ func TestGetPortfolioSummary_RepositoryError(t *testing.T) {
 func TestGetPortfolioSummary_DayChange(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
 
 	// Define historical prices
@@ -443,7 +525,7 @@ func TestGetPortfolioSummary_DayChange(t *testing.T) {
 		return 0, errors.New("price not found")
 	}
 
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Add test holdings
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
@@ -499,6 +581,7 @@ func TestGetPortfolioSummary_DayChange(t *testing.T) {
 func TestGetPortfolioSummary_DayChange_Timezone(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
 	marketData := newMockMarketDataGateway()
 
 	// Scenario:
@@ -526,7 +609,7 @@ func TestGetPortfolioSummary_DayChange_Timezone(t *testing.T) {
 		return 0, errors.New("price not found")
 	}
 
-	uc := NewPortfolioUsecase(repo, marketData)
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
 
 	// Add test holdings
 	repo.holdings["user-tz:AAPL"] = &domain.Holding{
@@ -558,5 +641,114 @@ func TestGetPortfolioSummary_DayChange_Timezone(t *testing.T) {
 	expectedDayChange := 100.0
 	if summary.DayChange != expectedDayChange {
 		t.Errorf("Expected day change %f, got %f. This implies it compared with Dec 1 price instead of Nov 30.", expectedDayChange, summary.DayChange)
+	}
+}
+
+func TestBackfillPortfolioHistory_Success(t *testing.T) {
+	// Setup
+	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
+	marketData := newMockMarketDataGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
+
+	// Add test holdings
+	repo.holdings["user-123:AAPL"] = &domain.Holding{
+		UserID:      "user-123",
+		Symbol:      "AAPL",
+		Quantity:    10,
+		AverageCost: 100.00,
+		LastUpdated: time.Now(),
+	}
+
+	// Mock historical prices for Backfill
+	marketData.prices["AAPL"] = 150.00
+
+	// Execute
+	ctx := context.Background()
+	startDate := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
+	userIDs := []string{"user-123"}
+	result := uc.BackfillPortfolioHistory(ctx, userIDs, startDate, endDate, false)
+
+	// Assert
+	if result.Status != "success" {
+		t.Errorf("Expected status 'success', got '%s'", result.Status)
+	}
+	if result.Created != 2 {
+		t.Errorf("Expected 2 snapshots created, got %d", result.Created)
+	}
+	if result.Errors != 0 {
+		t.Errorf("Expected 0 errors, got %d", result.Errors)
+	}
+}
+
+func TestBackfillPortfolioHistory_DryRun(t *testing.T) {
+	// Setup
+	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
+	marketData := newMockMarketDataGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
+
+	repo.holdings["user-123:AAPL"] = &domain.Holding{
+		UserID:      "user-123",
+		Symbol:      "AAPL",
+		Quantity:    10,
+		AverageCost: 100.00,
+		LastUpdated: time.Now(),
+	}
+	marketData.prices["AAPL"] = 150.00
+
+	// Execute
+	ctx := context.Background()
+	startDate := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	userIDs := []string{"user-123"}
+	result := uc.BackfillPortfolioHistory(ctx, userIDs, startDate, endDate, true)
+
+	// Assert
+	if result.Created != 1 {
+		t.Errorf("Expected 1 snapshot created (in dry run count), got %d", result.Created)
+	}
+	// Verify no snapshot was actually stored
+	key := fmt.Sprintf("user-123:%s", startDate.Format("2006-01-02"))
+	if _, exists := historyRepo.snapshots[key]; exists {
+		t.Error("Expected no snapshot to be stored in dry run")
+	}
+}
+
+func TestBackfillPortfolioHistory_AlreadyExists(t *testing.T) {
+	// Setup
+	repo := newMockHoldingRepository()
+	historyRepo := newMockPortfolioHistoryRepository()
+	marketData := newMockMarketDataGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, marketData)
+
+	repo.holdings["user-123:AAPL"] = &domain.Holding{
+		UserID:      "user-123",
+		Symbol:      "AAPL",
+		Quantity:    10,
+		AverageCost: 100.00,
+		LastUpdated: time.Now(),
+	}
+	marketData.prices["AAPL"] = 150.00
+
+	// Pre-create a snapshot
+	date := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	_ = historyRepo.CreateSnapshot(context.Background(), &domain.PortfolioSnapshot{
+		UserID:    "user-123",
+		Timestamp: date,
+	})
+
+	// Execute
+	ctx := context.Background()
+	userIDs := []string{"user-123"}
+	result := uc.BackfillPortfolioHistory(ctx, userIDs, date, date, false)
+
+	// Assert
+	if result.Skipped != 1 {
+		t.Errorf("Expected 1 skipped, got %d", result.Skipped)
+	}
+	if result.Created != 0 {
+		t.Errorf("Expected 0 created, got %d", result.Created)
 	}
 }

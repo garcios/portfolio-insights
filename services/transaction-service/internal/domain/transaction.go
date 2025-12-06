@@ -40,6 +40,7 @@ type TransactionRepository interface {
 	Update(ctx context.Context, transaction *Transaction) error
 	Delete(ctx context.Context, id string) error
 	Count() (int, error)
+	GetOldestByUserID(ctx context.Context, userID string) (*Transaction, error)
 }
 
 // UserGateway defines the interface for communicating with the user service.
@@ -64,4 +65,5 @@ type TransactionUsecase interface {
 	ListTransactions(ctx context.Context, userID string, filter TransactionFilter, limit, offset int) ([]*Transaction, error)
 	UpdateTransaction(ctx context.Context, txn *Transaction) error
 	DeleteTransaction(ctx context.Context, id string) error
+	GetOldestTransaction(ctx context.Context, userID string) (*Transaction, error)
 }

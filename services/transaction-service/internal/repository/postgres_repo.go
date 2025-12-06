@@ -276,3 +276,57 @@ func (r *postgresTransactionRepo) Count() (int, error) {
 	}
 	return count, nil
 }
+
+func (r *postgresTransactionRepo) GetOldestByUserID(ctx context.Context, userID string) (*domain.Transaction, error) {
+	query := `
+		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
+		FROM txn.transactions
+		WHERE user_id = $1
+		ORDER BY executed_at ASC
+		LIMIT 1
+	`
+	row := r.db.QueryRowContext(ctx, query, userID)
+
+	var txn domain.Transaction
+	var brokerage sql.NullFloat64
+	var notes sql.NullString
+	var priceCurrency sql.NullString
+	var brokerageCurrency sql.NullString
+
+	err := row.Scan(
+		&txn.ID,
+		&txn.UserID,
+		&txn.Symbol,
+		&txn.Type,
+		&txn.Quantity,
+		&txn.PricePerShare,
+		&txn.ExecutedAt,
+		&txn.CreatedAt,
+		&txn.UpdatedAt,
+		&brokerage,
+		&notes,
+		&priceCurrency,
+		&brokerageCurrency,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if brokerage.Valid {
+		txn.Brokerage = brokerage.Float64
+	}
+	if notes.Valid {
+		txn.Notes = notes.String
+	}
+	if priceCurrency.Valid {
+		txn.PriceCurrency = priceCurrency.String
+	}
+	if brokerageCurrency.Valid {
+		txn.BrokerageCurrency = brokerageCurrency.String
+	}
+
+	return &txn, nil
+}

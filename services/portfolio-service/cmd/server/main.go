@@ -20,6 +20,9 @@ import (
 	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
 )
 
 func main() {
@@ -107,7 +110,7 @@ func main() {
 	}()
 
 	// Initialize Usecase
-	portfolioUsecase := usecase.NewPortfolioUsecase(repo, marketDataGateway)
+	portfolioUsecase := usecase.NewPortfolioUsecase(repo, historyRepo, marketDataGateway)
 
 	// Initialize gRPC Handler
 	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase, historyRepo)
@@ -138,10 +141,25 @@ func main() {
 		l.Info("Asset cache warmer started", "interval", warmingInterval.String())
 	}
 
+	// Initialize Transaction Service Client
+	// Initialize Transaction Service Client
+	transactionConn, err := grpc.NewClient(cfg.TransactionServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		l.Error("failed to connect to transaction service", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := transactionConn.Close(); err != nil {
+			l.Error("failed to close transaction connection", "error", err)
+		}
+	}()
+	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
+
 	// Initialize Snapshot Worker
 	snapshotWorker := infrastructure.NewSnapshotWorker(
 		portfolioUsecase,
 		historyRepo,
+		transactionClient,
 		l,
 	)
 	go snapshotWorker.Start()

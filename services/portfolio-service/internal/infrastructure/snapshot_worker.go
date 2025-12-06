@@ -8,22 +8,25 @@ import (
 
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
 )
 
 // SnapshotWorker handles periodic portfolio snapshots
 type SnapshotWorker struct {
-	portfolioUsecase usecase.PortfolioUsecase
-	historyRepo      domain.PortfolioHistoryRepository
-	logger           *slog.Logger
-	ticker           *time.Ticker
-	stopChan         chan struct{}
-	interval         time.Duration
+	portfolioUsecase  usecase.PortfolioUsecase
+	historyRepo       domain.PortfolioHistoryRepository
+	transactionClient transactionpb.TransactionServiceClient
+	logger            *slog.Logger
+	ticker            *time.Ticker
+	stopChan          chan struct{}
+	interval          time.Duration
 }
 
 // NewSnapshotWorker creates a new SnapshotWorker
 func NewSnapshotWorker(
 	uc usecase.PortfolioUsecase,
 	repo domain.PortfolioHistoryRepository,
+	txClient transactionpb.TransactionServiceClient,
 	log *slog.Logger,
 ) *SnapshotWorker {
 	// Default: snapshot every 24 hours
@@ -38,11 +41,12 @@ func NewSnapshotWorker(
 	}
 
 	return &SnapshotWorker{
-		portfolioUsecase: uc,
-		historyRepo:      repo,
-		logger:           log,
-		interval:         interval,
-		stopChan:         make(chan struct{}),
+		portfolioUsecase:  uc,
+		historyRepo:       repo,
+		transactionClient: txClient,
+		logger:            log,
+		interval:          interval,
+		stopChan:          make(chan struct{}),
 	}
 }
 
@@ -53,7 +57,7 @@ func (w *SnapshotWorker) Start() {
 	w.ticker = time.NewTicker(w.interval)
 
 	// Run immediately on startup in a goroutine
-	go w.createSnapshots()
+	go w.createBackfillSnapshots(context.Background())
 
 	for {
 		select {
@@ -125,4 +129,50 @@ func (w *SnapshotWorker) createSnapshotForUser(ctx context.Context, userID strin
 // TriggerNow allows manual triggering (useful for testing)
 func (w *SnapshotWorker) TriggerNow() {
 	go w.createSnapshots()
+}
+
+// TriggerBackfill allows manual triggering of history backfill
+func (w *SnapshotWorker) TriggerBackfill() {
+	go w.createBackfillSnapshots(context.Background())
+}
+
+func (w *SnapshotWorker) createBackfillSnapshots(ctx context.Context) {
+	// Get all unique user IDs from holdings
+	userIDs, err := w.historyRepo.GetAllUserIDs(ctx)
+	if err != nil {
+		w.logger.Error("failed to get user IDs", "error", err)
+		return
+	}
+
+	for _, userID := range userIDs {
+		// Get oldest transaction for the user from transaction-service
+		req := &transactionpb.GetOldestTransactionForUserRequest{UserId: userID}
+		resp, err := w.transactionClient.GetOldestTransactionForUser(ctx, req)
+		if err != nil {
+			w.logger.Error("failed to get oldest transaction", "user_id", userID, "error", err)
+			continue
+		}
+
+		if resp.Transaction == nil {
+			w.logger.Info("no transactions found for user, skipping backfill", "user_id", userID)
+			continue
+		}
+
+		startDate := resp.Transaction.ExecutedAt.AsTime()
+		endDate := time.Now()
+
+		w.logger.Info("Backfilling history for user",
+			"user_id", userID,
+			"start_date", startDate,
+			"end_date", endDate)
+
+		// Perform backfill
+		result := w.portfolioUsecase.BackfillPortfolioHistory(ctx, []string{userID}, startDate, endDate, false)
+
+		w.logger.Info("Backfill completed for user",
+			"user_id", userID,
+			"created", result.Created,
+			"skipped", result.Skipped,
+			"errors", result.Errors)
+	}
 }
