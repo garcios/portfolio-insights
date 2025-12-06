@@ -1,3 +1,4 @@
+// Package config provides configuration loading for the user service.
 package config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config holds the application configuration.
 type Config struct {
 	Port        string `mapstructure:"port"`
 	MetricsPort string `mapstructure:"metrics_port"`
@@ -21,6 +23,7 @@ type Config struct {
 	DBSSLMode  string `mapstructure:"db_sslmode"`
 }
 
+// LoadConfig loads the configuration from file and environment variables.
 func LoadConfig() Config {
 	// 1. Set Defaults
 	viper.SetDefault("port", "50051")
@@ -43,16 +46,23 @@ func LoadConfig() Config {
 	}
 
 	// 3. Bind to Environment Variables
-	viper.BindEnv("port", "PORT")
-	viper.BindEnv("metrics_port", "METRICS_PORT")
-	viper.BindEnv("log_level", "LOG_LEVEL")
+	bindKeys := map[string]string{
+		"port":         "PORT",
+		"metrics_port": "METRICS_PORT",
+		"log_level":    "LOG_LEVEL",
+		"db_host":      "DB_HOST",
+		"db_port":      "DB_PORT",
+		"db_user":      "DB_USER",
+		"db_password":  "DB_PASSWORD",
+		"db_name":      "DB_NAME",
+		"db_sslmode":   "DB_SSLMODE",
+	}
 
-	viper.BindEnv("db_host", "DB_HOST")
-	viper.BindEnv("db_port", "DB_PORT")
-	viper.BindEnv("db_user", "DB_USER")
-	viper.BindEnv("db_password", "DB_PASSWORD")
-	viper.BindEnv("db_name", "DB_NAME")
-	viper.BindEnv("db_sslmode", "DB_SSLMODE")
+	for key, env := range bindKeys {
+		if err := viper.BindEnv(key, env); err != nil {
+			log.Printf("Could not bind env var %s to key %s: %s", env, key, err)
+		}
+	}
 
 	viper.SetEnvPrefix("APP")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

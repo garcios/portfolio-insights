@@ -1,3 +1,4 @@
+// Package config provides configuration loading for the login-consent-provider.
 package config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config holds the application configuration.
 type Config struct {
 	Port            string `mapstructure:"port"`
 	HydraAdminURL   string `mapstructure:"hydra_admin_url"`
@@ -16,6 +18,7 @@ type Config struct {
 	LogLevel        string `mapstructure:"log_level"`
 }
 
+// LoadConfig loads the configuration from file and environment variables.
 func LoadConfig() Config {
 	// 1. Set Defaults
 	viper.SetDefault("port", "3002")
@@ -40,11 +43,19 @@ func LoadConfig() Config {
 	}
 
 	// 3. Bind to Environment Variables
-	viper.BindEnv("port", "PORT")
-	viper.BindEnv("hydra_admin_url", "HYDRA_ADMIN_URL")
-	viper.BindEnv("user_service_addr", "USER_SERVICE_ADDR")
-	viper.BindEnv("session_secret", "SESSION_SECRET")
-	viper.BindEnv("log_level", "LOG_LEVEL")
+	bindKeys := map[string]string{
+		"port":              "PORT",
+		"hydra_admin_url":   "HYDRA_ADMIN_URL",
+		"user_service_addr": "USER_SERVICE_ADDR",
+		"session_secret":    "SESSION_SECRET",
+		"log_level":         "LOG_LEVEL",
+	}
+
+	for key, env := range bindKeys {
+		if err := viper.BindEnv(key, env); err != nil {
+			log.Printf("Could not bind env var %s to key %s: %s", env, key, err)
+		}
+	}
 
 	viper.SetEnvPrefix("APP")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

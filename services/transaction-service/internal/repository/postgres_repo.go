@@ -1,3 +1,4 @@
+// Package repository implements the persistence layer for the transaction service.
 package repository
 
 import (

@@ -15,7 +15,15 @@ func TestUpsert_Insert(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
@@ -31,6 +39,7 @@ func TestUpsert_Insert(t *testing.T) {
 	mock.ExpectExec("INSERT INTO investments.holdings").
 		WithArgs(holding.UserID, holding.Symbol, holding.Quantity, holding.AverageCost, holding.Currency, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectClose()
 
 	// Execute
 	err = repo.Upsert(holding)
@@ -40,9 +49,6 @@ func TestUpsert_Insert(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }
 
 func TestUpsert_Update(t *testing.T) {
@@ -51,7 +57,15 @@ func TestUpsert_Update(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
@@ -67,6 +81,7 @@ func TestUpsert_Update(t *testing.T) {
 	mock.ExpectExec("INSERT INTO investments.holdings").
 		WithArgs(holding.UserID, holding.Symbol, holding.Quantity, holding.AverageCost, holding.Currency, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectClose()
 
 	// Execute
 	err = repo.Upsert(holding)
@@ -76,9 +91,6 @@ func TestUpsert_Update(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }
 
 func TestUpsert_Error(t *testing.T) {
@@ -87,7 +99,15 @@ func TestUpsert_Error(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
@@ -103,6 +123,7 @@ func TestUpsert_Error(t *testing.T) {
 	mock.ExpectExec("INSERT INTO investments.holdings").
 		WithArgs(holding.UserID, holding.Symbol, holding.Quantity, holding.AverageCost, holding.Currency, sqlmock.AnyArg()).
 		WillReturnError(sql.ErrConnDone)
+	mock.ExpectClose()
 
 	// Execute
 	err = repo.Upsert(holding)
@@ -112,9 +133,6 @@ func TestUpsert_Error(t *testing.T) {
 		t.Error("Expected error, got nil")
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }
 
 func TestGetByUserAndSymbol_Success(t *testing.T) {
@@ -123,7 +141,15 @@ func TestGetByUserAndSymbol_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
@@ -138,6 +164,7 @@ func TestGetByUserAndSymbol_Success(t *testing.T) {
 	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID, symbol).
 		WillReturnRows(rows)
+	mock.ExpectClose()
 
 	// Execute
 	holding, err := repo.GetByUserAndSymbol(userID, symbol)
@@ -163,9 +190,6 @@ func TestGetByUserAndSymbol_Success(t *testing.T) {
 		t.Errorf("Expected average cost 150.0, got %f", holding.AverageCost)
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }
 
 func TestGetByUserAndSymbol_NotFound(t *testing.T) {
@@ -174,7 +198,15 @@ func TestGetByUserAndSymbol_NotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
@@ -185,6 +217,7 @@ func TestGetByUserAndSymbol_NotFound(t *testing.T) {
 	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID, symbol).
 		WillReturnError(sql.ErrNoRows)
+	mock.ExpectClose()
 
 	// Execute
 	_, err = repo.GetByUserAndSymbol(userID, symbol)
@@ -198,9 +231,6 @@ func TestGetByUserAndSymbol_NotFound(t *testing.T) {
 		t.Errorf("Expected 'holding not found', got '%s'", err.Error())
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }
 
 func TestListByUser_Success(t *testing.T) {
@@ -209,7 +239,15 @@ func TestListByUser_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
@@ -224,6 +262,7 @@ func TestListByUser_Success(t *testing.T) {
 	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID).
 		WillReturnRows(rows)
+	mock.ExpectClose()
 
 	// Execute
 	holdings, err := repo.ListByUser(userID)
@@ -255,9 +294,6 @@ func TestListByUser_Success(t *testing.T) {
 		t.Errorf("Expected second quantity 5.0, got %f", holdings[1].Quantity)
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }
 
 func TestListByUser_Empty(t *testing.T) {
@@ -266,7 +302,15 @@ func TestListByUser_Empty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
@@ -278,6 +322,7 @@ func TestListByUser_Empty(t *testing.T) {
 	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID).
 		WillReturnRows(rows)
+	mock.ExpectClose()
 
 	// Execute
 	holdings, err := repo.ListByUser(userID)
@@ -291,9 +336,6 @@ func TestListByUser_Empty(t *testing.T) {
 		t.Errorf("Expected 0 holdings, got %d", len(holdings))
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }
 
 func TestListByUser_QueryError(t *testing.T) {
@@ -302,7 +344,15 @@ func TestListByUser_QueryError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
@@ -312,6 +362,7 @@ func TestListByUser_QueryError(t *testing.T) {
 	mock.ExpectQuery("SELECT user_id, symbol, quantity, average_cost_basis, currency, updated_at FROM investments.holdings").
 		WithArgs(userID).
 		WillReturnError(sql.ErrConnDone)
+	mock.ExpectClose()
 
 	// Execute
 	_, err = repo.ListByUser(userID)
@@ -321,9 +372,6 @@ func TestListByUser_QueryError(t *testing.T) {
 		t.Error("Expected error, got nil")
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }
 
 func TestCount_Success(t *testing.T) {
@@ -332,7 +380,15 @@ func TestCount_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
@@ -341,6 +397,7 @@ func TestCount_Success(t *testing.T) {
 
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM investments.holdings").
 		WillReturnRows(rows)
+	mock.ExpectClose()
 
 	// Execute
 	count, err := repo.Count()
@@ -354,9 +411,6 @@ func TestCount_Success(t *testing.T) {
 		t.Errorf("Expected count 42, got %d", count)
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }
 
 func TestDeleteZeroQuantityHoldings_Success(t *testing.T) {
@@ -365,13 +419,22 @@ func TestDeleteZeroQuantityHoldings_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create mock: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("Failed to close db: %v", err)
+		}
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("Unfulfilled expectations: %v", err)
+		}
+	}()
 
 	repo := NewPostgresHoldingRepository(db)
 
 	// Expect DELETE query
 	mock.ExpectExec("DELETE FROM investments.holdings WHERE quantity <= 0").
 		WillReturnResult(sqlmock.NewResult(0, 3))
+	mock.ExpectClose()
 
 	// Execute
 	err = repo.DeleteZeroQuantityHoldings()
@@ -381,7 +444,4 @@ func TestDeleteZeroQuantityHoldings_Success(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unfulfilled expectations: %v", err)
-	}
 }

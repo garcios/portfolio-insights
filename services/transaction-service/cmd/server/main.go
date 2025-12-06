@@ -11,6 +11,7 @@ import (
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/handler/grpc"
+	httpHandler "github.com/garcios/portfolio-insights/services/transaction-service/internal/handler/http"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/middleware"
@@ -78,9 +79,13 @@ func main() {
 
 	// Initialize Usecase
 	uc := usecase.NewTransactionUsecase(repo, userGateway, marketDataGateway, eventPublisher)
+	csvUc := usecase.NewCSVUploadUsecase(repo, userGateway, marketDataGateway, eventPublisher)
 
 	// Initialize gRPC Handler
 	handler := grpc.NewTransactionHandler(uc)
+
+	// Initialize HTTP Handler
+	csvHandler := httpHandler.NewCSVUploadHandler(csvUc)
 
 	// Start Metrics Server
 	metricsPort := cfg.MetricsPort
@@ -92,6 +97,15 @@ func main() {
 		l.Info("Metrics server listening on :" + metricsPort)
 		if err := http.ListenAndServe(":"+metricsPort, nil); err != nil {
 			l.Error("failed to start metrics server", "error", err)
+		}
+	}()
+
+	// Start HTTP Server for CSV Upload
+	go func() {
+		http.HandleFunc("/upload-csv", csvHandler.UploadCSV)
+		l.Info("HTTP server listening on :" + cfg.HTTPPort)
+		if err := http.ListenAndServe(":"+cfg.HTTPPort, nil); err != nil {
+			l.Error("failed to start HTTP server", "error", err)
 		}
 	}()
 

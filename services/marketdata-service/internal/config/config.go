@@ -1,3 +1,4 @@
+// Package config provides configuration loading for the marketdata service.
 package config
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config holds the application configuration.
 type Config struct {
 	Port        string `mapstructure:"port"`
 	MetricsPort string `mapstructure:"metrics_port"`
@@ -44,6 +46,7 @@ type Config struct {
 	MinioBucketName string `mapstructure:"minio_bucket_name"`
 }
 
+// LoadConfig loads the configuration from file and environment variables.
 func LoadConfig() Config {
 	// 1. Set Defaults
 	viper.SetDefault("port", "50054")
@@ -72,38 +75,41 @@ func LoadConfig() Config {
 	}
 
 	// 3. Bind to Environment Variables
-	viper.BindEnv("port", "PORT")
-	viper.BindEnv("metrics_port", "METRICS_PORT")
-	viper.BindEnv("log_level", "LOG_LEVEL")
+	bindKeys := map[string]string{
+		"port":                          "PORT",
+		"metrics_port":                  "METRICS_PORT",
+		"log_level":                     "LOG_LEVEL",
+		"db_host":                       "DB_HOST",
+		"db_port":                       "DB_PORT",
+		"db_user":                       "DB_USER",
+		"db_password":                   "DB_PASSWORD",
+		"db_name":                       "DB_NAME",
+		"db_sslmode":                    "DB_SSLMODE",
+		"eodhd_api_token":               "EODHD_API_TOKEN",
+		"eodhd_api_base_url":            "EODHD_API_BASE_URL",
+		"currency_sync_interval":        "CURRENCY_SYNC_INTERVAL",
+		"currency_stale_duration":       "CURRENCY_STALE_DURATION",
+		"currency_sync_batch_size":      "CURRENCY_SYNC_BATCH_SIZE",
+		"currency_sync_max_concurrency": "CURRENCY_SYNC_MAX_CONCURRENCY",
+		"currency_sync_historical_days": "CURRENCY_SYNC_HISTORICAL_DAYS",
+		"price_sync_interval":           "PRICE_SYNC_INTERVAL",
+		"price_stale_duration":          "PRICE_STALE_DURATION",
+		"price_sync_batch_size":         "PRICE_SYNC_BATCH_SIZE",
+		"price_sync_max_concurrency":    "PRICE_SYNC_MAX_CONCURRENCY",
+		"price_sync_historical_days":    "PRICE_SYNC_HISTORICAL_DAYS",
+		"eodhd_rate_limit":              "EODHD_RATE_LIMIT",
+		"minio_endpoint":                "MINIO_ENDPOINT",
+		"minio_access_key":              "MINIO_ACCESS_KEY",
+		"minio_secret_key":              "MINIO_SECRET_KEY",
+		"minio_use_ssl":                 "MINIO_USE_SSL",
+		"minio_bucket_name":             "MINIO_BUCKET_NAME",
+	}
 
-	viper.BindEnv("db_host", "DB_HOST")
-	viper.BindEnv("db_port", "DB_PORT")
-	viper.BindEnv("db_user", "DB_USER")
-	viper.BindEnv("db_password", "DB_PASSWORD")
-	viper.BindEnv("db_name", "DB_NAME")
-	viper.BindEnv("db_sslmode", "DB_SSLMODE")
-
-	viper.BindEnv("eodhd_api_token", "EODHD_API_TOKEN")
-	viper.BindEnv("eodhd_api_base_url", "EODHD_API_BASE_URL")
-
-	viper.BindEnv("currency_sync_interval", "CURRENCY_SYNC_INTERVAL")
-	viper.BindEnv("currency_stale_duration", "CURRENCY_STALE_DURATION")
-	viper.BindEnv("currency_sync_batch_size", "CURRENCY_SYNC_BATCH_SIZE")
-	viper.BindEnv("currency_sync_max_concurrency", "CURRENCY_SYNC_MAX_CONCURRENCY")
-	viper.BindEnv("currency_sync_historical_days", "CURRENCY_SYNC_HISTORICAL_DAYS")
-
-	viper.BindEnv("price_sync_interval", "PRICE_SYNC_INTERVAL")
-	viper.BindEnv("price_stale_duration", "PRICE_STALE_DURATION")
-	viper.BindEnv("price_sync_batch_size", "PRICE_SYNC_BATCH_SIZE")
-	viper.BindEnv("price_sync_max_concurrency", "PRICE_SYNC_MAX_CONCURRENCY")
-	viper.BindEnv("price_sync_historical_days", "PRICE_SYNC_HISTORICAL_DAYS")
-	viper.BindEnv("eodhd_rate_limit", "EODHD_RATE_LIMIT")
-
-	viper.BindEnv("minio_endpoint", "MINIO_ENDPOINT")
-	viper.BindEnv("minio_access_key", "MINIO_ACCESS_KEY")
-	viper.BindEnv("minio_secret_key", "MINIO_SECRET_KEY")
-	viper.BindEnv("minio_use_ssl", "MINIO_USE_SSL")
-	viper.BindEnv("minio_bucket_name", "MINIO_BUCKET_NAME")
+	for key, env := range bindKeys {
+		if err := viper.BindEnv(key, env); err != nil {
+			log.Printf("Could not bind env var %s to key %s: %s", env, key, err)
+		}
+	}
 
 	viper.SetEnvPrefix("APP")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

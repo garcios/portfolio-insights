@@ -1,3 +1,4 @@
+// Package config provides configuration loading for the transaction service.
 package config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config holds the application configuration.
 type Config struct {
 	Port        string `mapstructure:"port"`
 	HTTPPort    string `mapstructure:"http_port"`
@@ -28,6 +30,7 @@ type Config struct {
 	TransactionTopic string `mapstructure:"transaction_topic"`
 }
 
+// LoadConfig loads the configuration from file and environment variables.
 func LoadConfig() Config {
 	// 1. Set Defaults
 	viper.SetDefault("port", "50053")
@@ -55,22 +58,28 @@ func LoadConfig() Config {
 	}
 
 	// 3. Bind to Environment Variables
-	viper.BindEnv("port", "PORT")
-	viper.BindEnv("http_port", "HTTP_PORT")
-	viper.BindEnv("metrics_port", "METRICS_PORT")
-	viper.BindEnv("log_level", "LOG_LEVEL")
+	bindKeys := map[string]string{
+		"port":                    "PORT",
+		"http_port":               "HTTP_PORT",
+		"metrics_port":            "METRICS_PORT",
+		"log_level":               "LOG_LEVEL",
+		"db_host":                 "DB_HOST",
+		"db_port":                 "DB_PORT",
+		"db_user":                 "DB_USER",
+		"db_password":             "DB_PASSWORD",
+		"db_name":                 "DB_NAME",
+		"db_sslmode":              "DB_SSLMODE",
+		"user_service_addr":       "USER_SERVICE_ADDR",
+		"marketdata_service_addr": "MARKETDATA_SERVICE_ADDR",
+		"nats_url":                "NATS_URL",
+		"transaction_topic":       "TRANSACTION_TOPIC",
+	}
 
-	viper.BindEnv("db_host", "DB_HOST")
-	viper.BindEnv("db_port", "DB_PORT")
-	viper.BindEnv("db_user", "DB_USER")
-	viper.BindEnv("db_password", "DB_PASSWORD")
-	viper.BindEnv("db_name", "DB_NAME")
-	viper.BindEnv("db_sslmode", "DB_SSLMODE")
-
-	viper.BindEnv("user_service_addr", "USER_SERVICE_ADDR")
-	viper.BindEnv("marketdata_service_addr", "MARKETDATA_SERVICE_ADDR")
-	viper.BindEnv("nats_url", "NATS_URL")
-	viper.BindEnv("transaction_topic", "TRANSACTION_TOPIC")
+	for key, env := range bindKeys {
+		if err := viper.BindEnv(key, env); err != nil {
+			log.Printf("Could not bind env var %s to key %s: %s", env, key, err)
+		}
+	}
 
 	viper.SetEnvPrefix("APP")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

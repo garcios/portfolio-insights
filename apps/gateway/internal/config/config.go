@@ -1,3 +1,4 @@
+// Package config provides configuration loading for the gateway.
 package config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config holds the application configuration.
 type Config struct {
 	Port                       string `mapstructure:"port"`
 	PortfolioServiceAddr       string `mapstructure:"portfolio_service_addr"`
@@ -21,6 +23,7 @@ type Config struct {
 	LogLevel                   string `mapstructure:"log_level"`
 }
 
+// LoadConfig loads the configuration from file and environment variables.
 func LoadConfig() Config {
 	// 1. Set Defaults
 	viper.SetDefault("port", "8080")
@@ -47,16 +50,24 @@ func LoadConfig() Config {
 	}
 
 	// 3. Bind to Environment Variables
-	viper.BindEnv("port", "PORT")
-	viper.BindEnv("portfolio_service_addr", "PORTFOLIO_SERVICE_ADDR")
-	viper.BindEnv("user_service_addr", "USER_SERVICE_ADDR")
-	viper.BindEnv("transaction_service_addr", "TRANSACTION_SERVICE_ADDR")
-	viper.BindEnv("transaction_service_http_addr", "TRANSACTION_SERVICE_HTTP_ADDR")
-	viper.BindEnv("hydra_public_url", "HYDRA_PUBLIC_URL")
-	viper.BindEnv("jwks_url", "JWKS_URL")
-	viper.BindEnv("jwt_issuer", "JWT_ISSUER")
-	viper.BindEnv("jwt_audience", "JWT_AUDIENCE")
-	viper.BindEnv("log_level", "LOG_LEVEL")
+	bindKeys := map[string]string{
+		"port":                          "PORT",
+		"portfolio_service_addr":        "PORTFOLIO_SERVICE_ADDR",
+		"user_service_addr":             "USER_SERVICE_ADDR",
+		"transaction_service_addr":      "TRANSACTION_SERVICE_ADDR",
+		"transaction_service_http_addr": "TRANSACTION_SERVICE_HTTP_ADDR",
+		"hydra_public_url":              "HYDRA_PUBLIC_URL",
+		"jwks_url":                      "JWKS_URL",
+		"jwt_issuer":                    "JWT_ISSUER",
+		"jwt_audience":                  "JWT_AUDIENCE",
+		"log_level":                     "LOG_LEVEL",
+	}
+
+	for key, env := range bindKeys {
+		if err := viper.BindEnv(key, env); err != nil {
+			log.Printf("Could not bind env var %s to key %s: %s", env, key, err)
+		}
+	}
 
 	viper.SetEnvPrefix("APP")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

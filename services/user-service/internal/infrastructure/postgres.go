@@ -1,3 +1,4 @@
+// Package infrastructure provides external service integrations and low-level implementations.
 package infrastructure
 
 import (

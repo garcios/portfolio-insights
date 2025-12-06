@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: garcios
+      POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: portfolio
     ports:
@@ -63,7 +63,7 @@ services:
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_USER=garcios
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=portfolio
       - DB_SSLMODE=disable
@@ -80,7 +80,7 @@ services:
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_USER=garcios
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=portfolio
       - DB_SSLMODE=disable
@@ -117,7 +117,7 @@ services:
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_USER=garcios
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=portfolio
       - DB_SSLMODE=disable
@@ -140,7 +140,7 @@ services:
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_USER=garcios
+      - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=portfolio
       - DB_SSLMODE=disable
@@ -156,7 +156,7 @@ services:
       context: ../../infra/db
       dockerfile: Dockerfile
     environment:
-      - DB_URL=postgres://garcios:${DB_PASSWORD}@postgres:5432/portfolio?sslmode=disable
+      - DB_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/portfolio?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy

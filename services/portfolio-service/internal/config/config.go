@@ -1,3 +1,4 @@
+// Package config provides configuration loading for the portfolio service.
 package config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config holds the application configuration.
 type Config struct {
 	Port        string `mapstructure:"port"`
 	MetricsPort string `mapstructure:"metrics_port"`
@@ -30,6 +32,7 @@ type Config struct {
 	AssetCacheTTL         int    `mapstructure:"asset_cache_ttl_seconds"`
 }
 
+// LoadConfig loads the configuration from file and environment variables.
 func LoadConfig() Config {
 	// 1. Set Defaults
 	viper.SetDefault("port", "50052")
@@ -56,25 +59,30 @@ func LoadConfig() Config {
 	}
 
 	// 3. Bind to Environment Variables
-	viper.BindEnv("port", "PORT")
-	viper.BindEnv("metrics_port", "METRICS_PORT")
-	viper.BindEnv("log_level", "LOG_LEVEL")
+	bindKeys := map[string]string{
+		"port":                    "PORT",
+		"metrics_port":            "METRICS_PORT",
+		"log_level":               "LOG_LEVEL",
+		"db_host":                 "DB_HOST",
+		"db_port":                 "DB_PORT",
+		"db_user":                 "DB_USER",
+		"db_password":             "DB_PASSWORD",
+		"db_name":                 "DB_NAME",
+		"db_sslmode":              "DB_SSLMODE",
+		"redis_addr":              "REDIS_ADDR",
+		"redis_password":          "REDIS_PASSWORD",
+		"redis_db":                "REDIS_DB",
+		"nats_url":                "NATS_URL",
+		"exchange_rate_topic":     "EXCHANGE_RATE_TOPIC",
+		"marketdata_service_addr": "MARKETDATA_SERVICE_ADDR",
+		"asset_cache_ttl_seconds": "ASSET_CACHE_TTL_SECONDS",
+	}
 
-	viper.BindEnv("db_host", "DB_HOST")
-	viper.BindEnv("db_port", "DB_PORT")
-	viper.BindEnv("db_user", "DB_USER")
-	viper.BindEnv("db_password", "DB_PASSWORD")
-	viper.BindEnv("db_name", "DB_NAME")
-	viper.BindEnv("db_sslmode", "DB_SSLMODE")
-
-	viper.BindEnv("redis_addr", "REDIS_ADDR")
-	viper.BindEnv("redis_password", "REDIS_PASSWORD")
-	viper.BindEnv("redis_db", "REDIS_DB")
-
-	viper.BindEnv("nats_url", "NATS_URL")
-	viper.BindEnv("exchange_rate_topic", "EXCHANGE_RATE_TOPIC")
-	viper.BindEnv("marketdata_service_addr", "MARKETDATA_SERVICE_ADDR")
-	viper.BindEnv("asset_cache_ttl_seconds", "ASSET_CACHE_TTL_SECONDS")
+	for key, env := range bindKeys {
+		if err := viper.BindEnv(key, env); err != nil {
+			log.Printf("Could not bind env var %s to key %s: %s", env, key, err)
+		}
+	}
 
 	viper.SetEnvPrefix("APP")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
