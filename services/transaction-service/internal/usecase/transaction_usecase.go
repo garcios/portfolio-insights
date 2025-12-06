@@ -3,6 +3,7 @@ package usecase
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -138,12 +139,36 @@ func (uc *transactionUsecase) UpdateTransaction(ctx context.Context, txn *domain
 	// Update the input struct to reflect the updated state
 	*txn = *existing
 
+	// Publish transaction updated event
+	if err := uc.eventPublisher.PublishTransactionUpdated(ctx, txn); err != nil {
+		// Log the error but don't fail the transaction update
+		fmt.Printf("failed to publish transaction updated event: %v\n", err)
+	}
+
 	return nil
 }
 
 func (uc *transactionUsecase) DeleteTransaction(ctx context.Context, id string) error {
-	// TODO: Publish transaction deleted event
-	return uc.repo.Delete(ctx, id)
+	// Get the transaction first to include in the deleted event
+	transaction, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if transaction == nil {
+		return sql.ErrNoRows
+	}
+
+	if err := uc.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	// Publish transaction deleted event
+	if err := uc.eventPublisher.PublishTransactionDeleted(ctx, transaction); err != nil {
+		// Log the error but don't fail the transaction deletion
+		fmt.Printf("failed to publish transaction deleted event: %v\n", err)
+	}
+
+	return nil
 }
 
 func (uc *transactionUsecase) GetOldestTransaction(ctx context.Context, userID string) (*domain.Transaction, error) {

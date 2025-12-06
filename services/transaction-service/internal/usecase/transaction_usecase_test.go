@@ -153,6 +153,22 @@ func (m *MockEventPublisher) PublishTransactionCreated(ctx context.Context, tran
 	return nil
 }
 
+func (m *MockEventPublisher) PublishTransactionUpdated(ctx context.Context, transaction *domain.Transaction) error {
+	if m.publishError != nil {
+		return m.publishError
+	}
+	m.published = append(m.published, transaction)
+	return nil
+}
+
+func (m *MockEventPublisher) PublishTransactionDeleted(ctx context.Context, transaction *domain.Transaction) error {
+	if m.publishError != nil {
+		return m.publishError
+	}
+	m.published = append(m.published, transaction)
+	return nil
+}
+
 func TestCreateTransaction(t *testing.T) {
 	repo := NewMockRepo()
 	userGateway := &MockUserGateway{exists: true}

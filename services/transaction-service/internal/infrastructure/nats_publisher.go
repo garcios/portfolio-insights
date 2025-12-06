@@ -22,21 +22,49 @@ type TransactionCreatedEvent struct {
 	ExecutedAt    time.Time `json:"executed_at"`
 }
 
+// TransactionUpdatedEvent represents the event payload for an updated transaction.
+type TransactionUpdatedEvent struct {
+	TransactionID string    `json:"transaction_id"`
+	UserID        string    `json:"user_id"`
+	AssetSymbol   string    `json:"asset_symbol"`
+	PricePerShare float64   `json:"price_per_share"`
+	Quantity      float64   `json:"quantity"`
+	Type          string    `json:"type"`
+	ExecutedAt    time.Time `json:"executed_at"`
+}
+
+// TransactionDeletedEvent represents the event payload for a deleted transaction.
+type TransactionDeletedEvent struct {
+	TransactionID string `json:"transaction_id"`
+	UserID        string `json:"user_id"`
+	AssetSymbol   string `json:"asset_symbol"`
+}
+
 type natsEventPublisher struct {
-	nc    *nats.Conn
-	topic string
+	nc           *nats.Conn
+	createdTopic string
+	updatedTopic string
+	deletedTopic string
 }
 
 // NewNATSEventPublisher creates a new NATS event publisher.
 func NewNATSEventPublisher(cfg config.Config) (domain.EventPublisher, error) {
 	natsURL := cfg.NatsURL
-	topic := cfg.TransactionTopic
+	createdTopic := cfg.TransactionTopic
+	updatedTopic := cfg.TransactionUpdatedTopic
+	deletedTopic := cfg.TransactionDeletedTopic
 
 	if natsURL == "" {
 		natsURL = "nats://nats:4222"
 	}
-	if topic == "" {
-		topic = "transaction-service.transaction.created"
+	if createdTopic == "" {
+		createdTopic = "transaction-service.transaction.created"
+	}
+	if updatedTopic == "" {
+		updatedTopic = "transaction-service.transaction.updated"
+	}
+	if deletedTopic == "" {
+		deletedTopic = "transaction-service.transaction.deleted"
 	}
 
 	nc, err := nats.Connect(natsURL)
@@ -44,7 +72,12 @@ func NewNATSEventPublisher(cfg config.Config) (domain.EventPublisher, error) {
 		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
 
-	return &natsEventPublisher{nc: nc, topic: topic}, nil
+	return &natsEventPublisher{
+		nc:           nc,
+		createdTopic: createdTopic,
+		updatedTopic: updatedTopic,
+		deletedTopic: deletedTopic,
+	}, nil
 }
 
 func (p *natsEventPublisher) PublishTransactionCreated(ctx context.Context, transaction *domain.Transaction) error {
@@ -63,7 +96,49 @@ func (p *natsEventPublisher) PublishTransactionCreated(ctx context.Context, tran
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
-	if err := p.nc.Publish(p.topic, data); err != nil {
+	if err := p.nc.Publish(p.createdTopic, data); err != nil {
+		return fmt.Errorf("failed to publish event: %w", err)
+	}
+
+	return nil
+}
+
+func (p *natsEventPublisher) PublishTransactionUpdated(ctx context.Context, transaction *domain.Transaction) error {
+	event := TransactionUpdatedEvent{
+		TransactionID: transaction.ID,
+		UserID:        transaction.UserID,
+		AssetSymbol:   transaction.Symbol,
+		PricePerShare: transaction.PricePerShare,
+		Quantity:      transaction.Quantity,
+		Type:          transaction.Type,
+		ExecutedAt:    transaction.ExecutedAt,
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+
+	if err := p.nc.Publish(p.updatedTopic, data); err != nil {
+		return fmt.Errorf("failed to publish event: %w", err)
+	}
+
+	return nil
+}
+
+func (p *natsEventPublisher) PublishTransactionDeleted(ctx context.Context, transaction *domain.Transaction) error {
+	event := TransactionDeletedEvent{
+		TransactionID: transaction.ID,
+		UserID:        transaction.UserID,
+		AssetSymbol:   transaction.Symbol,
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+
+	if err := p.nc.Publish(p.deletedTopic, data); err != nil {
 		return fmt.Errorf("failed to publish event: %w", err)
 	}
 

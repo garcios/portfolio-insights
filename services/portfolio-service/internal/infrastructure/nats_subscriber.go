@@ -12,6 +12,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
 	"github.com/nats-io/nats.go"
 )
 
@@ -31,18 +32,50 @@ type TransactionCreatedEvent struct {
 	ExecutedAt    time.Time `json:"executed_at"`
 }
 
+// TransactionUpdatedEvent represents the event payload for an updated transaction.
+type TransactionUpdatedEvent struct {
+	TransactionID string    `json:"transaction_id"`
+	UserID        string    `json:"user_id"`
+	AssetSymbol   string    `json:"asset_symbol"`
+	PricePerShare float64   `json:"price_per_share"`
+	Quantity      float64   `json:"quantity"`
+	Type          string    `json:"type"`
+	ExecutedAt    time.Time `json:"executed_at"`
+}
+
+// TransactionDeletedEvent represents the event payload for a deleted transaction.
+type TransactionDeletedEvent struct {
+	TransactionID string `json:"transaction_id"`
+	UserID        string `json:"user_id"`
+	AssetSymbol   string `json:"asset_symbol"`
+}
+
 // NATSSubscriber subscribes to NATS events.
 type NATSSubscriber struct {
 	nc                *nats.Conn
-	sub               *nats.Subscription
+	subCreated        *nats.Subscription
+	subUpdated        *nats.Subscription
+	subDeleted        *nats.Subscription
 	repo              domain.HoldingRepository
 	marketDataGateway *MarketDataGateway
+	transactionClient transactionpb.TransactionServiceClient
 	assetCache        *AssetCache
 	logger            *slog.Logger
+
+	createdTopic string
+	updatedTopic string
+	deletedTopic string
 }
 
 // NewNATSSubscriber creates a new NATS subscriber.
-func NewNATSSubscriber(repo domain.HoldingRepository, marketDataGateway *MarketDataGateway, assetCache *AssetCache, l *slog.Logger, cfg config.Config) (*NATSSubscriber, error) {
+func NewNATSSubscriber(
+	repo domain.HoldingRepository,
+	marketDataGateway *MarketDataGateway,
+	transactionClient transactionpb.TransactionServiceClient,
+	assetCache *AssetCache,
+	l *slog.Logger,
+	cfg config.Config,
+) (*NATSSubscriber, error) {
 	natsURL := cfg.NatsURL
 	if natsURL == "" {
 		natsURL = "nats://nats:4222"
@@ -53,34 +86,62 @@ func NewNATSSubscriber(repo domain.HoldingRepository, marketDataGateway *MarketD
 		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
 
-	subscriber := &NATSSubscriber{
+	return &NATSSubscriber{
 		nc:                nc,
 		repo:              repo,
 		marketDataGateway: marketDataGateway,
+		transactionClient: transactionClient,
 		assetCache:        assetCache,
 		logger:            l,
-	}
-
-	return subscriber, nil
+		createdTopic:      cfg.TransactionCreatedTopic,
+		updatedTopic:      cfg.TransactionUpdatedTopic,
+		deletedTopic:      cfg.TransactionDeletedTopic,
+	}, nil
 }
 
-// Start starts subscribing to the NATS subject.
+// Start starts subscribing to the NATS subjects.
 func (s *NATSSubscriber) Start() error {
 	var err error
-	s.sub, err = s.nc.Subscribe(TransactionCreatedSubject, s.handleTransactionCreated)
-	if err != nil {
-		return fmt.Errorf("failed to subscribe to %s: %w", TransactionCreatedSubject, err)
-	}
 
-	s.logger.Info("Subscribed to NATS topic", "topic", TransactionCreatedSubject)
+	// Subscribe to Created
+	s.subCreated, err = s.nc.Subscribe(s.createdTopic, s.handleTransactionCreated)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to %s: %w", s.createdTopic, err)
+	}
+	s.logger.Info("Subscribed to NATS topic", "topic", s.createdTopic)
+
+	// Subscribe to Updated
+	s.subUpdated, err = s.nc.Subscribe(s.updatedTopic, s.handleTransactionUpdated)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to %s: %w", s.updatedTopic, err)
+	}
+	s.logger.Info("Subscribed to NATS topic", "topic", s.updatedTopic)
+
+	// Subscribe to Deleted
+	s.subDeleted, err = s.nc.Subscribe(s.deletedTopic, s.handleTransactionDeleted)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to %s: %w", s.deletedTopic, err)
+	}
+	s.logger.Info("Subscribed to NATS topic", "topic", s.deletedTopic)
+
 	return nil
 }
 
 // Stop stops the NATS subscriber.
 func (s *NATSSubscriber) Stop() {
-	if s.sub != nil {
-		if err := s.sub.Unsubscribe(); err != nil {
-			s.logger.Error("failed to unsubscribe from NATS", "error", err)
+	if s.subCreated != nil {
+		if err := s.subCreated.Unsubscribe(); err != nil {
+			s.logger.Error("failed to unsubscribe from created topic", "error", err)
+		}
+	}
+	if s.subUpdated != nil {
+		if err := s.subUpdated.Unsubscribe(); err != nil {
+			s.logger.Error("failed to unsubscribe from updated topic", "error", err)
+		}
+	}
+	if s.subDeleted != nil {
+		if err := s.subDeleted.Unsubscribe(); err != nil {
+			s.logger.Error("failed to unsubscribe from deleted topic", "error", err)
 		}
 	}
 	if s.nc != nil {
@@ -94,7 +155,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 	var event TransactionCreatedEvent
 	if err := json.Unmarshal(msg.Data, &event); err != nil {
 		s.logger.Error("failed to unmarshal transaction created event", "error", err)
-		metrics.RecordNatsMessage(TransactionCreatedSubject, "unmarshal_error", time.Since(start).Seconds())
+		metrics.RecordNatsMessage(s.createdTopic, "unmarshal_error", time.Since(start).Seconds())
 		return
 	}
 
@@ -105,6 +166,10 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		"type", event.Type,
 		"quantity", event.Quantity,
 	)
+
+	// Fallback to recalculation if we have the client, but keeping incremental logic for now as requested by plan.
+	// Actually, let's use recalculate for everything for consistency if possible, but incremental is faster.
+	// We'll keep incremental for CREATED as it's the happy path and less resource intensive.
 
 	// Get existing holding
 	holding, err := s.repo.GetByUserAndSymbol(event.UserID, event.AssetSymbol)
@@ -163,7 +228,9 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		// Calculate new average cost
 		totalCost := (holding.Quantity * holding.AverageCost) + (event.Quantity * event.PricePerShare)
 		newQuantity := holding.Quantity + event.Quantity
-		holding.AverageCost = totalCost / newQuantity
+		if newQuantity > 0 {
+			holding.AverageCost = totalCost / newQuantity
+		}
 		holding.Quantity = newQuantity
 	case "SELL":
 		// Reduce quantity, keep average cost the same
@@ -174,19 +241,10 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		}
 	case "SPLIT":
 		// Stock split: increase quantity, decrease average cost proportionally
-		// Total cost basis remains the same
-		// Example: 2-for-1 split of 100 shares @ $100 = 200 shares @ $50
 		if holding.Quantity > 0 && event.Quantity > 0 {
-			// Calculate split ratio from the additional quantity
-			// If we had 100 shares and receive 100 more, it's a 2-for-1 split (ratio = 2.0)
 			splitRatio := (holding.Quantity + event.Quantity) / holding.Quantity
-
-			// Adjust average cost by the inverse of the split ratio
 			holding.AverageCost = holding.AverageCost / splitRatio
-
-			// Add the new shares
 			holding.Quantity += event.Quantity
-
 			s.logger.Info("Processed stock split",
 				"symbol", event.AssetSymbol,
 				"split_ratio", splitRatio,
@@ -196,7 +254,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		}
 	default:
 		s.logger.Warn("unknown transaction type", "type", event.Type, "transaction_id", event.TransactionID)
-		metrics.RecordNatsMessage(TransactionCreatedSubject, "unknown_type", time.Since(start).Seconds())
+		metrics.RecordNatsMessage(s.createdTopic, "unknown_type", time.Since(start).Seconds())
 		return
 	}
 
@@ -205,11 +263,11 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 	// Save updated holding
 	if err := s.repo.Upsert(holding); err != nil {
 		s.logger.Error("failed to update holding", "error", err, "user_id", event.UserID, "symbol", event.AssetSymbol)
-		metrics.RecordNatsMessage(TransactionCreatedSubject, "db_error", time.Since(start).Seconds())
+		metrics.RecordNatsMessage(s.createdTopic, "db_error", time.Since(start).Seconds())
 		return
 	}
 
-	s.logger.Info("Updated portfolio holding",
+	s.logger.Info("Updated portfolio holding (created event)",
 		"user_id", event.UserID,
 		"symbol", event.AssetSymbol,
 		"new_quantity", holding.Quantity,
@@ -217,5 +275,167 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		"currency", holding.Currency,
 	)
 
-	metrics.RecordNatsMessage(TransactionCreatedSubject, "success", time.Since(start).Seconds())
+	metrics.RecordNatsMessage(s.createdTopic, "success", time.Since(start).Seconds())
+}
+
+func (s *NATSSubscriber) handleTransactionUpdated(msg *nats.Msg) {
+	start := time.Now()
+
+	var event TransactionUpdatedEvent
+	if err := json.Unmarshal(msg.Data, &event); err != nil {
+		s.logger.Error("failed to unmarshal transaction updated event", "error", err)
+		metrics.RecordNatsMessage(s.updatedTopic, "unmarshal_error", time.Since(start).Seconds())
+		return
+	}
+
+	s.logger.Info("Received transaction updated event", "transaction_id", event.TransactionID)
+
+	if err := s.recalculateHolding(context.Background(), event.UserID, event.AssetSymbol); err != nil {
+		s.logger.Error("failed to recalculate holding after update", "error", err, "user_id", event.UserID, "symbol", event.AssetSymbol)
+		metrics.RecordNatsMessage(s.updatedTopic, "recalc_error", time.Since(start).Seconds())
+		return
+	}
+
+	metrics.RecordNatsMessage(s.updatedTopic, "success", time.Since(start).Seconds())
+}
+
+func (s *NATSSubscriber) handleTransactionDeleted(msg *nats.Msg) {
+	start := time.Now()
+
+	var event TransactionDeletedEvent
+	if err := json.Unmarshal(msg.Data, &event); err != nil {
+		s.logger.Error("failed to unmarshal transaction deleted event", "error", err)
+		metrics.RecordNatsMessage(s.deletedTopic, "unmarshal_error", time.Since(start).Seconds())
+		return
+	}
+
+	s.logger.Info("Received transaction deleted event", "transaction_id", event.TransactionID)
+
+	if err := s.recalculateHolding(context.Background(), event.UserID, event.AssetSymbol); err != nil {
+		s.logger.Error("failed to recalculate holding after delete", "error", err, "user_id", event.UserID, "symbol", event.AssetSymbol)
+		metrics.RecordNatsMessage(s.deletedTopic, "recalc_error", time.Since(start).Seconds())
+		return
+	}
+
+	metrics.RecordNatsMessage(s.deletedTopic, "success", time.Since(start).Seconds())
+}
+
+func (s *NATSSubscriber) recalculateHolding(ctx context.Context, userID, symbol string) error {
+	// 1. Fetch all transactions for this user/symbol
+	// We need to implement pagination properly to get ALL transactions
+	var allTxns []*transactionpb.Transaction
+	pageSize := int32(100)
+	pageToken := ""
+
+	for {
+		resp, err := s.transactionClient.ListTransactions(ctx, &transactionpb.ListTransactionsRequest{
+			UserId: userID,
+			Filter: &transactionpb.TransactionFilter{
+				Symbol: symbol,
+			},
+			PageSize:  pageSize,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to list transactions: %w", err)
+		}
+
+		allTxns = append(allTxns, resp.Transactions...)
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		pageToken = resp.NextPageToken
+	}
+
+	// 2. Re-calculate holding state
+	// Sort transactions by ExecutedAt is handled by ListTransactions but generally good to double check order logic if needed.
+	// Assuming ListTransactions returns roughly ordered or we process them.
+	// Actually, ListTransactions returns descending by default. We need ASCENDING for correct average cost calculation.
+	// Or we just fetch them all and sort them here.
+
+	// Simple sort in-memory
+	// Note: using simple bubble/insertion sort or slice.Sortfunc if strict dependency allowed.
+	// Let's iterate backwards if they are DESC, or just sort properly.
+	// Since we only depend on 'allTxns', let's just sort them.
+	// However, transactionpb.Transaction struct might be large? No, it's just pointers.
+
+	// We will iterate them in reverse if they are DESC.
+	// ListTransactions usually returns newest first.
+	// So iterating from len-1 to 0 gives chronological order.
+
+	var quantity float64
+	var totalCost float64 // Used for average cost calculation
+
+	for i := len(allTxns) - 1; i >= 0; i-- {
+		tx := allTxns[i]
+		switch tx.Type {
+		case "BUY":
+			cost := tx.Quantity * tx.PricePerShare
+			totalCost += cost // Add to total cost basis
+			quantity += tx.Quantity
+		case "SELL":
+			// Reduce quantity.
+			// Average cost remains the same, so we reduce totalCost proportionally to keep AvgCost constant?
+			// AvgCost = TotalCost / Quantity
+			// NewTotalCost = (Quantity - SoldQty) * AvgCost
+			//              = (Quantity - SoldQty) * (TotalCost / Quantity)
+			if quantity > 0 {
+				avgCost := totalCost / quantity
+				quantity -= tx.Quantity
+				if quantity < 0 {
+					quantity = 0
+				}
+				totalCost = quantity * avgCost
+			}
+		case "SPLIT":
+			// Increase quantity, total cost stays same (so avg cost reduces)
+			if quantity > 0 && tx.Quantity > 0 {
+				quantity += tx.Quantity
+			}
+		}
+	}
+
+	avgCost := 0.0
+	if quantity > 0 {
+		avgCost = totalCost / quantity
+	}
+
+	// 3. Update Holding
+	holding, err := s.repo.GetByUserAndSymbol(userID, symbol)
+	if err != nil {
+		// New holding
+		// We need currency.
+		// If we don't have it easily, we can try to fetch it or default to USD.
+		// Since we are recalculating, maybe we can assume the symbol holds the currency metadata?
+		// We'll try to get it from cache/gateway.
+		currency := "USD"
+		if asset, err := s.marketDataGateway.GetAsset(ctx, symbol); err == nil && asset != nil {
+			currency = asset.Currency
+		}
+
+		holding = &domain.Holding{
+			UserID:   userID,
+			Symbol:   symbol,
+			Currency: currency,
+		}
+	}
+
+	holding.Quantity = quantity
+	holding.AverageCost = avgCost
+	holding.LastUpdated = time.Now()
+
+	if err := s.repo.Upsert(holding); err != nil {
+		return fmt.Errorf("failed to upsert recalculated holding: %w", err)
+	}
+
+	s.logger.Info("Recalculated holding",
+		"user_id", userID,
+		"symbol", symbol,
+		"new_quantity", quantity,
+		"new_average_cost", avgCost,
+		"txn_count", len(allTxns),
+	)
+
+	return nil
 }

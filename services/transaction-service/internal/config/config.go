@@ -26,8 +26,10 @@ type Config struct {
 	UserServiceAddr       string `mapstructure:"user_service_addr"`
 	MarketDataServiceAddr string `mapstructure:"marketdata_service_addr"`
 
-	NatsURL          string `mapstructure:"nats_url"`
-	TransactionTopic string `mapstructure:"transaction_topic"`
+	NatsURL                 string `mapstructure:"nats_url"`
+	TransactionTopic        string `mapstructure:"transaction_topic"`
+	TransactionUpdatedTopic string `mapstructure:"transaction_updated_topic"`
+	TransactionDeletedTopic string `mapstructure:"transaction_deleted_topic"`
 }
 
 // LoadConfig loads the configuration from file and environment variables.
@@ -39,6 +41,8 @@ func LoadConfig() Config {
 	viper.SetDefault("log_level", "info")
 	viper.SetDefault("nats_url", "nats://localhost:4222")
 	viper.SetDefault("transaction_topic", "transaction-service.transaction.created")
+	viper.SetDefault("transaction_updated_topic", "transaction-service.transaction.updated")
+	viper.SetDefault("transaction_deleted_topic", "transaction-service.transaction.deleted")
 	viper.SetDefault("user_service_addr", "localhost:50051")
 	viper.SetDefault("marketdata_service_addr", "localhost:50054")
 
@@ -59,20 +63,22 @@ func LoadConfig() Config {
 
 	// 3. Bind to Environment Variables
 	bindKeys := map[string]string{
-		"port":                    "PORT",
-		"http_port":               "HTTP_PORT",
-		"metrics_port":            "METRICS_PORT",
-		"log_level":               "LOG_LEVEL",
-		"db_host":                 "DB_HOST",
-		"db_port":                 "DB_PORT",
-		"db_user":                 "DB_USER",
-		"db_password":             "DB_PASSWORD",
-		"db_name":                 "DB_NAME",
-		"db_sslmode":              "DB_SSLMODE",
-		"user_service_addr":       "USER_SERVICE_ADDR",
-		"marketdata_service_addr": "MARKETDATA_SERVICE_ADDR",
-		"nats_url":                "NATS_URL",
-		"transaction_topic":       "TRANSACTION_TOPIC",
+		"port":                      "PORT",
+		"http_port":                 "HTTP_PORT",
+		"metrics_port":              "METRICS_PORT",
+		"log_level":                 "LOG_LEVEL",
+		"db_host":                   "DB_HOST",
+		"db_port":                   "DB_PORT",
+		"db_user":                   "DB_USER",
+		"db_password":               "DB_PASSWORD",
+		"db_name":                   "DB_NAME",
+		"db_sslmode":                "DB_SSLMODE",
+		"user_service_addr":         "USER_SERVICE_ADDR",
+		"marketdata_service_addr":   "MARKETDATA_SERVICE_ADDR",
+		"nats_url":                  "NATS_URL",
+		"transaction_topic":         "TRANSACTION_TOPIC",
+		"transaction_updated_topic": "TRANSACTION_UPDATED_TOPIC",
+		"transaction_deleted_topic": "TRANSACTION_DELETED_TOPIC",
 	}
 
 	for key, env := range bindKeys {

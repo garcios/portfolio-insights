@@ -135,6 +135,7 @@ All services follow **Clean Architecture** principles (Domain, Usecase, Reposito
 
 - **Market Data Service**:
   - Provides stock price information.
+  - Fetches prices and currency rates from external APIs (e.g., EODHD).
   - **Tech**: Go, gRPC.
 
 ### 5. Infrastructure

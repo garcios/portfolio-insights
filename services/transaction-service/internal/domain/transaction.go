@@ -56,6 +56,8 @@ type MarketDataGateway interface {
 // EventPublisher defines the interface for publishing events.
 type EventPublisher interface {
 	PublishTransactionCreated(ctx context.Context, transaction *Transaction) error
+	PublishTransactionUpdated(ctx context.Context, transaction *Transaction) error
+	PublishTransactionDeleted(ctx context.Context, transaction *Transaction) error
 }
 
 // TransactionUsecase defines the interface for transaction business logic.

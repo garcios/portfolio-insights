@@ -2160,3 +2160,68 @@ Refactored the portfolio history backfill strategy to use a distributed, worker-
 1. **Integration Testing:** Verify end-to-end backfill flow with real services running.
 2. **Performance Tuning:** Monitor memory usage during backfill of large user bases.
 3. **Observability:** Add Prometheus metrics for backfill duration and success rates.
+
+---
+
+## 2025-12-06 - Transaction Lifecycle Events
+
+### Overview
+Enhanced the transaction service to publish NATS events for all transaction lifecycle stages (Create, Update, Delete). This enables other services (like portfolio-service) to react to modifications and deletions of transactions, ensuring data consistency across the distributed system.
+
+### Features Implemented
+
+#### 1. Lifecycle Events
+**Status:** ✅ Complete
+
+**Events Added:**
+- `TransactionUpdated`: Published when a transaction is modified.
+- `TransactionDeleted`: Published when a transaction is removed.
+
+**Implementation Details:**
+- **Service:** `transaction-service`
+- **File:** `internal/infrastructure/nats_publisher.go`
+- **Interface:** Updated `EventPublisher` in `internal/domain/transaction.go`
+- **Usecase:** Updated `UpdateTransaction` and `DeleteTransaction` to trigger these events.
+
+**Configuration:**
+- Added new topic configurations in `config.go`:
+  - `transaction_updated_topic` (default: `transaction-service.transaction.updated`)
+  - `transaction_deleted_topic` (default: `transaction-service.transaction.deleted`)
+
+### Technical Decisions
+
+#### 1. Fetch-Before-Delete
+**Decision:** In `DeleteTransaction`, the transaction is fetched before deletion.
+
+**Rationale:**
+- To provide the full transaction context (UserID, Symbol, etc.) in the `TransactionDeleted` event.
+- Allows downstream services to know exactly what was removed without needing to query a history that might already be gone.
+
+#### 2. Handler Compatibility
+**Decision:** Identify `sql.ErrNoRows` in the usecase layer.
+
+**Rationale:**
+- Maintained compatibility with the existing gRPC handler which checks for `sql.ErrNoRows` to return a 404 NotFound status.
+- Ensured consistent error handling API.
+
+### Portfolio Service Event Subscription
+**Status:** ✅ Complete
+
+**Changes:**
+- **Service:** `portfolio-service`
+- **Component:** `internal/infrastructure/nats_subscriber.go`
+- **Enhancement:** Subscribed to `TransactionUpdated` and `TransactionDeleted` events.
+- **Logic:** Implemented a robust "Recalculate on Event" strategy for updates and deletions:
+  1. Received event triggers recalculation for the specific User + Asset.
+  2. Fetches **all** transactions for that user/asset from `transaction-service`.
+  3. Replays transactions in chronological order to reconstruct the holding state (Quantity, Average Cost).
+  4. Upserts the corrected holding to the database.
+
+**Rationale:**
+- Ensures data consistency even if events arrive out of order (for updates/deletes).
+- Avoids complex "delta" logic when reversing transaction effects.
+- Self-healing: Automatically corrects any drift in holdings whenever a transaction is modified.
+
+**Configuration:**
+- Added environment variables for new topics in `portfolio-service`.
+- Wired up `TransactionServiceClient` in `NATSSubscriber`.

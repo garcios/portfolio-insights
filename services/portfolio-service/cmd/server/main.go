@@ -115,8 +115,21 @@ func main() {
 	// Initialize gRPC Handler
 	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase, historyRepo)
 
+	// Initialize Transaction Service Client
+	transactionConn, err := grpc.NewClient(cfg.TransactionServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		l.Error("failed to connect to transaction service", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := transactionConn.Close(); err != nil {
+			l.Error("failed to close transaction connection", "error", err)
+		}
+	}()
+	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
+
 	// Initialize NATS Subscriber
-	subscriber, err := infrastructure.NewNATSSubscriber(repo, marketDataGateway, assetCache, l, cfg)
+	subscriber, err := infrastructure.NewNATSSubscriber(repo, marketDataGateway, transactionClient, assetCache, l, cfg)
 	if err != nil {
 		l.Error("failed to create NATS subscriber", "error", err)
 		os.Exit(1)
@@ -140,20 +153,6 @@ func main() {
 
 		l.Info("Asset cache warmer started", "interval", warmingInterval.String())
 	}
-
-	// Initialize Transaction Service Client
-	// Initialize Transaction Service Client
-	transactionConn, err := grpc.NewClient(cfg.TransactionServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		l.Error("failed to connect to transaction service", "error", err)
-		os.Exit(1)
-	}
-	defer func() {
-		if err := transactionConn.Close(); err != nil {
-			l.Error("failed to close transaction connection", "error", err)
-		}
-	}()
-	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
 	// Initialize Snapshot Worker
 	snapshotWorker := infrastructure.NewSnapshotWorker(
