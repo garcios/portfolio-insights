@@ -2097,3 +2097,66 @@ Fixed unit tests in `services/marketdata-service` that were failing due to missi
 ### Verification
 - Ran `go test ./internal/... -v` in `services/marketdata-service`.
 - All tests passed successfully.
+
+---
+
+## 2025-12-06 - Portfolio History Backfill Architecture
+
+### Overview
+Refactored the portfolio history backfill strategy to use a distributed, worker-based approach. Implemented robust cross-service communication between Portfolio Service and Transaction Service to automatically determine accurate backfill start dates based on user transaction history.
+
+### Features Implemented
+
+#### 1. Smart Backfill Worker
+**Status:** ✅ Complete
+
+**Components:**
+- **Worker:** `services/portfolio-service/internal/infrastructure/snapshot_worker.go`
+- **Tests:** `services/portfolio-service/internal/infrastructure/snapshot_worker_test.go`
+
+**Capabilities:**
+- **Automated Discovery:** Queries `transaction-service` for each user's oldest transaction to determine precise backfill start date.
+- **Intelligent Skipping:** Skips backfill for users with no transaction history.
+- **Resilience:** Continues processing other users if one fails.
+- **Dual Mode:** Supports both scheduled daily snapshots and on-demand historical backfill.
+
+#### 2. GetOldestTransactionForUser RPC
+**Status:** ✅ Complete
+
+**Service:** Transaction Service
+
+**Implementation:**
+- **Proto:** Added `GetOldestTransactionForUser` to `transaction.proto`
+- **Repository:** Efficient SQL query using `ORDER BY executed_at ASC LIMIT 1`
+- **Use Case:** Pass-through logic with error handling
+- **API:** Exposed via gRPC for internal service consumption
+
+#### 3. Cross-Service Integration
+**Status:** ✅ Complete
+
+**Architecture:**
+- **Client:** Portfolio Service initializes `TransactionServiceClient`
+- **Transport:** gRPC with insecure credentials (internal network)
+- **Configuration:** Added `TRANSACTION_SERVICE_ADDR` (default: `localhost:50053`)
+- **Docker:** Updated `docker-compose.yml` service dependencies
+
+### Technical Refactoring
+
+#### 1. Clean Architecture Alignment
+**Decision:** Moved backfill logic from Handler to Use Case and Infrastructure layers.
+
+**Rationale:**
+- **Separation of Concerns:** Handlers should only deal with request/response parsing.
+- **Testability:** Core business logic is now fully unit testable without HTTP dependencies.
+- **Reusability:** Backfill logic can be triggered by gRPC request (Admin) or background worker (Startup).
+
+#### 2. Linting & Code Quality
+**Actions:**
+- Replaced deprecated `grpc.Dial` with `grpc.NewClient`
+- Added proper error handling for deferred connection closures
+- Fixed all lint warnings across `portfolio-service`
+
+### Next Steps
+1. **Integration Testing:** Verify end-to-end backfill flow with real services running.
+2. **Performance Tuning:** Monitor memory usage during backfill of large user bases.
+3. **Observability:** Add Prometheus metrics for backfill duration and success rates.
