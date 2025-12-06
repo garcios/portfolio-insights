@@ -3,8 +3,8 @@ package infrastructure
 import (
 	"context"
 	"fmt"
-	"os"
 
+	"github.com/garcios/portfolio-insights/services/transaction-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/domain"
 	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
 	"google.golang.org/grpc"
@@ -16,18 +16,12 @@ type userGateway struct {
 }
 
 // NewUserGateway creates a new user gateway.
-func NewUserGateway() (domain.UserGateway, error) {
-	host := os.Getenv("USER_SERVICE_HOST")
-	port := os.Getenv("USER_SERVICE_PORT")
-
-	if host == "" {
-		host = "user-service"
-	}
-	if port == "" {
-		port = "50051"
+func NewUserGateway(cfg config.Config) (domain.UserGateway, error) {
+	target := cfg.UserServiceAddr
+	if target == "" {
+		target = "localhost:50051"
 	}
 
-	target := fmt.Sprintf("%s:%s", host, port)
 	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to user service: %w", err)

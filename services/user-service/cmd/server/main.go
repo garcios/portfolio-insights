@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/pkg/logger"
+	"github.com/garcios/portfolio-insights/services/user-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/metrics"
@@ -20,20 +21,26 @@ import (
 )
 
 func main() {
+	cfg := config.LoadConfig()
+
 	l := logger.New()
 	l.Info("User Service starting...")
 
 	// Start Metrics Server
+	metricsPort := cfg.MetricsPort
+	if metricsPort == "" {
+		metricsPort = "9096"
+	}
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		l.Info("Metrics server listening on :9096")
-		if err := http.ListenAndServe(":9096", nil); err != nil {
+		l.Info("Metrics server listening on :" + metricsPort)
+		if err := http.ListenAndServe(":"+metricsPort, nil); err != nil {
 			l.Error("failed to start metrics server", "error", err)
 		}
 	}()
 
 	// Infrastructure
-	db, err := infrastructure.NewPostgresDB()
+	db, err := infrastructure.NewPostgresDB(cfg)
 	if err != nil {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)
@@ -64,7 +71,7 @@ func main() {
 	// Handler
 	h := grpc.NewUserHandler(uc)
 
-	port := os.Getenv("PORT")
+	port := cfg.Port
 	if port == "" {
 		port = "50051"
 	}

@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/client"
+	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
 )
@@ -36,49 +35,6 @@ func DefaultPriceSyncConfig() PriceSyncConfig {
 	}
 }
 
-// LoadPriceSyncConfigFromEnv loads configuration from environment variables
-func LoadPriceSyncConfigFromEnv() PriceSyncConfig {
-	config := DefaultPriceSyncConfig()
-
-	if val := os.Getenv("PRICE_SYNC_INTERVAL"); val != "" {
-		if d, err := time.ParseDuration(val); err == nil {
-			config.SyncInterval = d
-		}
-	}
-
-	if val := os.Getenv("PRICE_STALE_DURATION"); val != "" {
-		if d, err := time.ParseDuration(val); err == nil {
-			config.StaleDuration = d
-		}
-	}
-
-	if val := os.Getenv("PRICE_SYNC_BATCH_SIZE"); val != "" {
-		if i, err := strconv.Atoi(val); err == nil {
-			config.BatchSize = i
-		}
-	}
-
-	if val := os.Getenv("PRICE_SYNC_MAX_CONCURRENCY"); val != "" {
-		if i, err := strconv.Atoi(val); err == nil {
-			config.MaxConcurrency = i
-		}
-	}
-
-	if val := os.Getenv("PRICE_SYNC_HISTORICAL_DAYS"); val != "" {
-		if i, err := strconv.Atoi(val); err == nil {
-			config.HistoricalDays = i
-		}
-	}
-
-	if val := os.Getenv("EODHD_RATE_LIMIT"); val != "" {
-		if f, err := strconv.ParseFloat(val, 64); err == nil {
-			config.RateLimit = f
-		}
-	}
-
-	return config
-}
-
 // EODHDPriceSyncWorker handles periodic synchronization of prices from EODHD API
 type EODHDPriceSyncWorker struct {
 	repo   domain.MarketDataRepository
@@ -87,25 +43,47 @@ type EODHDPriceSyncWorker struct {
 }
 
 // NewEODHDPriceSyncWorker creates a new price sync worker
-func NewEODHDPriceSyncWorker(repo domain.MarketDataRepository) (*EODHDPriceSyncWorker, error) {
-	apiToken := os.Getenv("EODHD_API_TOKEN")
-	if apiToken == "" {
-		return nil, fmt.Errorf("EODHD_API_TOKEN environment variable is required")
+func NewEODHDPriceSyncWorker(repo domain.MarketDataRepository, cfg config.Config) (*EODHDPriceSyncWorker, error) {
+	if cfg.EodhdApiToken == "" {
+		return nil, fmt.Errorf("EODHD_API_TOKEN configuration is required")
 	}
 
-	baseURL := os.Getenv("EODHD_API_BASE_URL")
-	if baseURL == "" {
-		baseURL = "https://eodhd.com/api"
+	workerConfig := PriceSyncConfig{
+		SyncInterval:   cfg.PriceSyncInterval,
+		StaleDuration:  cfg.PriceStaleDuration,
+		BatchSize:      cfg.PriceSyncBatchSize,
+		MaxConcurrency: cfg.PriceSyncMaxConcurrency,
+		HistoricalDays: cfg.PriceSyncHistoricalDays,
+		RateLimit:      cfg.EodhdRateLimit,
 	}
 
-	config := LoadPriceSyncConfigFromEnv()
+	// Apply defaults if zero values (though Viper should handle defaults in Config, explicit safety is good)
+	defaults := DefaultPriceSyncConfig()
+	if workerConfig.SyncInterval == 0 {
+		workerConfig.SyncInterval = defaults.SyncInterval
+	}
+	if workerConfig.StaleDuration == 0 {
+		workerConfig.StaleDuration = defaults.StaleDuration
+	}
+	if workerConfig.BatchSize == 0 {
+		workerConfig.BatchSize = defaults.BatchSize
+	}
+	if workerConfig.MaxConcurrency == 0 {
+		workerConfig.MaxConcurrency = defaults.MaxConcurrency
+	}
+	if workerConfig.HistoricalDays == 0 {
+		workerConfig.HistoricalDays = defaults.HistoricalDays
+	}
+	if workerConfig.RateLimit == 0 {
+		workerConfig.RateLimit = defaults.RateLimit
+	}
 
-	eodhd := client.NewEODHDClient(baseURL, apiToken, config.RateLimit)
+	eodhd := client.NewEODHDClient(cfg.EodhdApiBaseUrl, cfg.EodhdApiToken, workerConfig.RateLimit)
 
 	return &EODHDPriceSyncWorker{
 		repo:   repo,
 		client: eodhd,
-		config: config,
+		config: workerConfig,
 	}, nil
 }
 
@@ -191,7 +169,7 @@ func (w *EODHDPriceSyncWorker) processBatch(ctx context.Context, assets []*domai
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, w.config.MaxConcurrency)
 
-	results := make(chan syncResult, len(assets))
+	results := make(chan priceSyncResult, len(assets))
 
 	for _, asset := range assets {
 		wg.Add(1)
@@ -227,16 +205,16 @@ func (w *EODHDPriceSyncWorker) processBatch(ctx context.Context, assets []*domai
 	return totalPricesSynced, totalErrors
 }
 
-// syncResult holds the result of syncing a single asset
-type syncResult struct {
+// priceSyncResult holds the result of syncing a single asset
+type priceSyncResult struct {
 	Symbol       string
 	PricesSynced int
 	Error        error
 }
 
 // syncAsset synchronizes prices for a single asset
-func (w *EODHDPriceSyncWorker) syncAsset(ctx context.Context, asset *domain.Asset) syncResult {
-	result := syncResult{
+func (w *EODHDPriceSyncWorker) syncAsset(ctx context.Context, asset *domain.Asset) priceSyncResult {
+	result := priceSyncResult{
 		Symbol: asset.Symbol,
 	}
 

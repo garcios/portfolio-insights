@@ -3,25 +3,22 @@ package infrastructure
 import (
 	"context"
 	"fmt"
-	"os"
 
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 
 // NewRedisClient creates a new Redis client.
-func NewRedisClient() (*redis.Client, error) {
-	redisAddr := os.Getenv("REDIS_ADDR")
+func NewRedisClient(cfg config.Config) (*redis.Client, error) {
+	redisAddr := cfg.RedisAddr
 	if redisAddr == "" {
 		redisAddr = "localhost:6379"
 	}
 
-	redisPassword := os.Getenv("REDIS_PASSWORD")
-	redisDB := 0 // Default DB
-
 	client := redis.NewClient(&redis.Options{
 		Addr:     redisAddr,
-		Password: redisPassword,
-		DB:       redisDB,
+		Password: cfg.RedisPassword,
+		DB:       cfg.RedisDB,
 	})
 
 	// Test connection

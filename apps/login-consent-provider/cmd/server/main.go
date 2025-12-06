@@ -18,7 +18,7 @@ import (
 
 func main() {
 	// Load configuration
-	cfg := config.Load()
+	cfg := config.LoadConfig()
 
 	// Set Gin mode
 	if cfg.LogLevel == "debug" {

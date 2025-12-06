@@ -3,26 +3,19 @@ package infrastructure
 import (
 	"database/sql"
 	"fmt"
-	"os"
 
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	_ "github.com/lib/pq"
 )
 
 // NewPostgresDB creates a new PostgreSQL database connection.
-func NewPostgresDB() (*sql.DB, error) {
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-	sslmode := os.Getenv("DB_SSLMODE")
-
-	if host == "" || port == "" || user == "" || password == "" || dbname == "" || sslmode == "" {
-		return nil, fmt.Errorf("missing required environment variables")
+func NewPostgresDB(cfg config.Config) (*sql.DB, error) {
+	if cfg.DBHost == "" || cfg.DBPort == "" || cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" || cfg.DBSSLMode == "" {
+		return nil, fmt.Errorf("missing required database configuration")
 	}
 
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host, port, user, password, dbname, sslmode)
+		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode)
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {

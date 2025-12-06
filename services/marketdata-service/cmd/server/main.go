@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/pkg/logger"
+	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/config"
 	marketdatahandler "github.com/garcios/portfolio-insights/services/marketdata-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
@@ -24,11 +25,13 @@ import (
 )
 
 func main() {
+	cfg := config.LoadConfig()
+
 	l := logger.New()
 	l.Info("Market Data Service starting...")
 
 	// Connect to Database
-	db, err := infrastructure.NewPostgresDB()
+	db, err := infrastructure.NewPostgresDB(cfg)
 	if err != nil {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)
@@ -60,21 +63,21 @@ func main() {
 	uc := usecase.NewMarketDataUsecase(repo)
 
 	// Initialize Ingestion Worker (Assets)
-	ingestionWorker, err := worker.NewIngestionWorker(repo)
+	ingestionWorker, err := worker.NewIngestionWorker(repo, cfg)
 	if err != nil {
 		l.Error("failed to create ingestion worker", "error", err)
 		os.Exit(1)
 	}
 
 	// Initialize Price Ingestion Worker
-	priceWorker, err := worker.NewPriceIngestionWorker(repo)
+	priceWorker, err := worker.NewPriceIngestionWorker(repo, cfg)
 	if err != nil {
 		l.Error("failed to create price worker", "error", err)
 		os.Exit(1)
 	}
 
 	// Initialize Currency Ingestion Worker
-	currencyWorker, err := worker.NewCurrencyIngestionWorker(repo)
+	currencyWorker, err := worker.NewCurrencyIngestionWorker(repo, cfg)
 	if err != nil {
 		l.Error("failed to create currency worker", "error", err)
 		os.Exit(1)
@@ -90,7 +93,7 @@ func main() {
 	l.Info("Ingestion workers started (assets, prices, currency rates)")
 
 	// Initialize Price Sync Worker
-	priceSyncWorker, err := worker.NewEODHDPriceSyncWorker(repo)
+	priceSyncWorker, err := worker.NewEODHDPriceSyncWorker(repo, cfg)
 	if err != nil {
 		l.Error("failed to create price sync worker", "error", err)
 		os.Exit(1)
@@ -101,7 +104,7 @@ func main() {
 	l.Info("Price sync worker started")
 
 	// Initialize Currency Sync Worker
-	currencySyncWorker, err := worker.NewEODHDCurrencySyncWorker(repo)
+	currencySyncWorker, err := worker.NewEODHDCurrencySyncWorker(repo, cfg)
 	if err != nil {
 		l.Error("failed to create currency sync worker", "error", err)
 		os.Exit(1)
@@ -110,6 +113,11 @@ func main() {
 	l.Info("Currency sync worker started")
 
 	// Start HTTP Server (Metrics + Admin)
+	metricsPort := cfg.MetricsPort
+	if metricsPort == "" {
+		metricsPort = "9099"
+	}
+
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
 
@@ -131,14 +139,19 @@ func main() {
 			_, _ = w.Write([]byte("Currency sync triggered"))
 		})
 
-		l.Info("HTTP server listening on :9099")
-		if err := http.ListenAndServe(":9099", nil); err != nil {
+		l.Info("HTTP server listening on :" + metricsPort)
+		if err := http.ListenAndServe(":"+metricsPort, nil); err != nil {
 			l.Error("failed to start HTTP server", "error", err)
 		}
 	}()
 
 	// Start gRPC Server
-	lis, err := net.Listen("tcp", ":50054")
+	port := cfg.Port
+	if port == "" {
+		port = "50054"
+	}
+
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		l.Error("failed to listen", "error", err)
 		os.Exit(1)
@@ -152,7 +165,7 @@ func main() {
 	pb.RegisterMarketDataServiceServer(grpcServer, handler)
 
 	go func() {
-		l.Info("Market Data Service listening on port 50054")
+		l.Info("Market Data Service listening on port " + port)
 		if err := grpcServer.Serve(lis); err != nil {
 			l.Error("failed to serve gRPC", "error", err)
 			os.Exit(1)

@@ -39,6 +39,7 @@ type TransactionRepository interface {
 	ListByUserID(ctx context.Context, userID string, filter TransactionFilter, limit, offset int) ([]*Transaction, error)
 	Update(ctx context.Context, transaction *Transaction) error
 	Delete(ctx context.Context, id string) error
+	Count() (int, error)
 }
 
 // UserGateway defines the interface for communicating with the user service.

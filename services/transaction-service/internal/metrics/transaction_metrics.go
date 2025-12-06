@@ -7,6 +7,14 @@ import (
 )
 
 var (
+	// TotalTransactions counts the total number of transactions in the system.
+	TotalTransactions = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "total_transactions",
+			Help: "Total number of transactions",
+		},
+	)
+
 	// TransactionsCreatedTotal counts the total number of transactions created.
 	TransactionsCreatedTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{

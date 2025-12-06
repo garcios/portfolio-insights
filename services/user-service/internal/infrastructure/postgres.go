@@ -1,56 +1,30 @@
-// Package infrastructure provides external service implementations and configuration.
 package infrastructure
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
-	"strconv"
 	"time"
 
+	"github.com/garcios/portfolio-insights/services/user-service/internal/config"
 	_ "github.com/lib/pq"
 )
 
-// DBConfig holds the configuration for the database connection.
-type DBConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
-}
-
-// LoadDBConfigFromEnv loads database configuration from environment variables.
-func LoadDBConfigFromEnv() *DBConfig {
-	return &DBConfig{
-		Host:     getEnv("DB_HOST", "localhost"),
-		Port:     getEnv("DB_PORT", "5432"),
-		User:     getEnv("DB_USER", ""),
-		Password: getEnv("DB_PASSWORD", ""),
-		DBName:   getEnv("DB_NAME", "portfolio"),
-		SSLMode:  getEnv("DB_SSLMODE", "disable"),
-	}
-}
-
 // NewPostgresDB creates a new PostgreSQL database connection.
-func NewPostgresDB() (*sql.DB, error) {
-	config := LoadDBConfigFromEnv()
-
-	if config.Host == "" || config.Port == "" || config.User == "" || config.Password == "" || config.DBName == "" || config.SSLMode == "" {
-		return nil, fmt.Errorf("missing required environment variables")
+func NewPostgresDB(cfg config.Config) (*sql.DB, error) {
+	if cfg.DBHost == "" || cfg.DBPort == "" || cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" || cfg.DBSSLMode == "" {
+		return nil, fmt.Errorf("missing required database configuration")
 	}
 
 	// Build connection string
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		config.Host,
-		config.Port,
-		config.User,
-		config.Password,
-		config.DBName,
-		config.SSLMode,
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBName,
+		cfg.DBSSLMode,
 	)
 
 	// Open database connection
@@ -59,10 +33,10 @@ func NewPostgresDB() (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Configure connection pool
-	maxOpenConns := getEnvAsInt("DB_MAX_OPEN_CONNS", 25)
-	maxIdleConns := getEnvAsInt("DB_MAX_IDLE_CONNS", 5)
-	connMaxLifetime := getEnvAsDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute)
+	// Configure connection pool (using defaults or could be added to config)
+	maxOpenConns := 25
+	maxIdleConns := 5
+	connMaxLifetime := 5 * time.Minute
 
 	db.SetMaxOpenConns(maxOpenConns)
 	db.SetMaxIdleConns(maxIdleConns)
@@ -74,40 +48,7 @@ func NewPostgresDB() (*sql.DB, error) {
 	}
 
 	log.Printf("Successfully connected to PostgreSQL database: %s@%s:%s/%s",
-		config.User, config.Host, config.Port, config.DBName)
+		cfg.DBUser, cfg.DBHost, cfg.DBPort, cfg.DBName)
 
 	return db, nil
-}
-
-// Helper functions
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getEnvAsInt(key string, defaultValue int) int {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		return defaultValue
-	}
-	value, err := strconv.Atoi(valueStr)
-	if err != nil {
-		return defaultValue
-	}
-	return value
-}
-
-func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
-	valueStr := os.Getenv(key)
-	if valueStr == "" {
-		return defaultValue
-	}
-	value, err := time.ParseDuration(valueStr)
-	if err != nil {
-		return defaultValue
-	}
-	return value
 }

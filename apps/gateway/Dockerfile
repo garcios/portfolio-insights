@@ -26,6 +26,11 @@ WORKDIR /
 
 COPY --from=builder /server /server
 
+# Copy the config file from the host into the container
+# Source Path (Host): ./configs/dev.yaml
+# Destination Path (Container): /etc/app/config.yaml (Must be the path your Go app expects)
+COPY configs/dev.yaml /etc/app/config.yaml
+
 EXPOSE 8080
 
 CMD ["/server"]

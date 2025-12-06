@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"log/slog"
 
 	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/nats-io/nats.go"
@@ -42,8 +42,8 @@ type NATSSubscriber struct {
 }
 
 // NewNATSSubscriber creates a new NATS subscriber.
-func NewNATSSubscriber(repo domain.HoldingRepository, marketDataGateway *MarketDataGateway, assetCache *AssetCache, l *slog.Logger) (*NATSSubscriber, error) {
-	natsURL := os.Getenv("NATS_URL")
+func NewNATSSubscriber(repo domain.HoldingRepository, marketDataGateway *MarketDataGateway, assetCache *AssetCache, l *slog.Logger, cfg config.Config) (*NATSSubscriber, error) {
+	natsURL := cfg.NatsURL
 	if natsURL == "" {
 		natsURL = "nats://nats:4222"
 	}

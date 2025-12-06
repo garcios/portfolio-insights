@@ -1,0 +1,63 @@
+In all the go services, refactor the codes to use viper for configuration loading.
+
+Required services:
+- apps/gateway
+- apps/login-consent-provider
+- services/marketdata-service
+- services/portfolio-service
+- services/user-service
+- services/transaction-service
+
+
+The config loading pattern should be as follows:
+
+```
+import (
+    "fmt"
+    "log"
+    "github.com/spf13/viper"
+)
+
+func LoadConfig() Config {
+    // 1. Set Defaults (Lowest Precedence)
+    viper.SetDefault("port", 8080)
+    viper.SetDefault("log_level", "info")
+
+    // 2. Load Config File
+    viper.SetConfigName("config") // Name of config file (without extension)
+    viper.SetConfigType("yaml")   // Specify the type (e.g., yaml, json, toml)
+    viper.AddConfigPath(".")      // Search path for the config file in the current directory
+    viper.AddConfigPath("/etc/appname/") // You can add multiple search paths
+
+    err := viper.ReadInConfig() // Find and read the config file
+    if err != nil {
+        // Handle error: Config file is optional for many apps.
+        // We log the error but allow the program to continue with defaults/ENV.
+        if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+            fmt.Println("Warning: config file not found, using defaults and ENV vars.")
+        } else {
+            log.Fatalf("Fatal error reading config file: %s", err)
+        }
+    }
+    
+    // 3. Bind to Environment Variables (Highest Precedence)
+    // This tells viper which ENV vars to check and map.
+    // By convention, ENV vars are often SCREAMING_SNAKE_CASE.
+    viper.BindEnv("port", "PORT")
+    viper.BindEnv("database_url", "DATABASE_URL")
+    
+    // Additionally, you can tell viper to automatically check for environment variables
+    // matching the structure of the keys using a prefix.
+    // Example: APP_PORT, APP_DATABASE_URL
+    viper.SetEnvPrefix("APP") // Environment variables must be prefixed with APP_
+    viper.AutomaticEnv()      // Read in environment variables that match
+    
+    // 4. Unmarshal into Struct
+    var config Config
+    if err := viper.Unmarshal(&config); err != nil {
+        log.Fatalf("Unable to unmarshal config into struct: %s", err)
+    }
+
+    return config
+}
+```

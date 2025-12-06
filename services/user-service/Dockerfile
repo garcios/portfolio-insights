@@ -18,6 +18,11 @@ WORKDIR /
 
 COPY --from=builder /server /server
 
+# Copy the config file from the host into the container
+# Source Path (Host): ./configs/dev.yaml
+# Destination Path (Container): /etc/app/config.yaml
+COPY services/user-service/configs/dev.yaml /etc/app/config.yaml
+
 EXPOSE 50051
 
 CMD ["/server"]

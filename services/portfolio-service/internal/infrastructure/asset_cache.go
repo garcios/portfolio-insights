@@ -5,10 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/redis/go-redis/v9"
 )
@@ -30,15 +30,13 @@ type CachedAsset struct {
 }
 
 // NewAssetCache creates a new asset cache.
-func NewAssetCache(client *redis.Client) *AssetCache {
+func NewAssetCache(client *redis.Client, cfg config.Config) *AssetCache {
 	// Default TTL: 24 hours (assets don't change frequently)
 	ttl := 24 * time.Hour
 
 	// Allow override via environment
-	if ttlStr := os.Getenv("ASSET_CACHE_TTL_SECONDS"); ttlStr != "" {
-		if seconds, err := time.ParseDuration(ttlStr + "s"); err == nil {
-			ttl = seconds
-		}
+	if cfg.AssetCacheTTL > 0 {
+		ttl = time.Duration(cfg.AssetCacheTTL) * time.Second
 	}
 
 	return &AssetCache{

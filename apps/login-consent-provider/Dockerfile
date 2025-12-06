@@ -38,6 +38,11 @@ COPY --from=builder /app/apps/login-consent-provider/login-consent-provider .
 # Copy templates
 COPY --from=builder /app/apps/login-consent-provider/templates ./templates
 
+# Copy the config file from the host into the container
+# Source Path (Host): ./configs/dev.yaml
+# Destination Path (Container): /etc/app/config.yaml
+COPY apps/login-consent-provider/configs/dev.yaml /etc/app/config.yaml
+
 # Expose port
 EXPOSE 3002
 

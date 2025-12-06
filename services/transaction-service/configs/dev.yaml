@@ -1,0 +1,17 @@
+port: "50053"
+http_port: "8081"
+metrics_port: "9097"
+log_level: "debug"
+
+db_host: "postgres"
+db_port: "5432"
+db_user: "postgres"
+db_password: "password"
+db_name: "portfolio"
+db_sslmode: "disable"
+
+user_service_addr: "user-service:50051"
+marketdata_service_addr: "marketdata-service:50054"
+
+nats_url: "nats://nats:4222"
+transaction_topic: "transaction-service.transaction.created"

@@ -3,16 +3,15 @@ package infrastructure
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 )
 
 // MarketDataGateway acts as a gateway to the marketdata service.
@@ -24,8 +23,8 @@ type MarketDataGateway struct {
 }
 
 // NewMarketDataGateway creates a new market data gateway.
-func NewMarketDataGateway(cache *PriceCache, assetCache *AssetCache) (*MarketDataGateway, error) {
-	marketDataAddr := os.Getenv("MARKETDATA_SERVICE_ADDR")
+func NewMarketDataGateway(cache *PriceCache, assetCache *AssetCache, cfg config.Config) (*MarketDataGateway, error) {
+	marketDataAddr := cfg.MarketDataServiceAddr
 	if marketDataAddr == "" {
 		marketDataAddr = "localhost:50054"
 	}

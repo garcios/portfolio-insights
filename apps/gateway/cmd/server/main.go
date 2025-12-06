@@ -12,6 +12,7 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/graph"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/config"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/middleware"
 	"github.com/garcios/portfolio-insights/pkg/logger"
@@ -26,18 +27,16 @@ import (
 const defaultPort = "8080"
 
 func main() {
+	cfg := config.LoadConfig()
+
 	l := logger.New()
-	port := os.Getenv("PORT")
+	port := cfg.Port
 	if port == "" {
 		port = defaultPort
 	}
 
 	// Connect to portfolio service
-	portfolioServiceAddr := os.Getenv("PORTFOLIO_SERVICE_ADDR")
-	if portfolioServiceAddr == "" {
-		portfolioServiceAddr = "localhost:50052"
-	}
-
+	portfolioServiceAddr := cfg.PortfolioServiceAddr
 	portfolioConn, err := grpc.NewClient(portfolioServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		l.Error("Failed to connect to portfolio service", "error", err)
@@ -52,11 +51,7 @@ func main() {
 	portfolioClient := portfoliopb.NewPortfolioServiceClient(portfolioConn)
 
 	// Connect to user service
-	userServiceAddr := os.Getenv("USER_SERVICE_ADDR")
-	if userServiceAddr == "" {
-		userServiceAddr = "localhost:50051"
-	}
-
+	userServiceAddr := cfg.UserServiceAddr
 	userConn, err := grpc.NewClient(userServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		l.Error("Failed to connect to user service", "error", err)
@@ -71,11 +66,7 @@ func main() {
 	userClient := userpb.NewUserServiceClient(userConn)
 
 	// Connect to transaction service
-	transactionServiceAddr := os.Getenv("TRANSACTION_SERVICE_ADDR")
-	if transactionServiceAddr == "" {
-		transactionServiceAddr = "localhost:50053"
-	}
-
+	transactionServiceAddr := cfg.TransactionServiceAddr
 	transactionConn, err := grpc.NewClient(transactionServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		l.Error("Failed to connect to transaction service", "error", err)
@@ -90,10 +81,7 @@ func main() {
 	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
 	// Transaction service HTTP URL
-	transactionServiceHTTPAddr := os.Getenv("TRANSACTION_SERVICE_HTTP_ADDR")
-	if transactionServiceHTTPAddr == "" {
-		transactionServiceHTTPAddr = "http://localhost:8081"
-	}
+	transactionServiceHTTPAddr := cfg.TransactionServiceHTTPAddr
 
 	// Initialize dependency injection container
 	c := container.NewContainer(userClient, portfolioClient, transactionClient, transactionServiceHTTPAddr)
@@ -101,23 +89,20 @@ func main() {
 	// Initialize JWT authentication (optional for development)
 	var authMiddleware func(http.Handler) http.Handler
 
-	hydraPublicURL := os.Getenv("HYDRA_PUBLIC_URL")
+	hydraPublicURL := cfg.HydraPublicURL
 	if hydraPublicURL != "" {
 		// JWT authentication enabled
-		jwksURL := os.Getenv("JWKS_URL")
+		jwksURL := cfg.JWKSURL
 		if jwksURL == "" {
 			jwksURL = hydraPublicURL + "/.well-known/jwks.json"
 		}
 
-		jwtIssuer := os.Getenv("JWT_ISSUER")
+		jwtIssuer := cfg.JWTIssuer
 		if jwtIssuer == "" {
 			jwtIssuer = hydraPublicURL
 		}
 
-		jwtAudience := os.Getenv("JWT_AUDIENCE")
-		if jwtAudience == "" {
-			jwtAudience = "portfolio-insights-spa"
-		}
+		jwtAudience := cfg.JWTAudience
 
 		// Create JWKS fetcher
 		jwksFetcher := auth.NewJWKSFetcher(jwksURL, 1*time.Hour)
@@ -142,15 +127,14 @@ func main() {
 	}
 
 	// Create GraphQL server with clean architecture
-	// Create GraphQL server with clean architecture
-	config := generated.Config{
+	gqlConfig := generated.Config{
 		Resolvers: &graph.Resolver{
 			Container: c,
 		},
 	}
-	config.Directives.Auth = auth.Directive
+	gqlConfig.Directives.Auth = auth.Directive
 
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(config))
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(gqlConfig))
 
 	// CORS middleware
 	corsMiddleware := func(next http.Handler) http.Handler {

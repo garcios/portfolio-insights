@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/client"
+	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
 )
@@ -36,43 +35,6 @@ func DefaultCurrencySyncConfig() CurrencySyncConfig {
 	}
 }
 
-// LoadCurrencySyncConfigFromEnv loads configuration from environment variables
-func LoadCurrencySyncConfigFromEnv() CurrencySyncConfig {
-	config := DefaultCurrencySyncConfig()
-
-	if val := os.Getenv("CURRENCY_SYNC_INTERVAL"); val != "" {
-		if d, err := time.ParseDuration(val); err == nil {
-			config.SyncInterval = d
-		}
-	}
-
-	if val := os.Getenv("CURRENCY_STALE_DURATION"); val != "" {
-		if d, err := time.ParseDuration(val); err == nil {
-			config.StaleDuration = d
-		}
-	}
-
-	if val := os.Getenv("CURRENCY_SYNC_BATCH_SIZE"); val != "" {
-		if i, err := strconv.Atoi(val); err == nil {
-			config.BatchSize = i
-		}
-	}
-
-	if val := os.Getenv("CURRENCY_SYNC_MAX_CONCURRENCY"); val != "" {
-		if i, err := strconv.Atoi(val); err == nil {
-			config.MaxConcurrency = i
-		}
-	}
-
-	if val := os.Getenv("CURRENCY_SYNC_HISTORICAL_DAYS"); val != "" {
-		if i, err := strconv.Atoi(val); err == nil {
-			config.HistoricalDays = i
-		}
-	}
-
-	return config
-}
-
 // EODHDCurrencySyncWorker handles periodic synchronization of currency rates from EODHD API
 type EODHDCurrencySyncWorker struct {
 	repo   domain.MarketDataRepository
@@ -81,26 +43,27 @@ type EODHDCurrencySyncWorker struct {
 }
 
 // NewEODHDCurrencySyncWorker creates a new currency sync worker
-func NewEODHDCurrencySyncWorker(repo domain.MarketDataRepository) (*EODHDCurrencySyncWorker, error) {
-	apiToken := os.Getenv("EODHD_API_TOKEN")
-	if apiToken == "" {
-		return nil, fmt.Errorf("EODHD_API_TOKEN environment variable is required")
+func NewEODHDCurrencySyncWorker(repo domain.MarketDataRepository, cfg config.Config) (*EODHDCurrencySyncWorker, error) {
+	if cfg.EodhdApiToken == "" {
+		return nil, fmt.Errorf("EODHD_API_TOKEN configuration is required")
 	}
 
-	baseURL := os.Getenv("EODHD_API_BASE_URL")
-	if baseURL == "" {
-		baseURL = "https://eodhd.com/api"
+	workerConfig := CurrencySyncConfig{
+		SyncInterval:   cfg.CurrencySyncInterval,
+		StaleDuration:  cfg.CurrencyStaleDuration,
+		BatchSize:      cfg.CurrencySyncBatchSize,
+		MaxConcurrency: cfg.CurrencySyncMaxConcurrency,
+		HistoricalDays: cfg.CurrencySyncHistoricalDays,
+		RateLimit:      1.0,
 	}
-
-	config := LoadCurrencySyncConfigFromEnv()
 
 	// Reuse EODHD client
-	eodhd := client.NewEODHDClient(baseURL, apiToken, config.RateLimit)
+	eodhd := client.NewEODHDClient(cfg.EodhdApiBaseUrl, cfg.EodhdApiToken, workerConfig.RateLimit)
 
 	return &EODHDCurrencySyncWorker{
 		repo:   repo,
 		client: eodhd,
-		config: config,
+		config: workerConfig,
 	}, nil
 }
 
@@ -220,6 +183,13 @@ func (w *EODHDCurrencySyncWorker) processBatch(ctx context.Context, currencies [
 	}
 
 	return totalSynced, totalErrors
+}
+
+// syncResult holds the result of syncing a single item
+type syncResult struct {
+	Symbol       string
+	PricesSynced int
+	Error        error
 }
 
 // syncCurrency synchronizes rates for a single currency

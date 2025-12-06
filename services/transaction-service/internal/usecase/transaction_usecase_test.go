@@ -97,6 +97,9 @@ func (m *MockTransactionRepository) Delete(ctx context.Context, id string) error
 	delete(m.transactions, id)
 	return nil
 }
+func (m *MockTransactionRepository) Count() (int, error) {
+	return len(m.transactions), nil
+}
 
 // MockUserGateway
 type MockUserGateway struct {

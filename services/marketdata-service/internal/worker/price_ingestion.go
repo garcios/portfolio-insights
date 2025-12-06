@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"strconv"
 	"time"
 
+	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
 	"github.com/minio/minio-go/v7"
@@ -24,12 +24,12 @@ type PriceIngestionWorker struct {
 }
 
 // NewPriceIngestionWorker creates a new price ingestion worker.
-func NewPriceIngestionWorker(repo domain.MarketDataRepository) (*PriceIngestionWorker, error) {
-	endpoint := os.Getenv("MINIO_ENDPOINT")
-	accessKeyID := os.Getenv("MINIO_ACCESS_KEY")
-	secretAccessKey := os.Getenv("MINIO_SECRET_KEY")
-	useSSL := os.Getenv("MINIO_USE_SSL") == "true"
-	bucketName := os.Getenv("MINIO_BUCKET_NAME")
+func NewPriceIngestionWorker(repo domain.MarketDataRepository, cfg config.Config) (*PriceIngestionWorker, error) {
+	endpoint := cfg.MinioEndpoint
+	accessKeyID := cfg.MinioAccessKey
+	secretAccessKey := cfg.MinioSecretKey
+	useSSL := cfg.MinioUseSSL
+	bucketName := cfg.MinioBucketName
 
 	if endpoint == "" {
 		endpoint = "localhost:9000"

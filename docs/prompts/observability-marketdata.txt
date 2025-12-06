@@ -1,0 +1,21 @@
+"Design a comprehensive Grafana dashboard named 'Market Data Service Overview'. The dashboard should focus on observability and quick troubleshooting.
+
+Required Panels (SLI/Performance):
+
+Service Latency: P50, P95, and P99 response times, broken down by major API endpoints (e.g., /quote, /history).
+
+Traffic: Total request count (RPS) and active connections.
+
+Error Rate: Panel showing 4xx and 5xx response counts/percentages, clearly segregated.
+
+Required Panels (Resource Health):
+
+CPU/Memory Usage: Utilization percentage for all service instances, with separate graphs for CPU and Memory.
+
+JVM Metrics (if applicable): Heap usage and garbage collection frequency/duration.
+
+Dashboard Features:
+
+Use variables for environment (staging/prod) and instance selection.
+
+Group panels logically using rows."

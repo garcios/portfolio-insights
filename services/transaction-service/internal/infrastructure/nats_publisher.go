@@ -1,20 +1,14 @@
-// Package infrastructure provides external service implementations and configuration.
 package infrastructure
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/garcios/portfolio-insights/services/transaction-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/domain"
 	"github.com/nats-io/nats.go"
-)
-
-const (
-	// TransactionCreatedSubject is the NATS subject for transaction created events.
-	TransactionCreatedSubject = "transaction-service.transaction.created"
 )
 
 // TransactionCreatedEvent represents the event payload for a created transaction.
@@ -29,14 +23,20 @@ type TransactionCreatedEvent struct {
 }
 
 type natsEventPublisher struct {
-	nc *nats.Conn
+	nc    *nats.Conn
+	topic string
 }
 
 // NewNATSEventPublisher creates a new NATS event publisher.
-func NewNATSEventPublisher() (domain.EventPublisher, error) {
-	natsURL := os.Getenv("NATS_URL")
+func NewNATSEventPublisher(cfg config.Config) (domain.EventPublisher, error) {
+	natsURL := cfg.NatsURL
+	topic := cfg.TransactionTopic
+
 	if natsURL == "" {
 		natsURL = "nats://nats:4222"
+	}
+	if topic == "" {
+		topic = "transaction-service.transaction.created"
 	}
 
 	nc, err := nats.Connect(natsURL)
@@ -44,7 +44,7 @@ func NewNATSEventPublisher() (domain.EventPublisher, error) {
 		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
 
-	return &natsEventPublisher{nc: nc}, nil
+	return &natsEventPublisher{nc: nc, topic: topic}, nil
 }
 
 func (p *natsEventPublisher) PublishTransactionCreated(ctx context.Context, transaction *domain.Transaction) error {
@@ -63,7 +63,7 @@ func (p *natsEventPublisher) PublishTransactionCreated(ctx context.Context, tran
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
-	if err := p.nc.Publish(TransactionCreatedSubject, data); err != nil {
+	if err := p.nc.Publish(p.topic, data); err != nil {
 		return fmt.Errorf("failed to publish event: %w", err)
 	}
 

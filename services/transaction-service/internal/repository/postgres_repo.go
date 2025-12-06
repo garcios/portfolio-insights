@@ -1,4 +1,3 @@
-// Package repository implements data access for the transaction service.
 package repository
 
 import (
@@ -265,4 +264,14 @@ func (r *postgresTransactionRepo) Delete(ctx context.Context, id string) error {
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (r *postgresTransactionRepo) Count() (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM txn.transactions`
+	err := r.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }

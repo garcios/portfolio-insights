@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/garcios/portfolio-insights/pkg/logger"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	portfoliohandler "github.com/garcios/portfolio-insights/services/portfolio-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
@@ -22,20 +23,26 @@ import (
 )
 
 func main() {
+	cfg := config.LoadConfig()
+
 	l := logger.New()
 	l.Info("Portfolio Service starting...")
 
 	// Start Metrics Server
+	metricsPort := cfg.MetricsPort
+	if metricsPort == "" {
+		metricsPort = "9098"
+	}
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		l.Info("Metrics server listening on :9098")
-		if err := http.ListenAndServe(":9098", nil); err != nil {
+		l.Info("Metrics server listening on :" + metricsPort)
+		if err := http.ListenAndServe(":"+metricsPort, nil); err != nil {
 			l.Error("failed to start metrics server", "error", err)
 		}
 	}()
 
 	// Connect to Database
-	db, err := infrastructure.NewPostgresDB()
+	db, err := infrastructure.NewPostgresDB(cfg)
 	if err != nil {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)
@@ -49,7 +56,7 @@ func main() {
 	l.Info("Successfully connected to PostgreSQL database")
 
 	// Connect to Redis
-	redisClient, err := infrastructure.NewRedisClient()
+	redisClient, err := infrastructure.NewRedisClient(cfg)
 	if err != nil {
 		l.Warn("failed to connect to Redis, caching will be disabled", "error", err)
 		redisClient = nil
@@ -67,7 +74,7 @@ func main() {
 	// Initialize Asset Cache
 	var assetCache *infrastructure.AssetCache
 	if redisClient != nil {
-		assetCache = infrastructure.NewAssetCache(redisClient)
+		assetCache = infrastructure.NewAssetCache(redisClient, cfg)
 		l.Info("Asset caching enabled")
 	}
 
@@ -88,7 +95,7 @@ func main() {
 	}()
 
 	// Initialize MarketData Gateway with cache
-	marketDataGateway, err := infrastructure.NewMarketDataGateway(priceCache, assetCache)
+	marketDataGateway, err := infrastructure.NewMarketDataGateway(priceCache, assetCache, cfg)
 	if err != nil {
 		l.Error("failed to create marketdata gateway", "error", err)
 		os.Exit(1)
@@ -106,7 +113,7 @@ func main() {
 	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase, historyRepo)
 
 	// Initialize NATS Subscriber
-	subscriber, err := infrastructure.NewNATSSubscriber(repo, marketDataGateway, assetCache, l)
+	subscriber, err := infrastructure.NewNATSSubscriber(repo, marketDataGateway, assetCache, l, cfg)
 	if err != nil {
 		l.Error("failed to create NATS subscriber", "error", err)
 		os.Exit(1)
@@ -132,7 +139,7 @@ func main() {
 	}
 
 	// Start gRPC Server
-	port := os.Getenv("PORT")
+	port := cfg.Port
 	if port == "" {
 		port = "50052"
 	}

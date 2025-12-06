@@ -1,0 +1,20 @@
+port: "50052"
+metrics_port: "9098"
+log_level: "debug"
+
+db_host: "postgres"
+db_port: "5432"
+db_user: "postgres"
+db_password: "password"
+db_name: "portfolio"
+db_sslmode: "disable"
+
+redis_addr: "redis:6379"
+redis_password: ""
+redis_db: 0
+
+nats_url: "nats://nats:4222"
+
+exchange_rate_topic: "marketdata.exchange_rates"
+marketdata_service_addr: "marketdata-service:50054"
+asset_cache_ttl_seconds: 86400
