@@ -89,6 +89,7 @@ services:
       - PRICE_CACHE_TTL_SECONDS=60
       - MARKETDATA_SERVICE_ADDR=marketdata-service:50054
       - ADMIN_TOKEN=secret
+      - SNAPSHOT_INTERVAL=5m
     depends_on:
       - postgres
       - nats

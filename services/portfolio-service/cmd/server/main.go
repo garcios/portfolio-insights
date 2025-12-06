@@ -138,6 +138,15 @@ func main() {
 		l.Info("Asset cache warmer started", "interval", warmingInterval.String())
 	}
 
+	// Initialize Snapshot Worker
+	snapshotWorker := infrastructure.NewSnapshotWorker(
+		portfolioUsecase,
+		historyRepo,
+		l,
+	)
+	go snapshotWorker.Start()
+	defer snapshotWorker.Stop()
+
 	// Start gRPC Server
 	port := cfg.Port
 	if port == "" {
