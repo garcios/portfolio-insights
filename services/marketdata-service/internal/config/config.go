@@ -61,7 +61,6 @@ func LoadConfig() Config {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("/etc/app/")
-	viper.AddConfigPath("/etc/portfolio-insights/marketdata-service/")
 
 	err := viper.ReadInConfig()
 	if err != nil {

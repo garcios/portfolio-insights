@@ -32,7 +32,6 @@ func LoadConfig() Config {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("/etc/app/")
-	viper.AddConfigPath("/etc/portfolio-insights/user-service/")
 
 	err := viper.ReadInConfig()
 	if err != nil {

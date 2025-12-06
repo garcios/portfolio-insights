@@ -9,28 +9,28 @@ run-user:
 run-portfolio:
 	cd services/portfolio-service && go run cmd/server/main.go
 
-podman-up:
-	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up --build
+services-up:
+	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build
 
-podman-down:
+services-down:
 	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml down
 
-podman-logs:
+services-logs:
 	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml logs -f
 
-podman-build-gateway:
+build-gateway:
 	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build gateway
 
-podman-build-user-service:
+build-user-service:
 	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build user-service
 
-podman-build-portfolio-service:
+build-portfolio-service:
 	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build portfolio-service
 
-podman-build-transaction-service:
+build-transaction-service:
 	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build transaction-service
 
-podman-build-marketdata-service:
+build-marketdata-service:
 	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build marketdata-service
 
 monitoring-up:
@@ -114,7 +114,7 @@ lint:
 	cd apps/login-consent-provider && golangci-lint run ./...
 	cd apps/gateway && golangci-lint run ./...
 
-podman-prune:
+prune:
 	podman system prune -a --volumes
 
 tidy-all:	

@@ -18,7 +18,7 @@ type Config struct {
 
 func LoadConfig() Config {
 	// 1. Set Defaults
-	viper.SetDefault("port", "3001")
+	viper.SetDefault("port", "3002")
 	viper.SetDefault("hydra_admin_url", "http://localhost:4445")
 	viper.SetDefault("user_service_addr", "localhost:50051")
 	viper.SetDefault("session_secret", "change-this-secret")
@@ -29,7 +29,6 @@ func LoadConfig() Config {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("/etc/app/")
-	viper.AddConfigPath("/etc/portfolio-insights/login-consent-provider/")
 
 	err := viper.ReadInConfig()
 	if err != nil {
