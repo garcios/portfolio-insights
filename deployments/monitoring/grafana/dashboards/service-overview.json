@@ -30,7 +30,7 @@
                 "x": 0,
                 "y": 0
             },
-            "id": 20,
+            "id": 1,
             "panels": [],
             "title": "SLI / Performance",
             "type": "row"
@@ -91,113 +91,8 @@
             },
             "gridPos": {
                 "h": 8,
-                "w": 12,
+                "w": 8,
                 "x": 0,
-                "y": 1
-            },
-            "id": 1,
-            "options": {
-                "legend": {
-                    "calcs": [],
-                    "displayMode": "list",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "mode": "single",
-                    "sort": "none"
-                }
-            },
-            "targets": [
-                {
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "prometheus"
-                    },
-                    "expr": "histogram_quantile(0.99, rate(marketdata_grpc_request_duration_seconds_bucket[5m]))",
-                    "legendFormat": "P99 {{method}}",
-                    "refId": "A"
-                },
-                {
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "prometheus"
-                    },
-                    "expr": "histogram_quantile(0.95, rate(marketdata_grpc_request_duration_seconds_bucket[5m]))",
-                    "legendFormat": "P95 {{method}}",
-                    "refId": "B"
-                },
-                {
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "prometheus"
-                    },
-                    "expr": "histogram_quantile(0.50, rate(marketdata_grpc_request_duration_seconds_bucket[5m]))",
-                    "legendFormat": "P50 {{method}}",
-                    "refId": "C"
-                }
-            ],
-            "title": "Service Latency (P50, P95, P99)",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "drawStyle": "line",
-                        "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "lineInterpolation": "linear",
-                        "lineWidth": 1,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            }
-                        ]
-                    },
-                    "unit": "reqps"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 12,
-                "x": 12,
                 "y": 1
             },
             "id": 2,
@@ -219,12 +114,30 @@
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "expr": "sum by (method) (rate(marketdata_grpc_requests_total[5m]))",
-                    "legendFormat": "{{method}}",
+                    "expr": "histogram_quantile(0.99, sum by (le) (rate({__name__=~\".*(grpc|http)_request_duration_seconds_bucket\", job=\"$job\"}[5m])))",
+                    "legendFormat": "P99",
                     "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "histogram_quantile(0.95, sum by (le) (rate({__name__=~\".*(grpc|http)_request_duration_seconds_bucket\", job=\"$job\"}[5m])))",
+                    "legendFormat": "P95",
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "histogram_quantile(0.50, sum by (le) (rate({__name__=~\".*(grpc|http)_request_duration_seconds_bucket\", job=\"$job\"}[5m])))",
+                    "legendFormat": "P50",
+                    "refId": "C"
                 }
             ],
-            "title": "Traffic (RPS)",
+            "title": "Service Latency",
             "type": "timeseries"
         },
         {
@@ -284,8 +197,8 @@
             "gridPos": {
                 "h": 8,
                 "w": 8,
-                "x": 0,
-                "y": 9
+                "x": 8,
+                "y": 1
             },
             "id": 3,
             "options": {
@@ -306,95 +219,8 @@
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "expr": "sum by (status) (rate(marketdata_grpc_requests_total{status!=\"OK\"}[5m]))",
-                    "legendFormat": "{{status}}",
-                    "refId": "A"
-                }
-            ],
-            "title": "Error Rate (RPS)",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "drawStyle": "line",
-                        "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "lineInterpolation": "linear",
-                        "lineWidth": 1,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "never",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            }
-                        ]
-                    },
-                    "unit": "short"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 8,
-                "x": 8,
-                "y": 9
-            },
-            "id": 4,
-            "options": {
-                "legend": {
-                    "calcs": [],
-                    "displayMode": "list",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "mode": "single",
-                    "sort": "none"
-                }
-            },
-            "targets": [
-                {
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "prometheus"
-                    },
-                    "expr": "rate(marketdata_prices_ingested_total[5m])",
-                    "legendFormat": "Prices Ingested",
+                    "expr": "sum(rate({__name__=~\".*(grpc|http)_requests_total\", job=\"$job\"}[5m]))",
+                    "legendFormat": "Total RPS",
                     "refId": "A"
                 },
                 {
@@ -402,12 +228,12 @@
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "expr": "rate(marketdata_currencies_ingested_total[5m])",
-                    "legendFormat": "Currencies Ingested",
+                    "expr": "sum({__name__=~\".*in_flight_requests\", job=\"$job\"})",
+                    "legendFormat": "Active Connections",
                     "refId": "B"
                 }
             ],
-            "title": "Ingestion Rate (Records/s)",
+            "title": "Traffic Overview",
             "type": "timeseries"
         },
         {
@@ -468,6 +294,102 @@
                 "h": 8,
                 "w": 8,
                 "x": 16,
+                "y": 1
+            },
+            "id": 4,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate({__name__=~\".*(grpc|http)_requests_total\", status=~\"4..|InvalidArgument|NotFound|AlreadyExists|PermissionDenied|Unauthenticated|FailedPrecondition|OutOfRange|Unimplemented\", job=\"$job\"}[5m]))",
+                    "legendFormat": "4xx Errors",
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(rate({__name__=~\".*(grpc|http)_requests_total\", status=~\"5..|Internal|Unknown|DataLoss|Unavailable|DeadlineExceeded|Aborted|ResourceExhausted|Canceled\", job=\"$job\"}[5m]))",
+                    "legendFormat": "5xx Errors",
+                    "refId": "B"
+                }
+            ],
+            "title": "Error Rate",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "reqps"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
                 "y": 9
             },
             "id": 5,
@@ -489,21 +411,99 @@
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "expr": "sum(marketdata_total_assets)",
-                    "legendFormat": "Total Assets",
+                    "expr": "sum by (method, handler, path) (rate({__name__=~\".*(grpc|http)_requests_total\", job=\"$job\"}[5m]))",
+                    "legendFormat": "{{method}} {{handler}} {{path}}",
                     "refId": "A"
+                }
+            ],
+            "title": "Inbound Traffic (Breakdown)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "reqps"
                 },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 9
+            },
+            "id": 6,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
                 {
                     "datasource": {
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "expr": "sum(marketdata_total_prices)",
-                    "legendFormat": "Total Prices",
-                    "refId": "B"
+                    "expr": "sum by (method, target_service, source) (rate({__name__=~\".*client_requests_total|.*marketdata_requests_total\", job=\"$job\"}[5m]))",
+                    "legendFormat": "{{method}} {{target_service}} {{source}}",
+                    "refId": "A"
                 }
             ],
-            "title": "Total Data Volume",
+            "title": "Outbound Traffic",
             "type": "timeseries"
         },
         {
@@ -514,9 +514,9 @@
                 "x": 0,
                 "y": 17
             },
-            "id": 21,
+            "id": 7,
             "panels": [],
-            "title": "Resource Health",
+            "title": "Resource & Component Health",
             "type": "row"
         },
         {
@@ -579,7 +579,7 @@
                 "x": 0,
                 "y": 18
             },
-            "id": 6,
+            "id": 8,
             "options": {
                 "legend": {
                     "calcs": [],
@@ -598,7 +598,7 @@
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "expr": "rate(process_cpu_seconds_total{job=\"marketdata-service\"}[5m]) * 100",
+                    "expr": "rate(process_cpu_seconds_total{job=\"$job\"}[5m]) * 100",
                     "legendFormat": "CPU Usage",
                     "refId": "A"
                 }
@@ -666,7 +666,7 @@
                 "x": 12,
                 "y": 18
             },
-            "id": 7,
+            "id": 9,
             "options": {
                 "legend": {
                     "calcs": [],
@@ -685,26 +685,13 @@
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "expr": "process_resident_memory_bytes{job=\"marketdata-service\"}",
+                    "expr": "process_resident_memory_bytes{job=\"$job\"}",
                     "legendFormat": "Memory Usage",
                     "refId": "A"
                 }
             ],
             "title": "Memory Usage",
             "type": "timeseries"
-        },
-        {
-            "collapsed": false,
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 26
-            },
-            "id": 22,
-            "panels": [],
-            "title": "Database Health",
-            "type": "row"
         },
         {
             "datasource": {
@@ -764,9 +751,9 @@
                 "h": 8,
                 "w": 12,
                 "x": 0,
-                "y": 27
+                "y": 26
             },
-            "id": 8,
+            "id": 10,
             "options": {
                 "legend": {
                     "calcs": [],
@@ -785,8 +772,8 @@
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "expr": "rate(marketdata_database_queries_total[5m])",
-                    "legendFormat": "{{operation}} {{table}}",
+                    "expr": "sum(rate({__name__=~\".*database_queries_total\", job=\"$job\"}[5m]))",
+                    "legendFormat": "DB Ops",
                     "refId": "A"
                 }
             ],
@@ -851,9 +838,9 @@
                 "h": 8,
                 "w": 12,
                 "x": 12,
-                "y": 27
+                "y": 26
             },
-            "id": 9,
+            "id": 11,
             "options": {
                 "legend": {
                     "calcs": [],
@@ -872,8 +859,8 @@
                         "type": "prometheus",
                         "uid": "prometheus"
                     },
-                    "expr": "histogram_quantile(0.95, rate(marketdata_database_query_duration_seconds_bucket[5m]))",
-                    "legendFormat": "P95 {{operation}} {{table}}",
+                    "expr": "histogram_quantile(0.95, sum by (le) (rate({__name__=~\".*database_query_duration_seconds_bucket\", job=\"$job\"}[5m])))",
+                    "legendFormat": "DB Latency P95",
                     "refId": "A"
                 }
             ],
@@ -885,16 +872,12 @@
     "schemaVersion": 38,
     "style": "dark",
     "tags": [
-        "marketdata"
+        "service-overview"
     ],
     "templating": {
         "list": [
             {
-                "current": {
-                    "selected": false,
-                    "text": "marketdata-service",
-                    "value": "marketdata-service"
-                },
+                "current": {},
                 "hide": 0,
                 "includeAll": false,
                 "label": "Job",
@@ -905,7 +888,7 @@
                 "refresh": 1,
                 "regex": "",
                 "skipUrlSync": false,
-                "sort": 0,
+                "sort": 1,
                 "type": "query"
             }
         ]
@@ -916,8 +899,8 @@
     },
     "timepicker": {},
     "timezone": "",
-    "title": "Market Data Service Overview",
-    "uid": "marketdata-service-overview",
+    "title": "Service Overview",
+    "uid": "service-overview",
     "version": 1,
     "weekStart": ""
 }

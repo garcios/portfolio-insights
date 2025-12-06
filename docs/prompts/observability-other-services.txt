@@ -1,0 +1,34 @@
+Goal
+Action: Extend the existing observability and quick troubleshooting capabilities defined in marketdata-service-dashboard.json to cover all other microservices in the environment.
+
+
+Scope of Services
+Target Services (in addition to existing):
+
+- login-consent-provider
+- gateway
+- user-service
+- transaction-service
+- portfolio-service
+- prometheus
+
+
+General Requirements
+- Dashboard Name: Rename the final dashboard to 'Service Overview'.
+
+- Job Selection: Retain and utilize the existing Grafana dropdown variable (or create a new one, if necessary) named Job (service name) to select the specific service being viewed. The dashboard panels must dynamically update based on this selection.
+
+
+Panel Specifications (SLI/Performance)
+
+Panel Name,Metrics/Description,Details/Breakdown
+
+Service Latency,Time-series graphs for key response time percentiles.,"Must show P50, P95, and P99 response times. Break down the graphs by major API endpoints (e.g., /GetAsset, /ListAssets)."
+Traffic Overview,Total client requests per second and active connections.,Total Request Count (RPS): Time-series graph. Active Connections: Time-series graph.
+Error Rate,Response error counts and percentage.,"Segregated: Panel must clearly show and distinguish between 4xx errors (client errors) and 5xx errors (server errors), both in raw count and as a percentage of total traffic."
+Inbound Traffic,Total request count (RPS) and active connections received by the service.,Time-series graphs. Use a clear legend to differentiate metrics.
+Outbound Traffic,Total request count (RPS) and active connections initiated by the service to other dependencies.,Time-series graphs. Use a clear legend to differentiate metrics.
+
+Dashboard Features
+Layout: Group panels logically using Grafana Rows, adhering to the sections defined above (Performance & SLIs and Resource & Component Health).
+
