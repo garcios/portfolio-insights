@@ -6,81 +6,134 @@ option go_package = "github.com/garcios/portfolio-insights/services/portfolio-se
 
 import "google/protobuf/timestamp.proto";
 
+// PortfolioService handles portfolio calculations, summaries, and performance tracking.
 service PortfolioService {
+  // GetPortfolioSummary retrieves the overall summary of a user's portfolio, including total value and gain/loss.
   rpc GetPortfolioSummary(GetPortfolioSummaryRequest) returns (GetPortfolioSummaryResponse);
+  
+  // GetPortfolioPerformance retrieves historical performance data for charting and analysis over a specified period.
   rpc GetPortfolioPerformance(GetPortfolioPerformanceRequest) returns (GetPortfolioPerformanceResponse);
+  
+  // GetHoldings retrieves the list of current holdings in the user's portfolio.
   rpc GetHoldings(GetHoldingsRequest) returns (GetHoldingsResponse);
   
-  // Admin endpoint for backfilling portfolio history
+  // BackfillHistory triggers a recalculation of historical portfolio snapshots.
+  // This is an administrative endpoint used to populate or correct historical data.
   rpc BackfillHistory(BackfillHistoryRequest) returns (BackfillHistoryResponse);
 }
 
+// PortfolioSummary represents the high-level status of a user's portfolio.
 message PortfolioSummary {
+  // The ID of the user who owns the portfolio.
   string user_id = 1;
+  // The total current value of the portfolio.
   double total_value = 2;
+  // The total absolute gain or loss.
   double total_gain_loss = 3;
+  // The total gain or loss as a percentage.
   double total_gain_loss_percentage = 4;
+  // The currency code for the values (e.g., "USD").
   string currency = 5;
+  // The timestamp when this summary was last calculated.
   google.protobuf.Timestamp last_updated = 6;
+  // The absolute change in value over the last day.
   double day_change = 7;
+  // The percentage change in value over the last day.
   double day_change_percentage = 8;
 }
 
+// Holding represents a single asset held in the portfolio.
 message Holding {
+  // The symbol of the held asset (e.g., "AAPL").
   string symbol = 1;
+  // The quantity held.
   double quantity = 2;
+  // The average purchase price per unit.
   double average_price = 3;
+  // The current market price per unit.
   double current_price = 4;
+  // The total current value of this holding.
   double current_value = 5;
+  // The absolute gain or loss for this holding.
   double gain_loss = 6;
+  // The gain or loss as a percentage.
   double gain_loss_percentage = 7;
+  // The currency code for the prices (e.g., "USD").
   string currency = 8;
+  // The descriptive name of the asset.
   string asset_name = 9;
 }
 
+// GetPortfolioSummaryRequest is the request message for GetPortfolioSummary.
 message GetPortfolioSummaryRequest {
+  // The ID of the user.
   string user_id = 1;
 }
 
+// GetPortfolioSummaryResponse is the response message for GetPortfolioSummary.
 message GetPortfolioSummaryResponse {
+  // The computed portfolio summary.
   PortfolioSummary summary = 1;
 }
 
+// GetPortfolioPerformanceRequest is the request message for GetPortfolioPerformance.
 message GetPortfolioPerformanceRequest {
+  // The ID of the user.
   string user_id = 1;
-  string period = 2; // e.g., "1d", "1w", "1m", "1y", "all"
+  // The time period for the performance data (e.g., "1d", "1w", "1m", "1y", "all").
+  string period = 2;
 }
 
+// PortfolioPerformancePoint represents the portfolio value at a specific point in time.
 message PortfolioPerformancePoint {
+  // The timestamp of the data point.
   google.protobuf.Timestamp timestamp = 1;
+  // The portfolio value at that timestamp.
   double value = 2;
 }
 
+// GetPortfolioPerformanceResponse is the response message for GetPortfolioPerformance.
 message GetPortfolioPerformanceResponse {
+  // The list of performance data points, ordered by time.
   repeated PortfolioPerformancePoint data_points = 1;
 }
 
+// GetHoldingsRequest is the request message for GetHoldings.
 message GetHoldingsRequest {
+  // The ID of the user.
   string user_id = 1;
 }
 
+// GetHoldingsResponse is the response message for GetHoldings.
 message GetHoldingsResponse {
+  // A list of current holdings.
   repeated Holding holdings = 1;
 }
 
-// Backfill History Messages
+// BackfillHistoryRequest is the request message for BackfillHistory.
 message BackfillHistoryRequest {
-  string user_id = 1;           // Empty = all users
-  string start_date = 2;        // YYYY-MM-DD format
-  string end_date = 3;          // YYYY-MM-DD format (optional, defaults to today)
-  bool dry_run = 4;             // Preview without writing
-  string admin_token = 5;       // Authentication token
+  // The user ID to backfill for. If empty, backfills for all users.
+  string user_id = 1;           
+  // The start date for the backfill in YYYY-MM-DD format.
+  string start_date = 2;        
+  // The end date for the backfill in YYYY-MM-DD format (optional, defaults to today).
+  string end_date = 3;          
+  // If true, performs a preview without writing changes to the database.
+  bool dry_run = 4;             
+  // Authentication token for admin access.
+  string admin_token = 5;       
 }
 
+// BackfillHistoryResponse is the response message for BackfillHistory.
 message BackfillHistoryResponse {
+  // The number of historical snapshots successfully created.
   int32 snapshots_created = 1;
+  // The number of snapshots skipped (e.g., already exist or no data).
   int32 snapshots_skipped = 2;
+  // The number of errors encountered during the process.
   int32 errors = 3;
+  // A list of error messages describing any failures.
   repeated string error_messages = 4;
-  string status = 5;            // "success", "partial", "failed"
+  // The overall status of the operation ("success", "partial", "failed").
+  string status = 5;            
 }

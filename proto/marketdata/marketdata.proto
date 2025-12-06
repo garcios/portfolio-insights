@@ -6,102 +6,171 @@ option go_package = "github.com/garcios/portfolio-insights/services/marketdata-s
 
 import "google/protobuf/timestamp.proto";
 
+// MarketDataService provides methods to access market data such as asset details, prices, and currency rates.
 service MarketDataService {
+  // GetAsset retrieves detailed information about a specific asset by its symbol.
   rpc GetAsset(GetAssetRequest) returns (GetAssetResponse);
+  
+  // ListAssets returns a paginated list of available assets.
   rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse);
+  
+  // GetLatestPrice retrieves the latest price for a specific asset.
   rpc GetLatestPrice(GetLatestPriceRequest) returns (GetLatestPriceResponse);
+  
+  // GetLatestPrices retrieves the latest prices for a list of assets in a single batch call.
   rpc GetLatestPrices(GetLatestPricesRequest) returns (GetLatestPricesResponse);
+  
+  // GetHistoricalPrices retrieves historical price data for a specific asset within a time range.
   rpc GetHistoricalPrices(GetHistoricalPricesRequest) returns (GetHistoricalPricesResponse);
+  
+  // GetLatestCurrencyRate retrieves the latest exchange rate between two currencies.
   rpc GetLatestCurrencyRate(GetLatestCurrencyRateRequest) returns (GetLatestCurrencyRateResponse);
+  
+  // GetHistoricalCurrencyRates retrieves historical exchange rates between two currencies within a time range.
   rpc GetHistoricalCurrencyRates(GetHistoricalCurrencyRatesRequest) returns (GetHistoricalCurrencyRatesResponse);
 }
 
+// Asset represents a financial instrument or entity.
 message Asset {
+  // Unique identifier for the asset.
   string id = 1;
+  // The symbol/ticker of the asset (e.g., "AAPL", "BTC-USD").
   string symbol = 2;
+  // The full name of the asset.
   string name = 3;
+  // The type of asset (e.g., "EQUITY", "CRYPTOCURRENCY").
   string type = 4;
+  // The exchange where the asset is traded.
   string exchange = 5;
+  // The currency in which the asset is quoted.
   string currency = 6;
 }
 
+// AssetPrice represents the price of an asset at a specific point in time.
 message AssetPrice {
+  // The ID of the asset.
   string asset_id = 1;
+  // The price value.
   double price = 2;
+  // The timestamp when the price was recorded.
   google.protobuf.Timestamp timestamp = 3;
 }
 
+// GetAssetRequest is the request message for GetAsset.
 message GetAssetRequest {
+  // The symbol of the asset to retrieve.
   string symbol = 1;
 }
 
+// GetAssetResponse is the response message for GetAsset.
 message GetAssetResponse {
+  // The requested asset details.
   Asset asset = 1;
 }
 
+// ListAssetsRequest is the request message for ListAssets.
 message ListAssetsRequest {
+  // The maximum number of assets to return.
   int32 page_size = 1;
+  // The token for the next page of results (from a previous response).
   string page_token = 2;
 }
 
+// ListAssetsResponse is the response message for ListAssets.
 message ListAssetsResponse {
+  // The list of assets.
   repeated Asset assets = 1;
+  // The token to retrieve the next page of results.
   string next_page_token = 2;
 }
 
+// GetLatestPriceRequest is the request message for GetLatestPrice.
 message GetLatestPriceRequest {
+  // The symbol of the asset.
   string symbol = 1;
 }
 
+// GetLatestPriceResponse is the response message for GetLatestPrice.
 message GetLatestPriceResponse {
+  // The latest price of the asset.
   AssetPrice price = 1;
 }
 
+// GetLatestPricesRequest is the request message for GetLatestPrices.
 message GetLatestPricesRequest {
+  // A list of asset symbols to retrieve prices for.
   repeated string symbols = 1;
 }
 
+// GetLatestPricesResponse is the response message for GetLatestPrices.
 message GetLatestPricesResponse {
+  // A map of asset symbols to their latest prices.
   map<string, AssetPrice> prices = 1;
 }
 
+// GetHistoricalPricesRequest is the request message for GetHistoricalPrices.
 message GetHistoricalPricesRequest {
+  // The symbol of the asset.
   string symbol = 1;
+  // The start time of the historical range.
   google.protobuf.Timestamp start_time = 2;
+  // The end time of the historical range.
   google.protobuf.Timestamp end_time = 3;
-  string interval = 4; // e.g., "1d", "1h"
+  // The interval for the data points (e.g., "1d", "1h").
+  string interval = 4; 
 }
 
+// GetHistoricalPricesResponse is the response message for GetHistoricalPrices.
 message GetHistoricalPricesResponse {
+  // The list of historical prices.
   repeated AssetPrice prices = 1;
 }
 
+// CurrencyRate represents an exchange rate between two currencies.
 message CurrencyRate {
+  // Unique identifier for the currency rate record.
   string id = 1;
+  // The base currency code (e.g., "USD").
   string base_currency = 2;
+  // The target currency code (e.g., "EUR").
   string target_currency = 3;
+  // The exchange rate (1 Base = Rate Target).
   double rate = 4;
+  // The date/time for which this rate is valid.
   google.protobuf.Timestamp rate_date = 5;
+  // The timestamp when this record was created.
   google.protobuf.Timestamp created_at = 6;
 }
 
+// GetLatestCurrencyRateRequest is the request message for GetLatestCurrencyRate.
 message GetLatestCurrencyRateRequest {
+  // The base currency code.
   string base_currency = 1;
+  // The target currency code.
   string target_currency = 2;
 }
 
+// GetLatestCurrencyRateResponse is the response message for GetLatestCurrencyRate.
 message GetLatestCurrencyRateResponse {
+  // The latest currency rate.
   CurrencyRate currency_rate = 1;
 }
 
+// GetHistoricalCurrencyRatesRequest is the request message for GetHistoricalCurrencyRates.
 message GetHistoricalCurrencyRatesRequest {
+  // The base currency code.
   string base_currency = 1;
+  // The target currency code.
   string target_currency = 2;
+  // The start time of the historical range.
   google.protobuf.Timestamp start_time = 3;
+  // The end time of the historical range.
   google.protobuf.Timestamp end_time = 4;
 }
 
+// GetHistoricalCurrencyRatesResponse is the response message for GetHistoricalCurrencyRates.
 message GetHistoricalCurrencyRatesResponse {
+  // The list of historical currency rates.
   repeated CurrencyRate rates = 1;
 }
 

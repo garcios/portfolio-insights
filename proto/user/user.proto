@@ -4,40 +4,66 @@ package user;
 
 option go_package = "github.com/garcios/portfolio-insights/services/user-service/proto/user";
 
+// UserService handles user management and authentication verification.
 service UserService {
+  // GetUser retrieves user details by their ID.
   rpc GetUser (GetUserRequest) returns (GetUserResponse);
+  
+  // CreateUser registers a new user in the system.
   rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
+  
+  // VerifyUser checks credentials for login or verification purposes.
   rpc VerifyUser (VerifyUserRequest) returns (VerifyUserResponse);
 }
 
+// GetUserRequest is the request message for GetUser.
 message GetUserRequest {
+  // The unique identifier of the user to retrieve.
   string id = 1;
 }
 
+// GetUserResponse is the response message for GetUser.
 message GetUserResponse {
+  // The user's unique identifier.
   string id = 1;
+  // The user's email address.
   string email = 2;
+  // The user's username.
   string username = 3;
 }
 
+// CreateUserRequest is the request message for CreateUser.
 message CreateUserRequest {
+  // The email address for the new user.
   string email = 1;
+  // The username for the new user.
   string username = 2;
+  // The password for the new user.
   string password = 3;
 }
 
+// CreateUserResponse is the response message for CreateUser.
 message CreateUserResponse {
+  // The unique identifier of the newly created user.
   string id = 1;
 }
 
+// VerifyUserRequest is the request message for VerifyUser.
 message VerifyUserRequest {
+  // The email of the user to verify.
   string email = 1;
+  // The password to verify against.
   string password = 2;
 }
 
+// VerifyUserResponse is the response message for VerifyUser.
 message VerifyUserResponse {
+  // True if credentials are valid, false otherwise.
   bool valid = 1;
+  // The user's unique identifier (if valid).
   string id = 2;
+  // The user's username (if valid).
   string username = 3;
+  // The user's email (if valid).
   string email = 4;
 }

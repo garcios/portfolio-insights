@@ -6,95 +6,166 @@ option go_package = "github.com/garcios/portfolio-insights/services/transaction-
 
 import "google/protobuf/timestamp.proto";
 
+// TransactionService handles the management of financial transactions (buy/sell).
 service TransactionService {
+  // CreateTransaction records a new transaction.
   rpc CreateTransaction(CreateTransactionRequest) returns (CreateTransactionResponse);
+  
+  // GetTransaction retrieves a specific transaction by its ID.
   rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
+  
+  // ListTransactions returns a paginated list of transactions for a user, optionally filtered.
   rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+  
+  // UpdateTransaction modifies an existing transaction.
   rpc UpdateTransaction(UpdateTransactionRequest) returns (UpdateTransactionResponse);
+  
+  // DeleteTransaction removes a transaction from the records.
   rpc DeleteTransaction(DeleteTransactionRequest) returns (DeleteTransactionResponse);
 }
 
+// Transaction represents a financial transaction record.
 message Transaction {
+  // Unique identifier for the transaction.
   string id = 1;
+  // The ID of the user who made the transaction.
   string user_id = 2;
+  // The symbol of the asset (e.g., "AAPL").
   string symbol = 3;
-  string type = 4; // BUY or SELL
+  // The type of transaction ("BUY" or "SELL").
+  string type = 4;
+  // The quantity of assets bought or sold.
   double quantity = 5;
+  // The price per unit at the time of execution.
   double price_per_share = 6;
+  // The timestamp when the transaction physically occurred.
   google.protobuf.Timestamp executed_at = 7;
+  // The timestamp when the record was created.
   google.protobuf.Timestamp created_at = 8;
+  // The timestamp when the record was last updated.
   google.protobuf.Timestamp updated_at = 9;
+  // Brokerage fees associated with the transaction.
   double brokerage = 10;
+  // Optional notes attached to the transaction.
   string notes = 11;
+  // The currency in which the price is quoted.
   string price_currency = 12;
+  // The currency in which brokerage fees are paid.
   string brokerage_currency = 13;
 }
 
+// CreateTransactionRequest is the request message for CreateTransaction.
 message CreateTransactionRequest {
+  // The ID of the user creating the transaction.
   string user_id = 1;
+  // The symbol of the asset.
   string symbol = 2;
+  // The type of transaction ("BUY" or "SELL").
   string type = 3;
+  // The quantity involved.
   double quantity = 4;
+  // The price per share/unit.
   double price_per_share = 5;
+  // The execution timestamp.
   google.protobuf.Timestamp executed_at = 6;
+  // The brokerage fee amount.
   double brokerage = 7;
+  // Optional notes.
   string notes = 8;
+  // The currency code for the price.
   string price_currency = 9;
+  // The currency code for the brokerage fee.
   string brokerage_currency = 10;
 }
 
+// CreateTransactionResponse is the response message for CreateTransaction.
 message CreateTransactionResponse {
+  // The created transaction record.
   Transaction transaction = 1;
 }
 
+// GetTransactionRequest is the request message for GetTransaction.
 message GetTransactionRequest {
+  // The ID of the transaction to retrieve.
   string id = 1;
 }
 
+// GetTransactionResponse is the response message for GetTransaction.
 message GetTransactionResponse {
+  // The requested transaction details.
   Transaction transaction = 1;
 }
 
+// TransactionFilter defines criteria for filtering transactions.
 message TransactionFilter {
+  // Filter by asset symbol.
   string symbol = 1;
+  // Filter by transaction type ("BUY" or "SELL").
   string type = 2;
+  // Filter transactions executed after this time.
   google.protobuf.Timestamp from_executed_at = 3;
+  // Filter transactions executed before this time.
   google.protobuf.Timestamp to_executed_at = 4;
 }
 
+// ListTransactionsRequest is the request message for ListTransactions.
 message ListTransactionsRequest {
+  // The ID of the user.
   string user_id = 1;
+  // The maximum number of transactions to return.
   int32 page_size = 2;
+  // The token for the next page of results.
   string page_token = 3;
+  // Optional filter to apply.
   TransactionFilter filter = 4;
 }
 
+// ListTransactionsResponse is the response message for ListTransactions.
 message ListTransactionsResponse {
+  // The list of transactions.
   repeated Transaction transactions = 1;
+  // The token to retrieve the next page of results.
   string next_page_token = 2;
 }
 
+// UpdateTransactionRequest is the request message for UpdateTransaction.
 message UpdateTransactionRequest {
+  // The ID of the transaction to update.
   string id = 1;
+  // Updated symbol (if changed).
   string symbol = 2;
+  // Updated type (if changed).
   string type = 3;
+  // Updated quantity (if changed).
   double quantity = 4;
+  // Updated price per share (if changed).
   double price_per_share = 5;
+  // Updated execution time (if changed).
   google.protobuf.Timestamp executed_at = 6;
+  // Updated brokerage fee (if changed).
   double brokerage = 7;
+  // Updated notes (if changed).
   string notes = 8;
+  // Updated price currency (if changed).
   string price_currency = 9;
+  // Updated brokerage currency (if changed).
   string brokerage_currency = 10;
 }
 
+// UpdateTransactionResponse is the response message for UpdateTransaction.
 message UpdateTransactionResponse {
+  // The updated transaction record.
   Transaction transaction = 1;
 }
 
+// DeleteTransactionRequest is the request message for DeleteTransaction.
 message DeleteTransactionRequest {
+  // The ID of the transaction to delete.
   string id = 1;
 }
 
+// DeleteTransactionResponse is the response message for DeleteTransaction.
 message DeleteTransactionResponse {
+  // Indicates if the deletion was successful.
   bool success = 1;
 }
