@@ -1,0 +1,16 @@
+Goal
+Enhance the 'Service Overview' dashboard to provide granular latency visibility for individual API endpoints within the selected service, improving the speed and accuracy of troubleshooting performance bottlenecks.
+
+Action Required: Panel Modification
+
+Locate and modify the existing 'Service Latency' panel (or create a new panel, if the existing one cannot be adequately modified) within the 'Performance & SLIs' row.
+
+Detailed Panel Specifications
+Panel Name,Metric Focus,Requirements
+Endpoint Latency Detail,Focus on the duration (latency) of each API call.,"Display the average and percentile durations for all major endpoints (e.g., /v1/users/get, /v1/users/create, /health)."
+Duration Metrics,Must display time-series graphs for critical percentiles.,"Show P50 (Median), P95, and P99 latency for each unique API endpoint."
+Grouping/Legend,Ensure data is easily distinguishable.,"Use the Prometheus label for the endpoint path (e.g., http_request_path or similar) to break down the metrics, ensuring the legend clearly labels the duration for each path."
+Units,Ensure time is displayed correctly.,"Use a time-based unit (e.g., milliseconds or seconds) with appropriate Grafana unit formatting."
+
+Technical Consideration (Assumed Metrics)
+The implementation should utilize standard Prometheus histogram or summary metrics (e.g., http_request_duration_seconds_bucket, _sum, _count) instrumented in the services, using the appropriate rate() and histogram_quantile() functions to calculate the desired percentiles per endpoint.
