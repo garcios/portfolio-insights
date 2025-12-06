@@ -45,6 +45,9 @@ services:
       - TRANSACTION_SERVICE_ADDR=transaction-service:50053
       - TRANSACTION_SERVICE_HTTP_ADDR=http://transaction-service:8081
       - HYDRA_PUBLIC_URL=http://hydra-public:4444
+      - JWKS_URL=http://hydra-public:4444/.well-known/jwks.json
+      - JWT_ISSUER=http://hydra-public:4444
+      - JWT_AUDIENCE=portfolio-insights-spa
     depends_on:
       - user-service
       - portfolio-service

@@ -4,9 +4,9 @@ user_service_addr: "user-service:50051"
 transaction_service_addr: "transaction-service:50053"
 transaction_service_http_addr: "http://transaction-service:8081"
 
-hydra_public_url: "http://hydra:4444"
-jwks_url: "http://hydra:4444/.well-known/jwks.json"
-jwt_issuer: "http://localhost:4444/"
+hydra_public_url: "http://hydra-public:4444"
+jwks_url: "http://hydra-public:4444/.well-known/jwks.json"
+jwt_issuer: "http://hydra-public:4444"
 jwt_audience: "portfolio-insights-spa"
 
 log_level: "debug"
