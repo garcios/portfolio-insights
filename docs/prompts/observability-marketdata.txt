@@ -2,20 +2,25 @@
 
 Required Panels (SLI/Performance):
 
-Service Latency: P50, P95, and P99 response times, broken down by major API endpoints (e.g., /quote, /history).
+- Service Latency: P50, P95, and P99 response times, broken down by major API endpoints (e.g., /GetAsset, /ListAssets).
 
-Traffic: Total request count (RPS) and active connections.
+- Traffic: Total request count (RPS) and active connections.
 
-Error Rate: Panel showing 4xx and 5xx response counts/percentages, clearly segregated.
+- Error Rate: Panel showing 4xx and 5xx response counts/percentages, clearly segregated.
+
+- Inbound Traffic: Total request count (RPS) and active connections.
+
+- Outbound Traffic: Total request count (RPS) and active connections.
+
 
 Required Panels (Resource Health):
 
-CPU/Memory Usage: Utilization percentage for all service instances, with separate graphs for CPU and Memory.
+- CPU/Memory Usage: Utilization percentage for all service instances, with separate graphs for CPU and Memory.
 
-JVM Metrics (if applicable): Heap usage and garbage collection frequency/duration.
+- JVM Metrics (if applicable): Heap usage and garbage collection frequency/duration.
 
 Dashboard Features:
 
-Use variables for environment (staging/prod) and instance selection.
+- Use variables for environment (staging/prod) and instance selection.
 
-Group panels logically using rows."
+- Group panels logically using rows."
