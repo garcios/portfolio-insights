@@ -26,7 +26,7 @@ graph TD
     CDN -->|Static Assets| S3[Object Storage]
     CDN -->|API Req| LB[Load Balancer]
     
-    LB -->|GraphQL| GW_Cluster[API Gateway Cluster (HPA)]
+    LB -->|GraphQL| GW_Cluster["API Gateway Cluster (HPA)"]
     
     subgraph "Kubernetes Cluster"
         GW_Cluster -->|gRPC| US[User Service]
