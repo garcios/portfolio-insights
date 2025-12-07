@@ -1,0 +1,30 @@
+Draft a comprehensive technical strategy document outlining the implementation plan for calculating two primary portfolio return metrics: the Internal Rate of Return (IRR) / Money-Weighted Rate of Return (MWRR) and the Time-Weighted Rate of Return (TWRR).
+
+This document must be created at the path: docs/RETURNS_COMPUTATON_STRATEGY.md.
+
+The strategy document must include the following detailed sections:
+
+Data Requirements: 
+Specify the precise data points, including required dates and market values, needed to accurately calculate both IRR (MWRR) and TWRR.
+
+IRR/MWRR Methodology: 
+Detail the mathematical formula or algorithm (e.g., XIRR for irregular periods) that will be used, and define how all portfolio cash flows (deposits, withdrawals, dividends, and terminal value) will be structured as the input array.
+
+TWRR Methodology: 
+Detail the process for partitioning the investment period into sub-periods (based on external cash flows) and the specific calculation method for chaining the sub-period returns.
+
+Implementation Plan & Code Snippets: 
+For each calculation, propose the necessary code changes. Do not implement actual code changes. Instead, use pseudo-code or language-agnostic snippets to illustrate the core calculation logic and clearly list the names of the affected files where these changes would be made.
+
+
+---
+
+Using the data sources and computational logic outlined in docs/RETURNS_COMPUTATION_STRATEGY.md, perform a data quality audit. 
+
+Specifically:
+
+- Identify any missing or incomplete data series required for the calculation.
+
+- Highlight areas where the documented data validation steps are insufficient.
+
+- Propose concrete, actionable steps to remedy these data gaps and validation weaknesses, including recommendations for data sourcing or methodological changes.
