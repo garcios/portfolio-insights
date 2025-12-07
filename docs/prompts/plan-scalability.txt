@@ -1,0 +1,3 @@
+Draft a comprehensive technical strategy document for scaling the portfolio-insight application to 500,000 users. The document should include a current-state architecture diagram (found in README.md, a proposed-state architecture diagram, a detailed breakdown of necessary technical workstreams (e.g., Database, API Gateway, Front-end performance), and Key Performance Indicators (KPIs)** for measuring success over the next 18 months.
+
+The strategy document must be created at the path: docs/SCALABILITY_STRATEGY.md.
