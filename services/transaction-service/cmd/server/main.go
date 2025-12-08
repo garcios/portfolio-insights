@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/handler/grpc"
@@ -30,7 +31,15 @@ func main() {
 	l.Info("Transaction Service starting...")
 
 	// Connect to Database
-	db, err := infrastructure.NewPostgresDB(cfg)
+	dbCfg := database.Config{
+		Host:     cfg.DBHost,
+		Port:     cfg.DBPort,
+		User:     cfg.DBUser,
+		Password: cfg.DBPassword,
+		DBName:   cfg.DBName,
+		SSLMode:  cfg.DBSSLMode,
+	}
+	db, err := database.NewPostgresDB(dbCfg)
 	if err != nil {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)

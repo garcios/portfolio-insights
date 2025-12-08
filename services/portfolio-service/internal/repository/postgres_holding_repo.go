@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
-	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 )
 
 // PostgresHoldingRepository implements a PostgreSQL holding repository.
@@ -23,7 +23,7 @@ func NewPostgresHoldingRepository(db *sql.DB) *PostgresHoldingRepository {
 func (r *PostgresHoldingRepository) Upsert(holding *domain.Holding) error {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("upsert", "holdings", time.Since(start).Seconds(), nil)
+		database.RecordQuery("upsert", "holdings", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -37,7 +37,7 @@ func (r *PostgresHoldingRepository) Upsert(holding *domain.Holding) error {
 			updated_at = EXCLUDED.updated_at
 	`
 
-	_, err := r.db.Exec(
+	result, err := r.db.Exec(
 		query,
 		holding.UserID,
 		holding.Symbol,
@@ -48,9 +48,12 @@ func (r *PostgresHoldingRepository) Upsert(holding *domain.Holding) error {
 	)
 
 	if err != nil {
-		metrics.RecordDatabaseQuery("upsert", "holdings", time.Since(start).Seconds(), err)
+		database.RecordQuery("upsert", "holdings", time.Since(start).Seconds(), err)
 		return fmt.Errorf("failed to upsert holding: %w", err)
 	}
+
+	rowsAffected, _ := result.RowsAffected()
+	database.RecordRowsAffected("upsert", "holdings", rowsAffected)
 
 	return nil
 }
@@ -59,7 +62,7 @@ func (r *PostgresHoldingRepository) Upsert(holding *domain.Holding) error {
 func (r *PostgresHoldingRepository) GetByUserAndSymbol(userID, symbol string) (*domain.Holding, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_by_user_symbol", "holdings", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_by_user_symbol", "holdings", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -82,7 +85,7 @@ func (r *PostgresHoldingRepository) GetByUserAndSymbol(userID, symbol string) (*
 		return nil, fmt.Errorf("holding not found")
 	}
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_by_user_symbol", "holdings", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_by_user_symbol", "holdings", time.Since(start).Seconds(), err)
 		return nil, fmt.Errorf("failed to get holding: %w", err)
 	}
 
@@ -93,7 +96,7 @@ func (r *PostgresHoldingRepository) GetByUserAndSymbol(userID, symbol string) (*
 func (r *PostgresHoldingRepository) ListByUser(userID string) ([]*domain.Holding, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("list_by_user", "holdings", time.Since(start).Seconds(), nil)
+		database.RecordQuery("list_by_user", "holdings", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -105,12 +108,12 @@ func (r *PostgresHoldingRepository) ListByUser(userID string) ([]*domain.Holding
 
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
-		metrics.RecordDatabaseQuery("list_by_user", "holdings", time.Since(start).Seconds(), err)
+		database.RecordQuery("list_by_user", "holdings", time.Since(start).Seconds(), err)
 		return nil, fmt.Errorf("failed to list holdings: %w", err)
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			metrics.RecordDatabaseQuery("list_by_user_close", "holdings", 0, closeErr)
+			database.RecordQuery("list_by_user_close", "holdings", 0, closeErr)
 		}
 	}()
 
@@ -142,7 +145,7 @@ func (r *PostgresHoldingRepository) ListByUser(userID string) ([]*domain.Holding
 func (r *PostgresHoldingRepository) Count() (int, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("count", "holdings", time.Since(start).Seconds(), nil)
+		database.RecordQuery("count", "holdings", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `SELECT COUNT(*) FROM investments.holdings`
@@ -150,7 +153,7 @@ func (r *PostgresHoldingRepository) Count() (int, error) {
 	var count int
 	err := r.db.QueryRow(query).Scan(&count)
 	if err != nil {
-		metrics.RecordDatabaseQuery("count", "holdings", time.Since(start).Seconds(), err)
+		database.RecordQuery("count", "holdings", time.Since(start).Seconds(), err)
 		return 0, fmt.Errorf("failed to count holdings: %w", err)
 	}
 
@@ -161,16 +164,19 @@ func (r *PostgresHoldingRepository) Count() (int, error) {
 func (r *PostgresHoldingRepository) DeleteZeroQuantityHoldings() error {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("delete_zero_quantity", "holdings", time.Since(start).Seconds(), nil)
+		database.RecordQuery("delete_zero_quantity", "holdings", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `DELETE FROM investments.holdings WHERE quantity <= 0`
 
-	_, err := r.db.Exec(query)
+	result, err := r.db.Exec(query)
 	if err != nil {
-		metrics.RecordDatabaseQuery("delete_zero_quantity", "holdings", time.Since(start).Seconds(), err)
+		database.RecordQuery("delete_zero_quantity", "holdings", time.Since(start).Seconds(), err)
 		return fmt.Errorf("failed to delete zero quantity holdings: %w", err)
 	}
+
+	rowsAffected, _ := result.RowsAffected()
+	database.RecordRowsAffected("delete_zero_quantity", "holdings", rowsAffected)
 
 	return nil
 }

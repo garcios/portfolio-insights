@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/handler/grpc"
-	"github.com/garcios/portfolio-insights/services/user-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/repository"
@@ -40,7 +40,16 @@ func main() {
 	}()
 
 	// Infrastructure
-	db, err := infrastructure.NewPostgresDB(cfg)
+	// Infrastructure
+	dbCfg := database.Config{
+		Host:     cfg.DBHost,
+		Port:     cfg.DBPort,
+		User:     cfg.DBUser,
+		Password: cfg.DBPassword,
+		DBName:   cfg.DBName,
+		SSLMode:  cfg.DBSSLMode,
+	}
+	db, err := database.NewPostgresDB(dbCfg)
 	if err != nil {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)

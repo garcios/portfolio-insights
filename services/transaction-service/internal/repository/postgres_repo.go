@@ -5,7 +5,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
+	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/domain"
 )
 
@@ -19,12 +21,13 @@ func NewPostgresTransactionRepository(db *sql.DB) domain.TransactionRepository {
 }
 
 func (r *postgresTransactionRepo) Create(ctx context.Context, transaction *domain.Transaction) error {
+	start := time.Now()
 	query := `
 		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at, brokerage, notes, price_currency, brokerage_currency)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, created_at, updated_at
 	`
-	return r.db.QueryRowContext(ctx, query,
+	err := r.db.QueryRowContext(ctx, query,
 		transaction.UserID,
 		transaction.Symbol,
 		transaction.Type,
@@ -36,9 +39,16 @@ func (r *postgresTransactionRepo) Create(ctx context.Context, transaction *domai
 		transaction.PriceCurrency,
 		transaction.BrokerageCurrency,
 	).Scan(&transaction.ID, &transaction.CreatedAt, &transaction.UpdatedAt)
+
+	database.RecordQuery("create", "transactions", time.Since(start).Seconds(), err)
+	if err == nil {
+		database.RecordRowsAffected("create", "transactions", 1)
+	}
+	return err
 }
 
 func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions []*domain.Transaction) error {
+	start := time.Now()
 	if len(transactions) == 0 {
 		return nil
 	}
@@ -87,10 +97,17 @@ func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions [
 		}
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	database.RecordQuery("bulk_create", "transactions", time.Since(start).Seconds(), err)
+	if err == nil {
+		database.RecordRowsAffected("bulk_create", "transactions", int64(len(transactions)))
+	}
+	return err
 }
 
 func (r *postgresTransactionRepo) GetByID(ctx context.Context, id string) (*domain.Transaction, error) {
+	start := time.Now()
+
 	query := `
 		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
 		FROM txn.transactions
@@ -139,10 +156,13 @@ func (r *postgresTransactionRepo) GetByID(ctx context.Context, id string) (*doma
 		txn.BrokerageCurrency = brokerageCurrency.String
 	}
 
+	database.RecordQuery("get_by_id", "transactions", time.Since(start).Seconds(), nil)
 	return &txn, nil
 }
 
 func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID string, filter domain.TransactionFilter, limit, offset int) ([]*domain.Transaction, error) {
+	start := time.Now()
+
 	query := `
 		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
 		FROM txn.transactions
@@ -177,11 +197,13 @@ func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID strin
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		database.RecordQuery("list_by_user_id", "transactions", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
 			fmt.Printf("failed to close rows: %v\n", err)
+			database.RecordQuery("list_by_user_id_close", "transactions", 0, err)
 		}
 	}()
 
@@ -226,16 +248,18 @@ func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID strin
 
 		transactions = append(transactions, &txn)
 	}
+	database.RecordQuery("list_by_user_id", "transactions", time.Since(start).Seconds(), nil)
 	return transactions, nil
 }
 
 func (r *postgresTransactionRepo) Update(ctx context.Context, txn *domain.Transaction) error {
+	start := time.Now()
 	query := `
 		UPDATE txn.transactions
 		SET symbol = $1, type = $2, quantity = $3, price_per_share = $4, executed_at = $5, updated_at = $6, brokerage = $7, notes = $8, price_currency = $9, brokerage_currency = $10
 		WHERE id = $11
 	`
-	_, err := r.db.ExecContext(ctx, query,
+	result, err := r.db.ExecContext(ctx, query,
 		txn.Symbol,
 		txn.Type,
 		txn.Quantity,
@@ -248,13 +272,20 @@ func (r *postgresTransactionRepo) Update(ctx context.Context, txn *domain.Transa
 		txn.BrokerageCurrency,
 		txn.ID,
 	)
+	database.RecordQuery("update", "transactions", time.Since(start).Seconds(), err)
+	if err == nil {
+		rowsAffected, _ := result.RowsAffected()
+		database.RecordRowsAffected("update", "transactions", rowsAffected)
+	}
 	return err
 }
 
 func (r *postgresTransactionRepo) Delete(ctx context.Context, id string) error {
+	start := time.Now()
 	query := `DELETE FROM txn.transactions WHERE id = $1`
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
+		database.RecordQuery("delete", "transactions", time.Since(start).Seconds(), err)
 		return err
 	}
 	rowsAffected, err := result.RowsAffected()
@@ -262,22 +293,31 @@ func (r *postgresTransactionRepo) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	if rowsAffected == 0 {
-		return sql.ErrNoRows
+		err = sql.ErrNoRows
+		database.RecordQuery("delete", "transactions", time.Since(start).Seconds(), err)
+		return err
 	}
+	database.RecordQuery("delete", "transactions", time.Since(start).Seconds(), nil)
+	database.RecordRowsAffected("delete", "transactions", rowsAffected)
 	return nil
 }
 
 func (r *postgresTransactionRepo) Count() (int, error) {
+	start := time.Now()
 	var count int
 	query := `SELECT COUNT(*) FROM txn.transactions`
 	err := r.db.QueryRow(query).Scan(&count)
 	if err != nil {
+		database.RecordQuery("count", "transactions", time.Since(start).Seconds(), err)
 		return 0, err
 	}
+	database.RecordQuery("count", "transactions", time.Since(start).Seconds(), nil)
 	return count, nil
 }
 
 func (r *postgresTransactionRepo) GetOldestByUserID(ctx context.Context, userID string) (*domain.Transaction, error) {
+	start := time.Now()
+
 	query := `
 		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
 		FROM txn.transactions
@@ -328,5 +368,6 @@ func (r *postgresTransactionRepo) GetOldestByUserID(ctx context.Context, userID 
 		txn.BrokerageCurrency = brokerageCurrency.String
 	}
 
+	database.RecordQuery("get_oldest_by_user_id", "transactions", time.Since(start).Seconds(), nil)
 	return &txn, nil
 }

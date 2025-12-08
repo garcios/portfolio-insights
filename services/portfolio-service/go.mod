@@ -6,7 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/garcios/portfolio-insights/pkg v0.0.0
 	github.com/garcios/portfolio-insights/services/marketdata-service v0.0.0
-	github.com/lib/pq v1.10.9
+	github.com/garcios/portfolio-insights/services/transaction-service v0.0.0-00010101000000-000000000000
 	github.com/nats-io/nats.go v1.47.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.17.0
@@ -22,6 +22,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
@@ -47,3 +48,5 @@ require (
 replace github.com/garcios/portfolio-insights/pkg => ../../pkg
 
 replace github.com/garcios/portfolio-insights/services/marketdata-service => ../marketdata-service
+
+replace github.com/garcios/portfolio-insights/services/transaction-service => ../transaction-service

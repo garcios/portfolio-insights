@@ -1,0 +1,9 @@
+Goal: Centralize database interaction logic and corresponding metrics reporting.
+
+Task:
+
+Move database client initialization (DB libraries) and configuration from services/user-service/repository/user_repo.go to the new pkg/database package.
+
+Move database-related metrics collection/instrumentation (e.g., connection pool size, query latency metrics) from user_repo.go into the new pkg/database package.
+
+Update user_repo.go to consume the refactored database client and metrics through the pkg/database package.

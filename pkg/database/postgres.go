@@ -1,5 +1,4 @@
-// Package infrastructure provides external service integrations and low-level implementations.
-package infrastructure
+package database
 
 import (
 	"database/sql"
@@ -7,25 +6,24 @@ import (
 	"log"
 	"time"
 
-	"github.com/garcios/portfolio-insights/services/user-service/internal/config"
 	_ "github.com/lib/pq"
 )
 
 // NewPostgresDB creates a new PostgreSQL database connection.
-func NewPostgresDB(cfg config.Config) (*sql.DB, error) {
-	if cfg.DBHost == "" || cfg.DBPort == "" || cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" || cfg.DBSSLMode == "" {
+func NewPostgresDB(cfg Config) (*sql.DB, error) {
+	if cfg.Host == "" || cfg.Port == "" || cfg.User == "" || cfg.Password == "" || cfg.DBName == "" || cfg.SSLMode == "" {
 		return nil, fmt.Errorf("missing required database configuration")
 	}
 
 	// Build connection string
 	connStr := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		cfg.DBHost,
-		cfg.DBPort,
-		cfg.DBUser,
-		cfg.DBPassword,
+		cfg.Host,
+		cfg.Port,
+		cfg.User,
+		cfg.Password,
 		cfg.DBName,
-		cfg.DBSSLMode,
+		cfg.SSLMode,
 	)
 
 	// Open database connection
@@ -34,7 +32,7 @@ func NewPostgresDB(cfg config.Config) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Configure connection pool (using defaults or could be added to config)
+	// Configure connection pool
 	maxOpenConns := 25
 	maxIdleConns := 5
 	connMaxLifetime := 5 * time.Minute
@@ -49,7 +47,9 @@ func NewPostgresDB(cfg config.Config) (*sql.DB, error) {
 	}
 
 	log.Printf("Successfully connected to PostgreSQL database: %s@%s:%s/%s",
-		cfg.DBUser, cfg.DBHost, cfg.DBPort, cfg.DBName)
+		cfg.User, cfg.Host, cfg.Port, cfg.DBName)
+
+	StartMonitoring(db, cfg.DBName)
 
 	return db, nil
 }

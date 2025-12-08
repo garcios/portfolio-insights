@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/metrics"
 )
@@ -23,7 +24,7 @@ func NewUserRepository(db *sql.DB) domain.UserRepository {
 func (r *userRepository) GetByID(id string) (*domain.User, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_by_id", "users", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_by_id", "users", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -46,7 +47,7 @@ func (r *userRepository) GetByID(id string) (*domain.User, error) {
 		return nil, fmt.Errorf("user not found: %s", id)
 	}
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_by_id", "users", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_by_id", "users", time.Since(start).Seconds(), err)
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
@@ -70,11 +71,12 @@ func (r *userRepository) Create(user *domain.User) error {
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
-		metrics.RecordDatabaseQuery("create", "users", time.Since(start).Seconds(), err)
+		database.RecordQuery("create", "users", time.Since(start).Seconds(), err)
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	metrics.RecordDatabaseQuery("create", "users", time.Since(start).Seconds(), nil)
+	database.RecordQuery("create", "users", time.Since(start).Seconds(), nil)
+	database.RecordRowsAffected("create", "users", 1)
 	metrics.RecordUserCreated()
 	return nil
 }
@@ -83,7 +85,7 @@ func (r *userRepository) Create(user *domain.User) error {
 func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_by_email", "users", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_by_email", "users", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -106,7 +108,7 @@ func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 		return nil, fmt.Errorf("user not found with email: %s", email)
 	}
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_by_email", "users", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_by_email", "users", time.Since(start).Seconds(), err)
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
 
@@ -132,15 +134,16 @@ func (r *userRepository) Update(user *domain.User) error {
 	).Scan(&user.UpdatedAt)
 
 	if err == sql.ErrNoRows {
-		metrics.RecordDatabaseQuery("update", "users", time.Since(start).Seconds(), err)
+		database.RecordQuery("update", "users", time.Since(start).Seconds(), err)
 		return fmt.Errorf("user not found: %s", user.ID)
 	}
 	if err != nil {
-		metrics.RecordDatabaseQuery("update", "users", time.Since(start).Seconds(), err)
+		database.RecordQuery("update", "users", time.Since(start).Seconds(), err)
 		return fmt.Errorf("failed to update user: %w", err)
 	}
 
-	metrics.RecordDatabaseQuery("update", "users", time.Since(start).Seconds(), nil)
+	database.RecordQuery("update", "users", time.Since(start).Seconds(), nil)
+	database.RecordRowsAffected("update", "users", 1)
 	return nil
 }
 
@@ -151,23 +154,24 @@ func (r *userRepository) Delete(id string) error {
 
 	result, err := r.db.Exec(query, id)
 	if err != nil {
-		metrics.RecordDatabaseQuery("delete", "users", time.Since(start).Seconds(), err)
+		database.RecordQuery("delete", "users", time.Since(start).Seconds(), err)
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		metrics.RecordDatabaseQuery("delete", "users", time.Since(start).Seconds(), err)
+		database.RecordQuery("delete", "users", time.Since(start).Seconds(), err)
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 
 	if rowsAffected == 0 {
 		err = fmt.Errorf("user not found: %s", id)
-		metrics.RecordDatabaseQuery("delete", "users", time.Since(start).Seconds(), err)
+		database.RecordQuery("delete", "users", time.Since(start).Seconds(), err)
 		return err
 	}
 
-	metrics.RecordDatabaseQuery("delete", "users", time.Since(start).Seconds(), nil)
+	database.RecordQuery("delete", "users", time.Since(start).Seconds(), nil)
+	database.RecordRowsAffected("delete", "users", rowsAffected)
 	return nil
 }
 
@@ -175,13 +179,13 @@ func (r *userRepository) Delete(id string) error {
 func (r *userRepository) Count() (int, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("count", "users", time.Since(start).Seconds(), nil)
+		database.RecordQuery("count", "users", time.Since(start).Seconds(), nil)
 	}()
 
 	var count int
 	err := r.db.QueryRow("SELECT COUNT(*) FROM customers.users").Scan(&count)
 	if err != nil {
-		metrics.RecordDatabaseQuery("count", "users", time.Since(start).Seconds(), err)
+		database.RecordQuery("count", "users", time.Since(start).Seconds(), err)
 		return 0, fmt.Errorf("failed to count users: %w", err)
 	}
 	return count, nil

@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/pkg/logger"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/config"
 	marketdatahandler "github.com/garcios/portfolio-insights/services/marketdata-service/internal/handler/grpc"
-	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/repository"
@@ -31,7 +31,15 @@ func main() {
 	l.Info("Market Data Service starting...")
 
 	// Connect to Database
-	db, err := infrastructure.NewPostgresDB(cfg)
+	dbCfg := database.Config{
+		Host:     cfg.DBHost,
+		Port:     cfg.DBPort,
+		User:     cfg.DBUser,
+		Password: cfg.DBPassword,
+		DBName:   cfg.DBName,
+		SSLMode:  cfg.DBSSLMode,
+	}
+	db, err := database.NewPostgresDB(dbCfg)
 	if err != nil {
 		l.Error("failed to connect to database", "error", err)
 		os.Exit(1)

@@ -26,34 +26,6 @@ var (
 		[]string{"method"},
 	)
 
-	// DatabaseQueriesTotal counts the total number of database queries.
-	DatabaseQueriesTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "marketdata_database_queries_total",
-			Help: "Total number of database queries",
-		},
-		[]string{"operation", "table"},
-	)
-
-	// DatabaseQueryDuration histograms the duration of database queries in seconds.
-	DatabaseQueryDuration = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "marketdata_database_query_duration_seconds",
-			Help:    "Duration of database queries in seconds",
-			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1},
-		},
-		[]string{"operation", "table"},
-	)
-
-	// DatabaseErrorsTotal counts the total number of database errors.
-	DatabaseErrorsTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "marketdata_database_errors_total",
-			Help: "Total number of database errors",
-		},
-		[]string{"operation", "table"},
-	)
-
 	// IngestionJobsTotal counts the total number of ingestion jobs.
 	IngestionJobsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -110,15 +82,6 @@ var (
 func RecordGrpcRequest(method, status string, duration float64) {
 	GrpcRequestsTotal.WithLabelValues(method, status).Inc()
 	GrpcRequestDuration.WithLabelValues(method).Observe(duration)
-}
-
-// RecordDatabaseQuery records a database query
-func RecordDatabaseQuery(operation, table string, duration float64, err error) {
-	DatabaseQueriesTotal.WithLabelValues(operation, table).Inc()
-	DatabaseQueryDuration.WithLabelValues(operation, table).Observe(duration)
-	if err != nil {
-		DatabaseErrorsTotal.WithLabelValues(operation, table).Inc()
-	}
 }
 
 // RecordIngestionJob records an ingestion job

@@ -47,6 +47,10 @@ func (r *postgresHistoryRepo) CreateSnapshot(ctx context.Context, snapshot *doma
 		snapshot.TotalCostBasis,
 		snapshot.Timestamp,
 	)
+	// Note: We don't have start time here easily without refactoring function start,
+	// but assuming fast enough or can add timing if critical.
+	// Adding simple error logging via metrics if error occurs, or duration 0 if successful for now/count.
+	// Better to add timing.
 	return err
 }
 

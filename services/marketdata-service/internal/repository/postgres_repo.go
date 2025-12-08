@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/domain"
-	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
 )
 
 type postgresMarketDataRepo struct {
@@ -23,7 +23,7 @@ func NewPostgresMarketDataRepository(db *sql.DB) domain.MarketDataRepository {
 func (r *postgresMarketDataRepo) GetAssetBySymbol(symbol string) (*domain.Asset, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_asset_by_symbol", "assets", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_asset_by_symbol", "assets", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -36,7 +36,7 @@ func (r *postgresMarketDataRepo) GetAssetBySymbol(symbol string) (*domain.Asset,
 		&asset.ID, &asset.Symbol, &asset.Name, &asset.Type, &asset.Exchange, &asset.Currency, &asset.CreatedAt, &asset.UpdatedAt,
 	)
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_asset_by_symbol", "assets", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_asset_by_symbol", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	return &asset, nil
@@ -45,7 +45,7 @@ func (r *postgresMarketDataRepo) GetAssetBySymbol(symbol string) (*domain.Asset,
 func (r *postgresMarketDataRepo) ListAssets(limit, offset int) ([]*domain.Asset, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("list_assets", "assets", time.Since(start).Seconds(), nil)
+		database.RecordQuery("list_assets", "assets", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -56,12 +56,12 @@ func (r *postgresMarketDataRepo) ListAssets(limit, offset int) ([]*domain.Asset,
 	`
 	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
-		metrics.RecordDatabaseQuery("list_assets", "assets", time.Since(start).Seconds(), err)
+		database.RecordQuery("list_assets", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			metrics.RecordDatabaseQuery("list_assets_close", "assets", 0, closeErr)
+			database.RecordQuery("list_assets_close", "assets", 0, closeErr)
 		}
 	}()
 
@@ -102,25 +102,29 @@ func (r *postgresMarketDataRepo) UpsertAssets(assets []*domain.Asset) error {
 			updated_at = NOW()
 	`, strings.Join(valueStrings, ","))
 
-	_, err := r.db.Exec(stmt, valueArgs...)
-	metrics.RecordDatabaseQuery("upsert_assets", "assets", time.Since(start).Seconds(), err)
+	result, err := r.db.Exec(stmt, valueArgs...)
+	database.RecordQuery("upsert_assets", "assets", time.Since(start).Seconds(), err)
+	if err == nil {
+		rowsAffected, _ := result.RowsAffected()
+		database.RecordRowsAffected("upsert_assets", "assets", rowsAffected)
+	}
 	return err
 }
 
 func (r *postgresMarketDataRepo) GetAllAssetIDs() (map[string]string, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_all_asset_ids", "assets", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_all_asset_ids", "assets", time.Since(start).Seconds(), nil)
 	}()
 
 	rows, err := r.db.Query("SELECT symbol, id FROM marketdata.assets")
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_all_asset_ids", "assets", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_all_asset_ids", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			metrics.RecordDatabaseQuery("get_all_asset_ids_close", "assets", 0, closeErr)
+			database.RecordQuery("get_all_asset_ids_close", "assets", 0, closeErr)
 		}
 	}()
 
@@ -138,13 +142,13 @@ func (r *postgresMarketDataRepo) GetAllAssetIDs() (map[string]string, error) {
 func (r *postgresMarketDataRepo) CountAssets() (int, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("count_assets", "assets", time.Since(start).Seconds(), nil)
+		database.RecordQuery("count_assets", "assets", time.Since(start).Seconds(), nil)
 	}()
 
 	var count int
 	err := r.db.QueryRow("SELECT COUNT(*) FROM marketdata.assets").Scan(&count)
 	if err != nil {
-		metrics.RecordDatabaseQuery("count_assets", "assets", time.Since(start).Seconds(), err)
+		database.RecordQuery("count_assets", "assets", time.Since(start).Seconds(), err)
 		return 0, err
 	}
 	return count, nil
@@ -153,7 +157,7 @@ func (r *postgresMarketDataRepo) CountAssets() (int, error) {
 func (r *postgresMarketDataRepo) GetLatestPrice(symbol string) (*domain.AssetPrice, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_latest_price", "asset_prices", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_latest_price", "asset_prices", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -169,7 +173,7 @@ func (r *postgresMarketDataRepo) GetLatestPrice(symbol string) (*domain.AssetPri
 		&price.ID, &price.AssetID, &price.Price, &price.Timestamp, &price.CreatedAt,
 	)
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_latest_price", "asset_prices", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_latest_price", "asset_prices", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	return &price, nil
@@ -178,7 +182,7 @@ func (r *postgresMarketDataRepo) GetLatestPrice(symbol string) (*domain.AssetPri
 func (r *postgresMarketDataRepo) GetLatestPrices(symbols []string) (map[string]*domain.AssetPrice, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_latest_prices_batch", "asset_prices", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_latest_prices_batch", "asset_prices", time.Since(start).Seconds(), nil)
 	}()
 
 	if len(symbols) == 0 {
@@ -210,12 +214,12 @@ func (r *postgresMarketDataRepo) GetLatestPrices(symbols []string) (map[string]*
 
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_latest_prices_batch", "asset_prices", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_latest_prices_batch", "asset_prices", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			metrics.RecordDatabaseQuery("get_latest_prices_batch_close", "asset_prices", 0, closeErr)
+			database.RecordQuery("get_latest_prices_batch_close", "asset_prices", 0, closeErr)
 		}
 	}()
 
@@ -235,7 +239,7 @@ func (r *postgresMarketDataRepo) GetLatestPrices(symbols []string) (map[string]*
 func (r *postgresMarketDataRepo) GetHistoricalPrices(symbol string, start, end time.Time) ([]*domain.AssetPrice, error) {
 	startTime := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_historical_prices", "asset_prices", time.Since(startTime).Seconds(), nil)
+		database.RecordQuery("get_historical_prices", "asset_prices", time.Since(startTime).Seconds(), nil)
 	}()
 
 	query := `
@@ -247,12 +251,12 @@ func (r *postgresMarketDataRepo) GetHistoricalPrices(symbol string, start, end t
 	`
 	rows, err := r.db.Query(query, symbol, start, end)
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_historical_prices", "asset_prices", time.Since(startTime).Seconds(), err)
+		database.RecordQuery("get_historical_prices", "asset_prices", time.Since(startTime).Seconds(), err)
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			metrics.RecordDatabaseQuery("get_historical_prices_close", "asset_prices", 0, closeErr)
+			database.RecordQuery("get_historical_prices_close", "asset_prices", 0, closeErr)
 		}
 	}()
 
@@ -289,21 +293,25 @@ func (r *postgresMarketDataRepo) InsertPrices(prices []*domain.AssetPrice) error
 			price = EXCLUDED.price
 	`, strings.Join(valueStrings, ","))
 
-	_, err := r.db.Exec(stmt, valueArgs...)
-	metrics.RecordDatabaseQuery("insert_prices", "asset_prices", time.Since(start).Seconds(), err)
+	result, err := r.db.Exec(stmt, valueArgs...)
+	database.RecordQuery("insert_prices", "asset_prices", time.Since(start).Seconds(), err)
+	if err == nil {
+		rowsAffected, _ := result.RowsAffected()
+		database.RecordRowsAffected("insert_prices", "asset_prices", rowsAffected)
+	}
 	return err
 }
 
 func (r *postgresMarketDataRepo) CountPrices() (int, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("count_prices", "asset_prices", time.Since(start).Seconds(), nil)
+		database.RecordQuery("count_prices", "asset_prices", time.Since(start).Seconds(), nil)
 	}()
 
 	var count int
 	err := r.db.QueryRow("SELECT COUNT(*) FROM marketdata.asset_prices").Scan(&count)
 	if err != nil {
-		metrics.RecordDatabaseQuery("count_prices", "asset_prices", time.Since(start).Seconds(), err)
+		database.RecordQuery("count_prices", "asset_prices", time.Since(start).Seconds(), err)
 		return 0, err
 	}
 	return count, nil
@@ -331,15 +339,19 @@ func (r *postgresMarketDataRepo) InsertCurrencyRates(rates []*domain.CurrencyRat
 			rate = EXCLUDED.rate
 	`, strings.Join(valueStrings, ","))
 
-	_, err := r.db.Exec(stmt, valueArgs...)
-	metrics.RecordDatabaseQuery("insert_currency_rates", "currency_rates", time.Since(start).Seconds(), err)
+	result, err := r.db.Exec(stmt, valueArgs...)
+	database.RecordQuery("insert_currency_rates", "currency_rates", time.Since(start).Seconds(), err)
+	if err == nil {
+		rowsAffected, _ := result.RowsAffected()
+		database.RecordRowsAffected("insert_currency_rates", "currency_rates", rowsAffected)
+	}
 	return err
 }
 
 func (r *postgresMarketDataRepo) GetLatestCurrencyRate(baseCurrency, targetCurrency string) (*domain.CurrencyRate, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_latest_currency_rate", "currency_rates", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_latest_currency_rate", "currency_rates", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -354,7 +366,7 @@ func (r *postgresMarketDataRepo) GetLatestCurrencyRate(baseCurrency, targetCurre
 		&rate.ID, &rate.BaseCurrency, &rate.TargetCurrency, &rate.Rate, &rate.RateDate, &rate.CreatedAt,
 	)
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_latest_currency_rate", "currency_rates", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_latest_currency_rate", "currency_rates", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	return &rate, nil
@@ -363,7 +375,7 @@ func (r *postgresMarketDataRepo) GetLatestCurrencyRate(baseCurrency, targetCurre
 func (r *postgresMarketDataRepo) GetHistoricalCurrencyRates(baseCurrency, targetCurrency string, start, end time.Time) ([]*domain.CurrencyRate, error) {
 	startTime := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_historical_currency_rates", "currency_rates", time.Since(startTime).Seconds(), nil)
+		database.RecordQuery("get_historical_currency_rates", "currency_rates", time.Since(startTime).Seconds(), nil)
 	}()
 
 	query := `
@@ -374,12 +386,12 @@ func (r *postgresMarketDataRepo) GetHistoricalCurrencyRates(baseCurrency, target
 	`
 	rows, err := r.db.Query(query, baseCurrency, targetCurrency, start, end)
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_historical_currency_rates", "currency_rates", time.Since(startTime).Seconds(), err)
+		database.RecordQuery("get_historical_currency_rates", "currency_rates", time.Since(startTime).Seconds(), err)
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			metrics.RecordDatabaseQuery("get_historical_currency_rates_close", "currency_rates", 0, closeErr)
+			database.RecordQuery("get_historical_currency_rates_close", "currency_rates", 0, closeErr)
 		}
 	}()
 
@@ -398,7 +410,7 @@ func (r *postgresMarketDataRepo) GetHistoricalCurrencyRates(baseCurrency, target
 func (r *postgresMarketDataRepo) GetAssetsRequiringPriceUpdate(staleDuration time.Duration) ([]*domain.Asset, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_assets_requiring_update", "assets", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_assets_requiring_update", "assets", time.Since(start).Seconds(), nil)
 	}()
 
 	staleThreshold := time.Now().Add(-staleDuration)
@@ -414,12 +426,12 @@ func (r *postgresMarketDataRepo) GetAssetsRequiringPriceUpdate(staleDuration tim
 
 	rows, err := r.db.Query(query, staleThreshold)
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_assets_requiring_update", "assets", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_assets_requiring_update", "assets", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			metrics.RecordDatabaseQuery("get_assets_requiring_update_close", "assets", 0, closeErr)
+			database.RecordQuery("get_assets_requiring_update_close", "assets", 0, closeErr)
 		}
 	}()
 
@@ -439,7 +451,7 @@ func (r *postgresMarketDataRepo) GetAssetsRequiringPriceUpdate(staleDuration tim
 func (r *postgresMarketDataRepo) GetLatestPriceTimestamp(assetID string) (*time.Time, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_latest_price_timestamp", "asset_prices", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_latest_price_timestamp", "asset_prices", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -454,7 +466,7 @@ func (r *postgresMarketDataRepo) GetLatestPriceTimestamp(assetID string) (*time.
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		metrics.RecordDatabaseQuery("get_latest_price_timestamp", "asset_prices", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_latest_price_timestamp", "asset_prices", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 
@@ -465,7 +477,7 @@ func (r *postgresMarketDataRepo) GetLatestPriceTimestamp(assetID string) (*time.
 func (r *postgresMarketDataRepo) GetMissingPriceDates(assetID string, start, end time.Time) ([]time.Time, error) {
 	startTime := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_missing_price_dates", "asset_prices", time.Since(startTime).Seconds(), nil)
+		database.RecordQuery("get_missing_price_dates", "asset_prices", time.Since(startTime).Seconds(), nil)
 	}()
 
 	query := `
@@ -492,12 +504,12 @@ func (r *postgresMarketDataRepo) GetMissingPriceDates(assetID string, start, end
 
 	rows, err := r.db.Query(query, start, end, assetID)
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_missing_price_dates", "asset_prices", time.Since(startTime).Seconds(), err)
+		database.RecordQuery("get_missing_price_dates", "asset_prices", time.Since(startTime).Seconds(), err)
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			metrics.RecordDatabaseQuery("get_missing_price_dates_close", "asset_prices", 0, closeErr)
+			database.RecordQuery("get_missing_price_dates_close", "asset_prices", 0, closeErr)
 		}
 	}()
 
@@ -516,18 +528,18 @@ func (r *postgresMarketDataRepo) GetMissingPriceDates(assetID string, start, end
 func (r *postgresMarketDataRepo) GetTargetCurrencies() ([]string, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_target_currencies", "currency_rates", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_target_currencies", "currency_rates", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `SELECT DISTINCT target_currency FROM marketdata.currency_rates`
 	rows, err := r.db.Query(query)
 	if err != nil {
-		metrics.RecordDatabaseQuery("get_target_currencies", "currency_rates", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_target_currencies", "currency_rates", time.Since(start).Seconds(), err)
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			metrics.RecordDatabaseQuery("get_target_currencies_close", "currency_rates", 0, closeErr)
+			database.RecordQuery("get_target_currencies_close", "currency_rates", 0, closeErr)
 		}
 	}()
 
@@ -545,7 +557,7 @@ func (r *postgresMarketDataRepo) GetTargetCurrencies() ([]string, error) {
 func (r *postgresMarketDataRepo) GetLatestCurrencyRateTimestamp(baseCurrency, targetCurrency string) (*time.Time, error) {
 	start := time.Now()
 	defer func() {
-		metrics.RecordDatabaseQuery("get_latest_currency_rate_timestamp", "currency_rates", time.Since(start).Seconds(), nil)
+		database.RecordQuery("get_latest_currency_rate_timestamp", "currency_rates", time.Since(start).Seconds(), nil)
 	}()
 
 	query := `
@@ -558,7 +570,7 @@ func (r *postgresMarketDataRepo) GetLatestCurrencyRateTimestamp(baseCurrency, ta
 	if err != nil {
 		// If no rows found or value is NULL, it might return nil or error depending on driver.
 		// Usually MAX() returns NULL if no rows match, which Scan handles if destination is *time.Time.
-		metrics.RecordDatabaseQuery("get_latest_currency_rate_timestamp", "currency_rates", time.Since(start).Seconds(), err)
+		database.RecordQuery("get_latest_currency_rate_timestamp", "currency_rates", time.Since(start).Seconds(), err)
 		return nil, nil // Treat error as nil timestamp (start from beginning)
 	}
 	return timestamp, nil

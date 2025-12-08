@@ -80,34 +80,6 @@ var (
 		[]string{"operation", "cache_type"},
 	)
 
-	// DatabaseQueriesTotal counts the total number of database queries.
-	DatabaseQueriesTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "portfolio_database_queries_total",
-			Help: "Total number of database queries",
-		},
-		[]string{"operation", "table"},
-	)
-
-	// DatabaseQueryDuration histograms the duration of database queries in seconds.
-	DatabaseQueryDuration = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "portfolio_database_query_duration_seconds",
-			Help:    "Duration of database queries in seconds",
-			Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1},
-		},
-		[]string{"operation", "table"},
-	)
-
-	// DatabaseErrorsTotal counts the total number of database errors.
-	DatabaseErrorsTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "portfolio_database_errors_total",
-			Help: "Total number of database errors",
-		},
-		[]string{"operation", "table"},
-	)
-
 	// MarketDataRequestsTotal counts the total number of market data requests.
 	MarketDataRequestsTotal = promauto.NewCounterVec(
 		prometheus.CounterOpts{
@@ -179,15 +151,6 @@ func RecordCacheOperation(operation, cacheType string, hit bool, duration float6
 		CacheMissesTotal.WithLabelValues(cacheType).Inc()
 	}
 	CacheOperationDuration.WithLabelValues(operation, cacheType).Observe(duration)
-}
-
-// RecordDatabaseQuery records a database query
-func RecordDatabaseQuery(operation, table string, duration float64, err error) {
-	DatabaseQueriesTotal.WithLabelValues(operation, table).Inc()
-	DatabaseQueryDuration.WithLabelValues(operation, table).Observe(duration)
-	if err != nil {
-		DatabaseErrorsTotal.WithLabelValues(operation, table).Inc()
-	}
 }
 
 // RecordMarketDataRequest records a market data request
