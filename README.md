@@ -315,6 +315,6 @@ make monitoring-up
 
 Access the monitoring tools:
 - **Grafana**: `http://localhost:3001` (admin/admin)
-- **Prometheus**: `http://localhost:9090`
+- **Prometheus**: `http://localhost:9081`
 - **Alertmanager**: `http://localhost:9093`
 
