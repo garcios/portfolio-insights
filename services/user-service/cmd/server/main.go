@@ -9,10 +9,10 @@ import (
 
 	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/pkg/logger"
+	"github.com/garcios/portfolio-insights/pkg/middleware"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/metrics"
-	"github.com/garcios/portfolio-insights/services/user-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/usecase"
 	pb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
@@ -95,7 +95,7 @@ func main() {
 
 	// Register Metrics Middleware
 	s := googleGrpc.NewServer(
-		googleGrpc.UnaryInterceptor(middleware.MetricsUnaryInterceptor()),
+		googleGrpc.UnaryInterceptor(middleware.MetricsUnaryInterceptor(metrics.RecordGrpcRequest)),
 	)
 	pb.RegisterUserServiceServer(s, h)
 	if err := s.Serve(lis); err != nil {

@@ -53,3 +53,9 @@ var (
 		[]string{"service", "method", "status"},
 	)
 )
+
+// RecordGrpcRequest records a gRPC request
+func RecordGrpcRequest(method, status string, duration float64) {
+	GRPCRequestsTotal.WithLabelValues("transaction-service", method, status).Inc()
+	GRPCRequestDuration.WithLabelValues("transaction-service", method, status).Observe(duration)
+}

@@ -10,12 +10,12 @@ import (
 
 	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/pkg/logger"
+	"github.com/garcios/portfolio-insights/pkg/middleware"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/handler/grpc"
 	httpHandler "github.com/garcios/portfolio-insights/services/transaction-service/internal/handler/http"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/metrics"
-	"github.com/garcios/portfolio-insights/services/transaction-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/usecase"
 	pb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
@@ -132,7 +132,7 @@ func main() {
 
 	// Register Metrics Middleware
 	s := googleGrpc.NewServer(
-		googleGrpc.UnaryInterceptor(middleware.UnaryServerInterceptor("transaction-service")),
+		googleGrpc.UnaryInterceptor(middleware.MetricsUnaryInterceptor(metrics.RecordGrpcRequest)),
 	)
 	pb.RegisterTransactionServiceServer(s, handler)
 	reflection.Register(s)

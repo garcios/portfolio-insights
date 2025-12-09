@@ -12,10 +12,10 @@ import (
 
 	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/pkg/logger"
+	"github.com/garcios/portfolio-insights/pkg/middleware"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/config"
 	marketdatahandler "github.com/garcios/portfolio-insights/services/marketdata-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/metrics"
-	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/usecase"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/worker"
@@ -167,7 +167,7 @@ func main() {
 
 	// Register Metrics Middleware
 	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.MetricsUnaryInterceptor()),
+		grpc.UnaryInterceptor(middleware.MetricsUnaryInterceptor(metrics.RecordGrpcRequest)),
 	)
 	handler := marketdatahandler.NewMarketDataHandler(uc)
 	pb.RegisterMarketDataServiceServer(grpcServer, handler)

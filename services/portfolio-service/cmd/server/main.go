@@ -11,11 +11,11 @@ import (
 
 	"github.com/garcios/portfolio-insights/pkg/database"
 	"github.com/garcios/portfolio-insights/pkg/logger"
+	"github.com/garcios/portfolio-insights/pkg/middleware"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	portfoliohandler "github.com/garcios/portfolio-insights/services/portfolio-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
-	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/middleware"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
@@ -187,7 +187,7 @@ func main() {
 
 	// Register Metrics Middleware
 	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.MetricsUnaryInterceptor()),
+		grpc.UnaryInterceptor(middleware.MetricsUnaryInterceptor(metrics.RecordGrpcRequest)),
 	)
 	pb.RegisterPortfolioServiceServer(grpcServer, portfolioHandler)
 
