@@ -3,6 +3,7 @@ package infrastructure
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"testing"
 	"time"
 
@@ -79,17 +80,29 @@ func (m *mockPortfolioUsecase) BackfillPortfolioHistory(
 }
 
 type mockPortfolioHistoryRepository struct {
+	mu        sync.Mutex
 	snapshots []*domain.PortfolioSnapshot
 	userIDs   []string
 	err       error
 }
 
 func (m *mockPortfolioHistoryRepository) CreateSnapshot(ctx context.Context, snapshot *domain.PortfolioSnapshot) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.err != nil {
 		return m.err
 	}
 	m.snapshots = append(m.snapshots, snapshot)
 	return nil
+}
+
+func (m *mockPortfolioHistoryRepository) GetSnapshots() []*domain.PortfolioSnapshot {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Return a copy to avoid race conditions on the slice if the test iterates while worker appends
+	result := make([]*domain.PortfolioSnapshot, len(m.snapshots))
+	copy(result, m.snapshots)
+	return result
 }
 
 func (m *mockPortfolioHistoryRepository) GetHistory(ctx context.Context, userID string, from, to time.Time) ([]*domain.PortfolioSnapshot, error) {
@@ -134,14 +147,17 @@ func TestSnapshotWorker_CreateSnapshots(t *testing.T) {
 	// Wait for processing
 	time.Sleep(100 * time.Millisecond)
 
+	// Get snapshots safely
+	snapshots := repo.GetSnapshots()
+
 	// Assert
-	if len(repo.snapshots) != 2 {
-		t.Errorf("Expected 2 snapshots, got %d", len(repo.snapshots))
+	if len(snapshots) != 2 {
+		t.Errorf("Expected 2 snapshots, got %d", len(snapshots))
 	}
 
 	// Verify snapshot content
 	var s1 *domain.PortfolioSnapshot
-	for _, s := range repo.snapshots {
+	for _, s := range snapshots {
 		if s.UserID == "user-1" {
 			s1 = s
 			break
