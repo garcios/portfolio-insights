@@ -8,7 +8,8 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/gateway"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/infrastructure/mapper"
-	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	"github.com/garcios/portfolio-insights/pkg/resourcenames"
+	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
 )
 
 // PortfolioGRPCGateway implements the PortfolioGateway interface using gRPC
@@ -30,10 +31,10 @@ func (g *PortfolioGRPCGateway) GetPortfolio(ctx context.Context, userID string) 
 	return entity.NewPortfolio(userID, userID, "My Portfolio"), nil
 }
 
-// GetPortfolioSummary retrieves portfolio summary metrics
+// GetPortfolioSummary retrieves portfolio summary metrics using AIP singleton resource
 func (g *PortfolioGRPCGateway) GetPortfolioSummary(ctx context.Context, userID string) (*entity.PortfolioSummary, error) {
 	req := &portfoliopb.GetPortfolioSummaryRequest{
-		UserId: userID,
+		Name: resourcenames.PortfolioName(userID),
 	}
 
 	resp, err := g.client.GetPortfolioSummary(ctx, req)
@@ -41,17 +42,17 @@ func (g *PortfolioGRPCGateway) GetPortfolioSummary(ctx context.Context, userID s
 		return nil, fmt.Errorf("failed to get portfolio summary: %w", err)
 	}
 
-	if resp.Summary == nil {
+	if resp == nil {
 		return nil, nil
 	}
 
-	return mapper.ProtoToPortfolioSummaryEntity(resp.Summary), nil
+	return mapper.ProtoToPortfolioSummaryEntity(resp), nil
 }
 
-// GetHoldings retrieves all holdings for a user
+// GetHoldings retrieves all holdings for a user using AIP parent field
 func (g *PortfolioGRPCGateway) GetHoldings(ctx context.Context, userID string) ([]*entity.Holding, error) {
 	req := &portfoliopb.GetHoldingsRequest{
-		UserId: userID,
+		Parent: resourcenames.UserName(userID),
 	}
 
 	resp, err := g.client.GetHoldings(ctx, req)
@@ -67,10 +68,10 @@ func (g *PortfolioGRPCGateway) GetHoldings(ctx context.Context, userID string) (
 	return holdings, nil
 }
 
-// GetPortfolioPerformance retrieves historical performance data
+// GetPortfolioPerformance retrieves historical performance data using AIP singleton resource
 func (g *PortfolioGRPCGateway) GetPortfolioPerformance(ctx context.Context, userID, period string) ([]*entity.PortfolioPerformancePoint, error) {
 	req := &portfoliopb.GetPortfolioPerformanceRequest{
-		UserId: userID,
+		Name:   resourcenames.PortfolioName(userID),
 		Period: period,
 	}
 

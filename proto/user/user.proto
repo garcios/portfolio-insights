@@ -4,66 +4,113 @@ package user;
 
 option go_package = "github.com/garcios/portfolio-insights/services/user-service/proto/user";
 
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+
 // UserService handles user management and authentication verification.
 service UserService {
-  // GetUser retrieves user details by their ID.
-  rpc GetUser (GetUserRequest) returns (GetUserResponse);
+  option (google.api.default_host) = "user-service:50051";
+
+  // GetUser retrieves user details by their resource name.
+  rpc GetUser (GetUserRequest) returns (User) {
+    option (google.api.http) = {
+      get: "/v1/{name=users/*}"
+    };
+    option (google.api.method_signature) = "name";
+  }
   
   // CreateUser registers a new user in the system.
-  rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
+  rpc CreateUser (CreateUserRequest) returns (User) {
+    option (google.api.http) = {
+      post: "/v1/users"
+      body: "user"
+    };
+    option (google.api.method_signature) = "user";
+  }
   
   // VerifyUser checks credentials for login or verification purposes.
-  rpc VerifyUser (VerifyUserRequest) returns (VerifyUserResponse);
+  // This is a custom method for authentication.
+  rpc VerifyUser (VerifyUserRequest) returns (VerifyUserResponse) {
+    option (google.api.http) = {
+      post: "/v1/users:verify"
+      body: "*"
+    };
+  }
+}
+
+// User represents a user account in the system.
+message User {
+  option (google.api.resource) = {
+    type: "portfolioinsights.googleapis.com/User"
+    pattern: "users/{user}"
+    singular: "user"
+    plural: "users"
+  };
+
+  // Resource name of the user.
+  // Format: users/{user}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // The user's email address.
+  string email = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // The user's username.
+  string username = 3 [(google.api.field_behavior) = REQUIRED];
+
+  // The user's hashed password.
+  // This field is never returned in responses.
+  string password = 4 [(google.api.field_behavior) = INPUT_ONLY];
+
+  // Output only. The user ID extracted from the resource name.
+  // This is provided for convenience.
+  string user_id = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // GetUserRequest is the request message for GetUser.
 message GetUserRequest {
-  // The unique identifier of the user to retrieve.
-  string id = 1;
-}
-
-// GetUserResponse is the response message for GetUser.
-message GetUserResponse {
-  // The user's unique identifier.
-  string id = 1;
-  // The user's email address.
-  string email = 2;
-  // The user's username.
-  string username = 3;
+  // The resource name of the user to retrieve.
+  // Format: users/{user}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/User"
+    }
+  ];
 }
 
 // CreateUserRequest is the request message for CreateUser.
 message CreateUserRequest {
-  // The email address for the new user.
-  string email = 1;
-  // The username for the new user.
-  string username = 2;
-  // The password for the new user.
-  string password = 3;
-}
+  // The user to create.
+  // The user's name field is ignored; the server assigns the user ID.
+  User user = 1 [(google.api.field_behavior) = REQUIRED];
 
-// CreateUserResponse is the response message for CreateUser.
-message CreateUserResponse {
-  // The unique identifier of the newly created user.
-  string id = 1;
+  // Optional. The user ID to use for this user.
+  // If not provided, the server will generate one.
+  // Must be 1-63 characters, lowercase letters, numbers, and hyphens.
+  string user_id = 2 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // VerifyUserRequest is the request message for VerifyUser.
+// This is a custom method for authentication.
 message VerifyUserRequest {
   // The email of the user to verify.
-  string email = 1;
+  string email = 1 [(google.api.field_behavior) = REQUIRED];
+
   // The password to verify against.
-  string password = 2;
+  string password = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.field_behavior) = INPUT_ONLY
+  ];
 }
 
 // VerifyUserResponse is the response message for VerifyUser.
 message VerifyUserResponse {
   // True if credentials are valid, false otherwise.
   bool valid = 1;
-  // The user's unique identifier (if valid).
-  string id = 2;
-  // The user's username (if valid).
-  string username = 3;
-  // The user's email (if valid).
-  string email = 4;
+
+  // The user resource if credentials are valid.
+  // If invalid, this field is not set.
+  User user = 2;
 }

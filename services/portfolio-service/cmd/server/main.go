@@ -18,7 +18,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
-	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	pb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

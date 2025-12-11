@@ -18,7 +18,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/usecase"
-	pb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	pb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	googleGrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"

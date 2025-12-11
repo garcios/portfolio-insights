@@ -4,62 +4,154 @@ package marketdata;
 
 option go_package = "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata";
 
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "google/protobuf/timestamp.proto";
 
 // MarketDataService provides methods to access market data such as asset details, prices, and currency rates.
 service MarketDataService {
-  // GetAsset retrieves detailed information about a specific asset by its symbol.
-  rpc GetAsset(GetAssetRequest) returns (GetAssetResponse);
+  option (google.api.default_host) = "marketdata-service:50054";
+
+  // GetAsset retrieves detailed information about a specific asset by its resource name.
+  rpc GetAsset(GetAssetRequest) returns (Asset) {
+    option (google.api.http) = {
+      get: "/v1/{name=assets/*}"
+    };
+    option (google.api.method_signature) = "name";
+  }
+
+  // GetAssetBySymbol retrieves an asset by its symbol.
+  // This is a custom method for symbol-based lookup.
+  rpc GetAssetBySymbol(GetAssetBySymbolRequest) returns (Asset) {
+    option (google.api.http) = {
+      get: "/v1/assets:bySymbol"
+    };
+    option (google.api.method_signature) = "symbol";
+  }
   
   // ListAssets returns a paginated list of available assets.
-  rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse);
+  rpc ListAssets(ListAssetsRequest) returns (ListAssetsResponse) {
+    option (google.api.http) = {
+      get: "/v1/assets"
+    };
+    option (google.api.method_signature) = "";
+  }
   
   // GetLatestPrice retrieves the latest price for a specific asset.
-  rpc GetLatestPrice(GetLatestPriceRequest) returns (GetLatestPriceResponse);
+  // This is a custom method.
+  rpc GetLatestPrice(GetLatestPriceRequest) returns (AssetPrice) {
+    option (google.api.http) = {
+      get: "/v1/{name=assets/*}:latestPrice"
+    };
+    option (google.api.method_signature) = "name";
+  }
   
   // GetLatestPrices retrieves the latest prices for a list of assets in a single batch call.
-  rpc GetLatestPrices(GetLatestPricesRequest) returns (GetLatestPricesResponse);
+  // This is a custom batch method.
+  rpc GetLatestPrices(GetLatestPricesRequest) returns (GetLatestPricesResponse) {
+    option (google.api.http) = {
+      post: "/v1/assets:batchGetLatestPrices"
+      body: "*"
+    };
+  }
   
   // GetHistoricalPrices retrieves historical price data for a specific asset within a time range.
-  rpc GetHistoricalPrices(GetHistoricalPricesRequest) returns (GetHistoricalPricesResponse);
+  // This is a custom method.
+  rpc GetHistoricalPrices(GetHistoricalPricesRequest) returns (GetHistoricalPricesResponse) {
+    option (google.api.http) = {
+      get: "/v1/{name=assets/*}:historicalPrices"
+    };
+    option (google.api.method_signature) = "name,start_time,end_time";
+  }
   
   // GetLatestCurrencyRate retrieves the latest exchange rate between two currencies.
-  rpc GetLatestCurrencyRate(GetLatestCurrencyRateRequest) returns (GetLatestCurrencyRateResponse);
+  // This is a custom method.
+  rpc GetLatestCurrencyRate(GetLatestCurrencyRateRequest) returns (CurrencyRate) {
+    option (google.api.http) = {
+      get: "/v1/currencyRates:latest"
+    };
+    option (google.api.method_signature) = "base_currency,target_currency";
+  }
   
   // GetHistoricalCurrencyRates retrieves historical exchange rates between two currencies within a time range.
-  rpc GetHistoricalCurrencyRates(GetHistoricalCurrencyRatesRequest) returns (GetHistoricalCurrencyRatesResponse);
+  // This is a custom method.
+  rpc GetHistoricalCurrencyRates(GetHistoricalCurrencyRatesRequest) returns (GetHistoricalCurrencyRatesResponse) {
+    option (google.api.http) = {
+      get: "/v1/currencyRates:historical"
+    };
+    option (google.api.method_signature) = "base_currency,target_currency,start_time,end_time";
+  }
 }
 
 // Asset represents a financial instrument or entity.
 message Asset {
-  // Unique identifier for the asset.
-  string id = 1;
+  option (google.api.resource) = {
+    type: "portfolioinsights.googleapis.com/Asset"
+    pattern: "assets/{asset}"
+    singular: "asset"
+    plural: "assets"
+  };
+
+  // Resource name of the asset.
+  // Format: assets/{asset}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
   // The symbol/ticker of the asset (e.g., "AAPL", "BTC-USD").
-  string symbol = 2;
+  string symbol = 2 [(google.api.field_behavior) = REQUIRED];
+
   // The full name of the asset.
-  string name = 3;
+  string display_name = 3;
+
   // The type of asset (e.g., "EQUITY", "CRYPTOCURRENCY").
   string type = 4;
+
   // The exchange where the asset is traded.
   string exchange = 5;
+
   // The currency in which the asset is quoted.
   string currency = 6;
+
+  // Output only. The asset ID extracted from the resource name.
+  // This is provided for convenience.
+  string asset_id = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // AssetPrice represents the price of an asset at a specific point in time.
 message AssetPrice {
-  // The ID of the asset.
-  string asset_id = 1;
+  // The resource name of the asset.
+  // Format: assets/{asset}
+  string asset_name = 1 [
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Asset"
+    }
+  ];
+
   // The price value.
   double price = 2;
+
   // The timestamp when the price was recorded.
   google.protobuf.Timestamp timestamp = 3;
 }
 
 // GetAssetRequest is the request message for GetAsset.
 message GetAssetRequest {
-  // The symbol of the asset to retrieve.
-  string symbol = 1;
+  // The resource name of the asset to retrieve.
+  // Format: assets/{asset}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Asset"
+    }
+  ];
+}
+
+// GetAssetBySymbolRequest is the request message for GetAssetBySymbol.
+// This is a custom method for symbol-based lookup.
+message GetAssetBySymbolRequest {
+  // The symbol of the asset to retrieve (e.g., "AAPL").
+  string symbol = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // GetAssetResponse is the response message for GetAsset.
@@ -71,8 +163,14 @@ message GetAssetResponse {
 // ListAssetsRequest is the request message for ListAssets.
 message ListAssetsRequest {
   // The maximum number of assets to return.
+  // The service may return fewer than this value.
+  // If unspecified, at most 50 assets will be returned.
+  // The maximum value is 1000; values above 1000 will be coerced to 1000.
   int32 page_size = 1;
-  // The token for the next page of results (from a previous response).
+
+  // A page token, received from a previous ListAssets call.
+  // Provide this to retrieve the subsequent page.
+  // When paginating, all other parameters must match the call that provided the page token.
   string page_token = 2;
 }
 
@@ -80,14 +178,23 @@ message ListAssetsRequest {
 message ListAssetsResponse {
   // The list of assets.
   repeated Asset assets = 1;
-  // The token to retrieve the next page of results.
+
+  // A token to retrieve the next page of results.
+  // Pass this value in the page_token field in the subsequent call.
+  // If empty, there are no more results.
   string next_page_token = 2;
 }
 
 // GetLatestPriceRequest is the request message for GetLatestPrice.
 message GetLatestPriceRequest {
-  // The symbol of the asset.
-  string symbol = 1;
+  // The resource name of the asset.
+  // Format: assets/{asset}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Asset"
+    }
+  ];
 }
 
 // GetLatestPriceResponse is the response message for GetLatestPrice.
@@ -98,26 +205,42 @@ message GetLatestPriceResponse {
 
 // GetLatestPricesRequest is the request message for GetLatestPrices.
 message GetLatestPricesRequest {
-  // A list of asset symbols to retrieve prices for.
-  repeated string symbols = 1;
+  // A list of asset resource names to retrieve prices for.
+  // Format: assets/{asset}
+  repeated string names = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Asset"
+    }
+  ];
 }
 
 // GetLatestPricesResponse is the response message for GetLatestPrices.
 message GetLatestPricesResponse {
-  // A map of asset symbols to their latest prices.
+  // A map of asset resource names to their latest prices.
+  // Keys are in the format: assets/{asset}
   map<string, AssetPrice> prices = 1;
 }
 
 // GetHistoricalPricesRequest is the request message for GetHistoricalPrices.
 message GetHistoricalPricesRequest {
-  // The symbol of the asset.
-  string symbol = 1;
+  // The resource name of the asset.
+  // Format: assets/{asset}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Asset"
+    }
+  ];
+
   // The start time of the historical range.
-  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp start_time = 2 [(google.api.field_behavior) = REQUIRED];
+
   // The end time of the historical range.
-  google.protobuf.Timestamp end_time = 3;
+  google.protobuf.Timestamp end_time = 3 [(google.api.field_behavior) = REQUIRED];
+
   // The interval for the data points (e.g., "1d", "1h").
-  string interval = 4; 
+  string interval = 4;
 }
 
 // GetHistoricalPricesResponse is the response message for GetHistoricalPrices.
@@ -128,26 +251,46 @@ message GetHistoricalPricesResponse {
 
 // CurrencyRate represents an exchange rate between two currencies.
 message CurrencyRate {
-  // Unique identifier for the currency rate record.
-  string id = 1;
+  option (google.api.resource) = {
+    type: "portfolioinsights.googleapis.com/CurrencyRate"
+    pattern: "currencyRates/{currency_rate}"
+    singular: "currencyRate"
+    plural: "currencyRates"
+  };
+
+  // Resource name of the currency rate.
+  // Format: currencyRates/{currency_rate}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
   // The base currency code (e.g., "USD").
-  string base_currency = 2;
+  string base_currency = 2 [(google.api.field_behavior) = REQUIRED];
+
   // The target currency code (e.g., "EUR").
-  string target_currency = 3;
+  string target_currency = 3 [(google.api.field_behavior) = REQUIRED];
+
   // The exchange rate (1 Base = Rate Target).
   double rate = 4;
+
   // The date/time for which this rate is valid.
   google.protobuf.Timestamp rate_date = 5;
-  // The timestamp when this record was created.
-  google.protobuf.Timestamp created_at = 6;
+
+  // Output only. The timestamp when this record was created.
+  google.protobuf.Timestamp created_at = 6 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.field_behavior) = IMMUTABLE
+  ];
+
+  // Output only. The currency rate ID extracted from the resource name.
+  string currency_rate_id = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // GetLatestCurrencyRateRequest is the request message for GetLatestCurrencyRate.
 message GetLatestCurrencyRateRequest {
-  // The base currency code.
-  string base_currency = 1;
-  // The target currency code.
-  string target_currency = 2;
+  // The base currency code (e.g., "USD").
+  string base_currency = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The target currency code (e.g., "EUR").
+  string target_currency = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // GetLatestCurrencyRateResponse is the response message for GetLatestCurrencyRate.
@@ -158,14 +301,17 @@ message GetLatestCurrencyRateResponse {
 
 // GetHistoricalCurrencyRatesRequest is the request message for GetHistoricalCurrencyRates.
 message GetHistoricalCurrencyRatesRequest {
-  // The base currency code.
-  string base_currency = 1;
-  // The target currency code.
-  string target_currency = 2;
+  // The base currency code (e.g., "USD").
+  string base_currency = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The target currency code (e.g., "EUR").
+  string target_currency = 2 [(google.api.field_behavior) = REQUIRED];
+
   // The start time of the historical range.
-  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp start_time = 3 [(google.api.field_behavior) = REQUIRED];
+
   // The end time of the historical range.
-  google.protobuf.Timestamp end_time = 4;
+  google.protobuf.Timestamp end_time = 4 [(google.api.field_behavior) = REQUIRED];
 }
 
 // GetHistoricalCurrencyRatesResponse is the response message for GetHistoricalCurrencyRates.
@@ -173,4 +319,3 @@ message GetHistoricalCurrencyRatesResponse {
   // The list of historical currency rates.
   repeated CurrencyRate rates = 1;
 }
-

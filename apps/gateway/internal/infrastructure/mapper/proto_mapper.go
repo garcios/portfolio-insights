@@ -4,15 +4,16 @@ package mapper
 import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/gateway"
-	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
-	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	"github.com/garcios/portfolio-insights/pkg/resourcenames"
+	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// ProtoToUserEntity converts a protobuf GetUserResponse to a User entity
-func ProtoToUserEntity(resp *userpb.GetUserResponse) *entity.User {
-	return entity.NewUser(resp.Id, resp.Username, resp.Email)
+// ProtoToUserEntity converts a protobuf User to a User entity
+func ProtoToUserEntity(user *userpb.User) *entity.User {
+	return entity.NewUser(user.UserId, user.Username, user.Email)
 }
 
 // ProtoToPortfolioSummaryEntity converts a protobuf PortfolioSummary to a PortfolioSummary entity
@@ -54,7 +55,7 @@ func ProtoToPortfolioPerformancePointEntity(pb *portfoliopb.PortfolioPerformance
 // ProtoToTransactionEntity converts a protobuf Transaction to a Transaction entity
 func ProtoToTransactionEntity(pb *transactionpb.Transaction) *entity.Transaction {
 	txn := &entity.Transaction{
-		ID:                pb.Id,
+		ID:                pb.TransactionId,
 		UserID:            pb.UserId,
 		Type:              entity.TransactionType(pb.Type),
 		PriceCurrency:     pb.PriceCurrency,
@@ -82,8 +83,7 @@ func ProtoToTransactionEntity(pb *transactionpb.Transaction) *entity.Transaction
 
 // CreateTransactionInputToProto converts a CreateTransactionInput to a protobuf CreateTransactionRequest
 func CreateTransactionInputToProto(input gateway.CreateTransactionInput) *transactionpb.CreateTransactionRequest {
-	req := &transactionpb.CreateTransactionRequest{
-		UserId:            input.UserID,
+	transaction := &transactionpb.Transaction{
 		Type:              string(input.Type),
 		PriceCurrency:     input.PriceCurrency,
 		ExecutedAt:        timestamppb.New(input.ExecutedAt),
@@ -94,22 +94,25 @@ func CreateTransactionInputToProto(input gateway.CreateTransactionInput) *transa
 
 	// Set nullable fields if non-zero
 	if input.Symbol != "" {
-		req.Symbol = &input.Symbol
+		transaction.Symbol = &input.Symbol
 	}
 	if input.Quantity != 0 {
-		req.Quantity = &input.Quantity
+		transaction.Quantity = &input.Quantity
 	}
 	if input.PricePerShare != 0 {
-		req.PricePerShare = &input.PricePerShare
+		transaction.PricePerShare = &input.PricePerShare
 	}
 
-	return req
+	return &transactionpb.CreateTransactionRequest{
+		Parent:      resourcenames.UserName(input.UserID),
+		Transaction: transaction,
+	}
 }
 
 // ListTransactionsInputToProto converts a ListTransactionsInput to a protobuf ListTransactionsRequest
 func ListTransactionsInputToProto(input gateway.ListTransactionsInput) *transactionpb.ListTransactionsRequest {
 	req := &transactionpb.ListTransactionsRequest{
-		UserId:    input.UserID,
+		Parent:    resourcenames.UserName(input.UserID),
 		PageSize:  input.PageSize,
 		PageToken: input.PageToken,
 	}

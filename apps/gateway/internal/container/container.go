@@ -6,9 +6,9 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/infrastructure/grpc"
 	httpgw "github.com/garcios/portfolio-insights/apps/gateway/internal/infrastructure/http"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/usecase"
-	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
-	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
 )
 
 // Container holds all application dependencies

@@ -8,9 +8,9 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
-	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
-	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -18,18 +18,18 @@ import (
 // Mock UserServiceClient
 type MockUserServiceClient struct {
 	userpb.UserServiceClient
-	GetUserFunc    func(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.GetUserResponse, error)
-	CreateUserFunc func(ctx context.Context, in *userpb.CreateUserRequest, opts ...grpc.CallOption) (*userpb.CreateUserResponse, error)
+	GetUserFunc    func(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.User, error)
+	CreateUserFunc func(ctx context.Context, in *userpb.CreateUserRequest, opts ...grpc.CallOption) (*userpb.User, error)
 }
 
-func (m *MockUserServiceClient) GetUser(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.GetUserResponse, error) {
+func (m *MockUserServiceClient) GetUser(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.User, error) {
 	if m.GetUserFunc != nil {
 		return m.GetUserFunc(ctx, in, opts...)
 	}
 	return nil, nil
 }
 
-func (m *MockUserServiceClient) CreateUser(ctx context.Context, in *userpb.CreateUserRequest, opts ...grpc.CallOption) (*userpb.CreateUserResponse, error) {
+func (m *MockUserServiceClient) CreateUser(ctx context.Context, in *userpb.CreateUserRequest, opts ...grpc.CallOption) (*userpb.User, error) {
 	if m.CreateUserFunc != nil {
 		return m.CreateUserFunc(ctx, in, opts...)
 	}
@@ -39,12 +39,12 @@ func (m *MockUserServiceClient) CreateUser(ctx context.Context, in *userpb.Creat
 // Mock PortfolioServiceClient
 type MockPortfolioServiceClient struct {
 	portfoliopb.PortfolioServiceClient
-	GetPortfolioSummaryFunc     func(ctx context.Context, in *portfoliopb.GetPortfolioSummaryRequest, opts ...grpc.CallOption) (*portfoliopb.GetPortfolioSummaryResponse, error)
+	GetPortfolioSummaryFunc     func(ctx context.Context, in *portfoliopb.GetPortfolioSummaryRequest, opts ...grpc.CallOption) (*portfoliopb.PortfolioSummary, error)
 	GetHoldingsFunc             func(ctx context.Context, in *portfoliopb.GetHoldingsRequest, opts ...grpc.CallOption) (*portfoliopb.GetHoldingsResponse, error)
 	GetPortfolioPerformanceFunc func(ctx context.Context, in *portfoliopb.GetPortfolioPerformanceRequest, opts ...grpc.CallOption) (*portfoliopb.GetPortfolioPerformanceResponse, error)
 }
 
-func (m *MockPortfolioServiceClient) GetPortfolioSummary(ctx context.Context, in *portfoliopb.GetPortfolioSummaryRequest, opts ...grpc.CallOption) (*portfoliopb.GetPortfolioSummaryResponse, error) {
+func (m *MockPortfolioServiceClient) GetPortfolioSummary(ctx context.Context, in *portfoliopb.GetPortfolioSummaryRequest, opts ...grpc.CallOption) (*portfoliopb.PortfolioSummary, error) {
 	if m.GetPortfolioSummaryFunc != nil {
 		return m.GetPortfolioSummaryFunc(ctx, in, opts...)
 	}
@@ -68,13 +68,29 @@ func (m *MockPortfolioServiceClient) GetPortfolioPerformance(ctx context.Context
 // Mock TransactionServiceClient
 type MockTransactionServiceClient struct {
 	transactionpb.TransactionServiceClient
+	CreateTransactionFunc func(ctx context.Context, in *transactionpb.CreateTransactionRequest, opts ...grpc.CallOption) (*transactionpb.Transaction, error)
+	ListTransactionsFunc  func(ctx context.Context, in *transactionpb.ListTransactionsRequest, opts ...grpc.CallOption) (*transactionpb.ListTransactionsResponse, error)
+}
+
+func (m *MockTransactionServiceClient) CreateTransaction(ctx context.Context, in *transactionpb.CreateTransactionRequest, opts ...grpc.CallOption) (*transactionpb.Transaction, error) {
+	if m.CreateTransactionFunc != nil {
+		return m.CreateTransactionFunc(ctx, in, opts...)
+	}
+	return nil, nil
+}
+
+func (m *MockTransactionServiceClient) ListTransactions(ctx context.Context, in *transactionpb.ListTransactionsRequest, opts ...grpc.CallOption) (*transactionpb.ListTransactionsResponse, error) {
+	if m.ListTransactionsFunc != nil {
+		return m.ListTransactionsFunc(ctx, in, opts...)
+	}
+	return nil, nil
 }
 
 func TestQueryResolver_User(t *testing.T) {
 	mockUserClient := &MockUserServiceClient{
-		GetUserFunc: func(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.GetUserResponse, error) {
-			return &userpb.GetUserResponse{
-				Id:       "user-123",
+		GetUserFunc: func(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.User, error) {
+			return &userpb.User{
+				UserId:   "user-123",
 				Username: "John Doe",
 				Email:    "john@example.com",
 			}, nil
@@ -109,9 +125,11 @@ func TestQueryResolver_User(t *testing.T) {
 
 func TestMutationResolver_CreateUser(t *testing.T) {
 	mockUserClient := &MockUserServiceClient{
-		CreateUserFunc: func(ctx context.Context, in *userpb.CreateUserRequest, opts ...grpc.CallOption) (*userpb.CreateUserResponse, error) {
-			return &userpb.CreateUserResponse{
-				Id: "new-user-456",
+		CreateUserFunc: func(ctx context.Context, in *userpb.CreateUserRequest, opts ...grpc.CallOption) (*userpb.User, error) {
+			return &userpb.User{
+				UserId:   "new-user-456",
+				Username: "Jane Doe",
+				Email:    "jane@example.com",
 			}, nil
 		},
 	}
@@ -147,17 +165,15 @@ func TestMutationResolver_CreateUser(t *testing.T) {
 func TestPortfolioResolver_Summary(t *testing.T) {
 	now := time.Now()
 	mockPortfolioClient := &MockPortfolioServiceClient{
-		GetPortfolioSummaryFunc: func(ctx context.Context, in *portfoliopb.GetPortfolioSummaryRequest, opts ...grpc.CallOption) (*portfoliopb.GetPortfolioSummaryResponse, error) {
-			return &portfoliopb.GetPortfolioSummaryResponse{
-				Summary: &portfoliopb.PortfolioSummary{
-					TotalValue:              10000.50,
-					TotalGainLoss:           500.25,
-					TotalGainLossPercentage: 5.25,
-					DayChange:               100.0,
-					DayChangePercentage:     1.0,
-					Currency:                "USD",
-					LastUpdated:             timestamppb.New(now),
-				},
+		GetPortfolioSummaryFunc: func(ctx context.Context, in *portfoliopb.GetPortfolioSummaryRequest, opts ...grpc.CallOption) (*portfoliopb.PortfolioSummary, error) {
+			return &portfoliopb.PortfolioSummary{
+				TotalValue:              10000.50,
+				TotalGainLoss:           500.25,
+				TotalGainLossPercentage: 5.25,
+				DayChange:               100.0,
+				DayChangePercentage:     1.0,
+				Currency:                "USD",
+				LastUpdated:             timestamppb.New(now),
 			}, nil
 		},
 	}

@@ -11,6 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.17.0
 	github.com/spf13/viper v1.21.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20251022142026-3a174f9686a8
 	google.golang.org/grpc v1.77.0
 	google.golang.org/protobuf v1.36.10
 )

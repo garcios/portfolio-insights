@@ -6,7 +6,7 @@ import (
 
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/domain"
-	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -32,7 +32,9 @@ func NewUserGateway(cfg config.Config) (domain.UserGateway, error) {
 }
 
 func (g *userGateway) Exists(ctx context.Context, userID string) (bool, error) {
-	_, err := g.client.GetUser(ctx, &userpb.GetUserRequest{Id: userID})
+	// Use resource name format: users/{user}
+	resourceName := fmt.Sprintf("users/%s", userID)
+	_, err := g.client.GetUser(ctx, &userpb.GetUserRequest{Name: resourceName})
 	if err != nil {
 		// TODO: Check specific gRPC error code for NotFound
 		return false, nil

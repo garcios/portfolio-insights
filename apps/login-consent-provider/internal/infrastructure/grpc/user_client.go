@@ -10,7 +10,8 @@ import (
 
 	"github.com/garcios/portfolio-insights/apps/login-consent-provider/internal/domain"
 	"github.com/garcios/portfolio-insights/apps/login-consent-provider/internal/metrics"
-	pb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	"github.com/garcios/portfolio-insights/pkg/resourcenames"
+	pb "github.com/garcios/portfolio-insights/services/user-service/user"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -48,6 +49,7 @@ func (c *UserServiceClient) Close() error {
 }
 
 // VerifyUser verifies user credentials via gRPC call
+// Uses AIP-compliant VerifyUser which returns User object
 func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password string) (*domain.User, error) {
 	start := time.Now()
 	var err error
@@ -68,14 +70,21 @@ func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password stri
 		return nil, err
 	}
 
+	// Response now contains User object
+	if resp.User == nil {
+		err = fmt.Errorf("user not found in response")
+		return nil, err
+	}
+
 	return &domain.User{
-		ID:       resp.Id,
-		Email:    resp.Email,
-		Username: resp.Username,
+		ID:       resp.User.UserId,
+		Email:    resp.User.Email,
+		Username: resp.User.Username,
 	}, nil
 }
 
 // GetUser retrieves user by ID via gRPC call
+// Uses AIP-compliant resource name
 func (c *UserServiceClient) GetUser(ctx context.Context, userID string) (*domain.User, error) {
 	start := time.Now()
 	var err error
@@ -84,14 +93,14 @@ func (c *UserServiceClient) GetUser(ctx context.Context, userID string) (*domain
 	}()
 
 	resp, err := c.client.GetUser(ctx, &pb.GetUserRequest{
-		Id: userID,
+		Name: resourcenames.UserName(userID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	return &domain.User{
-		ID:       resp.Id,
+		ID:       resp.UserId,
 		Email:    resp.Email,
 		Username: resp.Username,
 	}, nil

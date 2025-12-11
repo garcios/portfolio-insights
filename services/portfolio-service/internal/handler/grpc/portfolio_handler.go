@@ -6,9 +6,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/garcios/portfolio-insights/pkg/resourcenames"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
-	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	pb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -32,13 +33,16 @@ func NewPortfolioHandler(
 	}
 }
 
-// GetHoldings retrieves all holdings for a user
+// GetHoldings retrieves all holdings for a user.
+// AIP-132 compliant: uses parent field instead of user_id.
 func (h *PortfolioHandler) GetHoldings(ctx context.Context, req *pb.GetHoldingsRequest) (*pb.GetHoldingsResponse, error) {
-	if req.UserId == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	// Parse parent resource name to get user ID
+	userID, err := resourcenames.ParseHoldingParent(req.Parent)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid parent: %v", err)
 	}
 
-	holdings, err := h.portfolioUsecase.GetHoldings(ctx, req.UserId)
+	holdings, err := h.portfolioUsecase.GetHoldings(ctx, userID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get holdings: %v", err)
 	}
@@ -55,6 +59,7 @@ func (h *PortfolioHandler) GetHoldings(ctx context.Context, req *pb.GetHoldingsR
 		}
 
 		pbHoldings[i] = &pb.Holding{
+			Name:               resourcenames.HoldingName(userID, holding.Symbol),
 			Symbol:             holding.Symbol,
 			Quantity:           holding.Quantity,
 			AveragePrice:       holding.AverageCost,
@@ -64,6 +69,7 @@ func (h *PortfolioHandler) GetHoldings(ctx context.Context, req *pb.GetHoldingsR
 			GainLossPercentage: gainLossPct,
 			Currency:           holding.Currency,
 			AssetName:          holding.AssetName,
+			HoldingId:          holding.Symbol, // Use symbol as holding ID
 		}
 	}
 
@@ -72,35 +78,40 @@ func (h *PortfolioHandler) GetHoldings(ctx context.Context, req *pb.GetHoldingsR
 	}, nil
 }
 
-// GetPortfolioSummary retrieves the portfolio summary for a user
-func (h *PortfolioHandler) GetPortfolioSummary(ctx context.Context, req *pb.GetPortfolioSummaryRequest) (*pb.GetPortfolioSummaryResponse, error) {
-	if req.UserId == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+// GetPortfolioSummary retrieves the portfolio summary for a user.
+// AIP-131 compliant: uses singleton resource name.
+func (h *PortfolioHandler) GetPortfolioSummary(ctx context.Context, req *pb.GetPortfolioSummaryRequest) (*pb.PortfolioSummary, error) {
+	// Parse portfolio resource name to get user ID
+	userID, err := resourcenames.ParsePortfolioName(req.Name)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid resource name: %v", err)
 	}
 
-	summary, err := h.portfolioUsecase.GetPortfolioSummary(ctx, req.UserId)
+	summary, err := h.portfolioUsecase.GetPortfolioSummary(ctx, userID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get portfolio summary: %v", err)
 	}
 
-	return &pb.GetPortfolioSummaryResponse{
-		Summary: &pb.PortfolioSummary{
-			UserId:                  summary.UserID,
-			TotalValue:              summary.TotalValue,
-			TotalGainLoss:           summary.GainLoss,
-			TotalGainLossPercentage: summary.GainLossPct,
-			DayChange:               summary.DayChange,
-			DayChangePercentage:     summary.DayChangePct,
-			Currency:                summary.Currency,
-			LastUpdated:             timestamppb.New(time.Now()),
-		},
+	return &pb.PortfolioSummary{
+		Name:                    resourcenames.PortfolioName(userID),
+		UserId:                  summary.UserID,
+		TotalValue:              summary.TotalValue,
+		TotalGainLoss:           summary.GainLoss,
+		TotalGainLossPercentage: summary.GainLossPct,
+		DayChange:               summary.DayChange,
+		DayChangePercentage:     summary.DayChangePct,
+		Currency:                summary.Currency,
+		LastUpdated:             timestamppb.New(time.Now()),
 	}, nil
 }
 
-// GetPortfolioPerformance retrieves historical portfolio performance
+// GetPortfolioPerformance retrieves historical portfolio performance.
+// Custom method for performance data.
 func (h *PortfolioHandler) GetPortfolioPerformance(ctx context.Context, req *pb.GetPortfolioPerformanceRequest) (*pb.GetPortfolioPerformanceResponse, error) {
-	if req.UserId == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	// Parse portfolio resource name to get user ID
+	userID, err := resourcenames.ParsePortfolioName(req.Name)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid resource name: %v", err)
 	}
 
 	if req.Period == "" {
@@ -108,7 +119,7 @@ func (h *PortfolioHandler) GetPortfolioPerformance(ctx context.Context, req *pb.
 	}
 
 	// Query historical snapshots from the database
-	snapshots, err := h.historyRepo.GetHistoryByPeriod(ctx, req.UserId, req.Period)
+	snapshots, err := h.historyRepo.GetHistoryByPeriod(ctx, userID, req.Period)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get portfolio history: %v", err)
 	}
@@ -127,7 +138,8 @@ func (h *PortfolioHandler) GetPortfolioPerformance(ctx context.Context, req *pb.
 	}, nil
 }
 
-// BackfillHistory implements the admin endpoint for backfilling portfolio history
+// BackfillHistory implements the admin endpoint for backfilling portfolio history.
+// Custom method for administrative operations.
 func (h *PortfolioHandler) BackfillHistory(
 	ctx context.Context,
 	req *pb.BackfillHistoryRequest,
@@ -153,8 +165,13 @@ func (h *PortfolioHandler) BackfillHistory(
 
 	// 3. Determine users to backfill
 	var userIDs []string
-	if req.UserId != "" {
-		userIDs = []string{req.UserId}
+	if req.Name != "" {
+		// Parse portfolio resource name if provided
+		userID, err := resourcenames.ParsePortfolioName(req.Name)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid resource name: %v", err)
+		}
+		userIDs = []string{userID}
 	} else {
 		// Get all users with holdings
 		userIDs, err = h.historyRepo.GetAllUserIDs(ctx)

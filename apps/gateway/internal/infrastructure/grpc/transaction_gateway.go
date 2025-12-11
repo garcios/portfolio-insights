@@ -7,7 +7,7 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/gateway"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/infrastructure/mapper"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 )
 
 // TransactionGRPCGateway implements the TransactionGateway interface using gRPC
@@ -31,7 +31,7 @@ func (g *TransactionGRPCGateway) CreateTransaction(ctx context.Context, input ga
 		return nil, fmt.Errorf("failed to create transaction: %w", err)
 	}
 
-	return mapper.ProtoToTransactionEntity(resp.Transaction), nil
+	return mapper.ProtoToTransactionEntity(resp), nil
 }
 
 // ListTransactions lists transactions for a user with optional filtering and pagination

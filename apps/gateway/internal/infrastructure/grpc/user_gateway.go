@@ -7,7 +7,8 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/gateway"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/infrastructure/mapper"
-	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	"github.com/garcios/portfolio-insights/pkg/resourcenames"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
 )
 
 // UserGRPCGateway implements the UserGateway interface using gRPC
@@ -22,10 +23,10 @@ func NewUserGRPCGateway(client userpb.UserServiceClient) gateway.UserGateway {
 	}
 }
 
-// GetUser retrieves a user by ID
+// GetUser retrieves a user by ID using AIP-compliant resource name
 func (g *UserGRPCGateway) GetUser(ctx context.Context, id string) (*entity.User, error) {
 	req := &userpb.GetUserRequest{
-		Id: id,
+		Name: resourcenames.UserName(id),
 	}
 
 	resp, err := g.client.GetUser(ctx, req)
@@ -36,12 +37,14 @@ func (g *UserGRPCGateway) GetUser(ctx context.Context, id string) (*entity.User,
 	return mapper.ProtoToUserEntity(resp), nil
 }
 
-// CreateUser creates a new user
+// CreateUser creates a new user using AIP-compliant User object
 func (g *UserGRPCGateway) CreateUser(ctx context.Context, email, username, password string) (*entity.User, error) {
 	req := &userpb.CreateUserRequest{
-		Email:    email,
-		Username: username,
-		Password: password,
+		User: &userpb.User{
+			Email:    email,
+			Username: username,
+			Password: password,
+		},
 	}
 
 	resp, err := g.client.CreateUser(ctx, req)
@@ -49,5 +52,5 @@ func (g *UserGRPCGateway) CreateUser(ctx context.Context, email, username, passw
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	return entity.NewUser(resp.Id, username, email), nil
+	return entity.NewUser(resp.UserId, username, email), nil
 }
