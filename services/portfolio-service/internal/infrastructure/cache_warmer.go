@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	pb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 )
 
 // CacheWarmer handles pre-populating the asset cache

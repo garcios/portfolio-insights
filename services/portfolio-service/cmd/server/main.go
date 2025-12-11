@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 )
 
 func main() {

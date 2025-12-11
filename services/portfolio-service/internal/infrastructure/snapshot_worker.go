@@ -2,13 +2,14 @@ package infrastructure
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 )
 
 // SnapshotWorker handles periodic portfolio snapshots
@@ -146,19 +147,19 @@ func (w *SnapshotWorker) createBackfillSnapshots(ctx context.Context) {
 
 	for _, userID := range userIDs {
 		// Get oldest transaction for the user from transaction-service
-		req := &transactionpb.GetOldestTransactionForUserRequest{UserId: userID}
+		req := &transactionpb.GetOldestTransactionForUserRequest{Parent: fmt.Sprintf("users/%s", userID)}
 		resp, err := w.transactionClient.GetOldestTransactionForUser(ctx, req)
 		if err != nil {
 			w.logger.Error("failed to get oldest transaction", "user_id", userID, "error", err)
 			continue
 		}
 
-		if resp.Transaction == nil {
+		if resp == nil {
 			w.logger.Info("no transactions found for user, skipping backfill", "user_id", userID)
 			continue
 		}
 
-		startDate := resp.Transaction.ExecutedAt.AsTime()
+		startDate := resp.ExecutedAt.AsTime()
 		endDate := time.Now()
 
 		w.logger.Info("Backfilling history for user",

@@ -8,11 +8,11 @@ import (
 
 	"log/slog"
 
-	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	pb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 	"github.com/nats-io/nats.go"
 )
 
@@ -283,16 +283,16 @@ func (s *NATSSubscriber) handleEquityTransaction(event TransactionCreatedEvent) 
 			s.logger.Debug("asset currency from cache", "symbol", symbol, "currency", currency)
 		} else if s.marketDataGateway != nil {
 			assetResp, err := s.marketDataGateway.client.GetAsset(ctx, &pb.GetAssetRequest{
-				Symbol: symbol,
+				Name: fmt.Sprintf("assets/%s", symbol),
 			})
 			if err != nil {
 				s.logger.Warn("failed to fetch asset from marketdata service, using default USD", "error", err, "symbol", symbol)
-			} else if assetResp.Asset != nil {
-				currency = assetResp.Asset.Currency
+			} else if assetResp != nil {
+				currency = assetResp.Currency
 				s.logger.Debug("asset currency from marketdata service", "symbol", symbol, "currency", currency)
 
 				if s.assetCache != nil {
-					if err := s.assetCache.Set(ctx, assetResp.Asset); err != nil {
+					if err := s.assetCache.Set(ctx, assetResp); err != nil {
 						s.logger.Warn("failed to cache asset", "error", err, "symbol", symbol)
 					}
 				}
@@ -449,7 +449,7 @@ func (s *NATSSubscriber) recalculateHolding(ctx context.Context, userID, symbol 
 
 	for {
 		resp, err := s.transactionClient.ListTransactions(ctx, &transactionpb.ListTransactionsRequest{
-			UserId: userID,
+			Parent: fmt.Sprintf("users/%s", userID),
 			Filter: &transactionpb.TransactionFilter{
 				Symbol: symbol,
 			},

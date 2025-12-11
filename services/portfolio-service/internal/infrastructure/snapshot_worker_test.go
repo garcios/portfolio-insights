@@ -9,7 +9,7 @@ import (
 
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 	"google.golang.org/grpc"
 )
 
