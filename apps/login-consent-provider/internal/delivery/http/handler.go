@@ -136,9 +136,30 @@ func (h *Handler) ConsentGet(c *gin.Context) {
 	// TODO: Remove this after investigating why this is always false.
 	consentReq.Skip = true
 
+	// Get user ID from session instead of using consentReq.Subject
+	// (Subject from Hydra can be corrupted in some cases)
+	session := sessions.Default(c)
+	userID := session.Get("user_id")
+	if userID == nil {
+		log.Printf("No user_id in session")
+		c.HTML(http.StatusUnauthorized, "error.html", gin.H{
+			"error": "Session expired, please login again",
+		})
+		return
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		log.Printf("user_id in session is not a string: %T", userID)
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"error": "Invalid session data",
+		})
+		return
+	}
+
 	// If skip is true, user has already consented
 	if consentReq.Skip {
-		redirectTo, err := h.authUseCase.AcceptConsent(c.Request.Context(), challenge, consentReq.RequestedScope, consentReq.RequestedAudience, consentReq.Subject, true)
+		redirectTo, err := h.authUseCase.AcceptConsent(c.Request.Context(), challenge, consentReq.RequestedScope, consentReq.RequestedAudience, userIDStr, true)
 		if err != nil {
 			log.Printf("Error accepting consent: %v", err)
 			c.HTML(http.StatusInternalServerError, "error.html", gin.H{
@@ -197,8 +218,29 @@ func (h *Handler) ConsentPost(c *gin.Context) {
 		return
 	}
 
+	// Get user ID from session instead of using consentReq.Subject
+	// (Subject from Hydra can be corrupted in some cases)
+	session := sessions.Default(c)
+	userID := session.Get("user_id")
+	if userID == nil {
+		log.Printf("No user_id in session")
+		c.HTML(http.StatusUnauthorized, "error.html", gin.H{
+			"error": "Session expired, please login again",
+		})
+		return
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		log.Printf("user_id in session is not a string: %T", userID)
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{
+			"error": "Invalid session data",
+		})
+		return
+	}
+
 	// Accept consent
-	redirectTo, err := h.authUseCase.AcceptConsent(c.Request.Context(), challenge, consentReq.RequestedScope, consentReq.RequestedAudience, consentReq.Subject, remember)
+	redirectTo, err := h.authUseCase.AcceptConsent(c.Request.Context(), challenge, consentReq.RequestedScope, consentReq.RequestedAudience, userIDStr, remember)
 	if err != nil {
 		log.Printf("Error accepting consent: %v", err)
 		c.HTML(http.StatusInternalServerError, "error.html", gin.H{
