@@ -29,30 +29,32 @@ func (h *TransactionHandler) CreateTransaction(ctx context.Context, req *pb.Crea
 	if req.UserId == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id is required")
 	}
-	if req.Symbol == "" {
-		return nil, status.Error(codes.InvalidArgument, "symbol is required")
-	}
 	if req.Type == "" {
 		return nil, status.Error(codes.InvalidArgument, "type is required")
-	}
-	if req.Quantity <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "quantity must be positive")
-	}
-	if req.PricePerShare < 0 {
-		return nil, status.Error(codes.InvalidArgument, "price_per_share must be non-negative")
 	}
 
 	txn := &domain.Transaction{
 		UserID:            req.UserId,
-		Symbol:            req.Symbol,
 		Type:              req.Type,
-		Quantity:          req.Quantity,
-		PricePerShare:     req.PricePerShare,
 		ExecutedAt:        req.ExecutedAt.AsTime(),
 		Brokerage:         req.Brokerage,
 		Notes:             req.Notes,
 		PriceCurrency:     req.PriceCurrency,
 		BrokerageCurrency: req.BrokerageCurrency,
+	}
+
+	// Set nullable fields from proto optional fields
+	if req.Symbol != nil {
+		txn.Symbol = req.Symbol
+	}
+	if req.Quantity != nil {
+		txn.Quantity = req.Quantity
+	}
+	if req.PricePerShare != nil {
+		txn.PricePerShare = req.PricePerShare
+	}
+	if req.Amount != nil {
+		txn.Amount = req.Amount
 	}
 
 	if err := h.usecase.CreateTransaction(ctx, txn); err != nil {
@@ -132,15 +134,26 @@ func (h *TransactionHandler) ListTransactions(ctx context.Context, req *pb.ListT
 func (h *TransactionHandler) UpdateTransaction(ctx context.Context, req *pb.UpdateTransactionRequest) (*pb.UpdateTransactionResponse, error) {
 	txn := &domain.Transaction{
 		ID:                req.Id,
-		Symbol:            req.Symbol,
 		Type:              req.Type,
-		Quantity:          req.Quantity,
-		PricePerShare:     req.PricePerShare,
 		ExecutedAt:        req.ExecutedAt.AsTime(),
 		Brokerage:         req.Brokerage,
 		Notes:             req.Notes,
 		PriceCurrency:     req.PriceCurrency,
 		BrokerageCurrency: req.BrokerageCurrency,
+	}
+
+	// Set nullable fields from proto optional fields
+	if req.Symbol != nil {
+		txn.Symbol = req.Symbol
+	}
+	if req.Quantity != nil {
+		txn.Quantity = req.Quantity
+	}
+	if req.PricePerShare != nil {
+		txn.PricePerShare = req.PricePerShare
+	}
+	if req.Amount != nil {
+		txn.Amount = req.Amount
 	}
 
 	if err := h.usecase.UpdateTransaction(ctx, txn); err != nil {
@@ -185,13 +198,10 @@ func (h *TransactionHandler) GetOldestTransactionForUser(ctx context.Context, re
 }
 
 func mapDomainToProto(txn *domain.Transaction) *pb.Transaction {
-	return &pb.Transaction{
+	pbTxn := &pb.Transaction{
 		Id:                txn.ID,
 		UserId:            txn.UserID,
-		Symbol:            txn.Symbol,
 		Type:              txn.Type,
-		Quantity:          txn.Quantity,
-		PricePerShare:     txn.PricePerShare,
 		ExecutedAt:        timestamppb.New(txn.ExecutedAt),
 		CreatedAt:         timestamppb.New(txn.CreatedAt),
 		UpdatedAt:         timestamppb.New(txn.UpdatedAt),
@@ -200,4 +210,20 @@ func mapDomainToProto(txn *domain.Transaction) *pb.Transaction {
 		PriceCurrency:     txn.PriceCurrency,
 		BrokerageCurrency: txn.BrokerageCurrency,
 	}
+
+	// Set optional fields if present
+	if txn.Symbol != nil {
+		pbTxn.Symbol = txn.Symbol
+	}
+	if txn.Quantity != nil {
+		pbTxn.Quantity = txn.Quantity
+	}
+	if txn.PricePerShare != nil {
+		pbTxn.PricePerShare = txn.PricePerShare
+	}
+	if txn.Amount != nil {
+		pbTxn.Amount = txn.Amount
+	}
+
+	return pbTxn
 }

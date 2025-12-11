@@ -90,10 +90,11 @@ func TestProtoToPortfolioPerformancePointEntity(t *testing.T) {
 
 func TestProtoToTransactionEntity(t *testing.T) {
 	now := time.Now()
+	symbol := "AAPL"
 	pb := &transactionpb.Transaction{
 		Id:         "tx-1",
 		UserId:     "user-1",
-		Symbol:     "AAPL",
+		Symbol:     &symbol,
 		Type:       "BUY",
 		ExecutedAt: timestamppb.New(now),
 		CreatedAt:  timestamppb.New(now),
@@ -125,8 +126,8 @@ func TestCreateTransactionInputToProto(t *testing.T) {
 	if pb.UserId != input.UserID {
 		t.Errorf("expected UserId %s, got %s", input.UserID, pb.UserId)
 	}
-	if pb.Symbol != input.Symbol {
-		t.Errorf("expected Symbol %s, got %s", input.Symbol, pb.Symbol)
+	if pb.Symbol == nil || *pb.Symbol != input.Symbol {
+		t.Errorf("expected Symbol %s, got %v", input.Symbol, pb.Symbol)
 	}
 	if pb.Type != string(input.Type) {
 		t.Errorf("expected Type %s, got %s", input.Type, pb.Type)

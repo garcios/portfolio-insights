@@ -165,13 +165,27 @@ CSRF protection is built into the Gin framework and session middleware.
 
 ### Integration Testing
 
-The application is designed to work with Ory Hydra. Test the complete flow:
+#### Running Integration Tests
 
-1. Start Hydra
-2. Start Login/Consent Provider
-3. Initiate OAuth2 flow from client
-4. Verify login and consent screens appear
-5. Verify successful token exchange
+```bash
+cd apps/login-consent-provider
+chmod +x test_integration.sh
+./test_integration.sh
+```
+
+**Prerequisites:**
+- Login-consent-provider running on `localhost:3001`
+- `curl` installed
+
+**What the tests cover:**
+- Health check endpoint
+- Login form rendering
+- Consent form rendering
+- Logout form rendering
+- Error page rendering
+- Prometheus metrics
+
+**Note:** Full OAuth2 flow testing requires Ory Hydra to be running. These tests validate endpoint availability and basic responses.
 
 ## Troubleshooting
 

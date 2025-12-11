@@ -28,19 +28,28 @@ service TransactionService {
 }
 
 // Transaction represents a financial transaction record.
+// Supports equity transactions (BUY, SELL) and cash transactions (INT, DIV, DEP, WIT).
 message Transaction {
   // Unique identifier for the transaction.
   string id = 1;
   // The ID of the user who made the transaction.
   string user_id = 2;
-  // The symbol of the asset (e.g., "AAPL").
-  string symbol = 3;
-  // The type of transaction ("BUY" or "SELL").
+  // The type of transaction: "BUY", "SELL", "INT" (Interest), "DIV" (Dividend), "DEP" (Deposit), "WIT" (Withdraw).
   string type = 4;
+  
+  // Equity-specific fields (required for BUY, SELL, DIV; null for INT, DEP, WIT)
+  // The symbol of the asset (e.g., "AAPL").
+  optional string symbol = 3;
   // The quantity of assets bought or sold.
-  double quantity = 5;
+  optional double quantity = 5;
   // The price per unit at the time of execution.
-  double price_per_share = 6;
+  optional double price_per_share = 6;
+  
+  // Cash-specific field (required for INT, DIV, DEP, WIT; null for BUY, SELL)
+  // The cash amount for interest, dividends, deposits, or withdrawals.
+  optional double amount = 14;
+  
+  // Common fields
   // The timestamp when the transaction physically occurred.
   google.protobuf.Timestamp executed_at = 7;
   // The timestamp when the record was created.
@@ -58,17 +67,28 @@ message Transaction {
 }
 
 // CreateTransactionRequest is the request message for CreateTransaction.
+// For equity transactions (BUY, SELL): provide symbol, quantity, price_per_share.
+// For dividend transactions (DIV): provide symbol and amount.
+// For cash transactions (INT, DEP, WIT): provide amount only.
 message CreateTransactionRequest {
   // The ID of the user creating the transaction.
   string user_id = 1;
-  // The symbol of the asset.
-  string symbol = 2;
-  // The type of transaction ("BUY" or "SELL").
+  // The type of transaction: "BUY", "SELL", "INT", "DIV", "DEP", "WIT".
   string type = 3;
+  
+  // Equity-specific fields (optional)
+  // The symbol of the asset.
+  optional string symbol = 2;
   // The quantity involved.
-  double quantity = 4;
+  optional double quantity = 4;
   // The price per share/unit.
-  double price_per_share = 5;
+  optional double price_per_share = 5;
+  
+  // Cash-specific field (optional)
+  // The cash amount for interest, dividends, deposits, or withdrawals.
+  optional double amount = 11;
+  
+  // Common fields
   // The execution timestamp.
   google.protobuf.Timestamp executed_at = 6;
   // The brokerage fee amount.
@@ -103,7 +123,7 @@ message GetTransactionResponse {
 message TransactionFilter {
   // Filter by asset symbol.
   string symbol = 1;
-  // Filter by transaction type ("BUY" or "SELL").
+  // Filter by transaction type: "BUY", "SELL", "INT", "DIV", "DEP", "WIT".
   string type = 2;
   // Filter transactions executed after this time.
   google.protobuf.Timestamp from_executed_at = 3;
@@ -135,14 +155,22 @@ message ListTransactionsResponse {
 message UpdateTransactionRequest {
   // The ID of the transaction to update.
   string id = 1;
-  // Updated symbol (if changed).
-  string symbol = 2;
-  // Updated type (if changed).
+  // Updated type (if changed): "BUY", "SELL", "INT", "DIV", "DEP", "WIT".
   string type = 3;
+  
+  // Equity-specific fields (optional)
+  // Updated symbol (if changed).
+  optional string symbol = 2;
   // Updated quantity (if changed).
-  double quantity = 4;
+  optional double quantity = 4;
   // Updated price per share (if changed).
-  double price_per_share = 5;
+  optional double price_per_share = 5;
+  
+  // Cash-specific field (optional)
+  // Updated amount (if changed).
+  optional double amount = 11;
+  
+  // Common fields
   // Updated execution time (if changed).
   google.protobuf.Timestamp executed_at = 6;
   // Updated brokerage fee (if changed).

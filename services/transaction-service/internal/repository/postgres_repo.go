@@ -23,8 +23,8 @@ func NewPostgresTransactionRepository(db *sql.DB) domain.TransactionRepository {
 func (r *postgresTransactionRepo) Create(ctx context.Context, transaction *domain.Transaction) error {
 	start := time.Now()
 	query := `
-		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at, brokerage, notes, price_currency, brokerage_currency)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at, brokerage, notes, price_currency, brokerage_currency, amount)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id, created_at, updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
@@ -38,6 +38,7 @@ func (r *postgresTransactionRepo) Create(ctx context.Context, transaction *domai
 		transaction.Notes,
 		transaction.PriceCurrency,
 		transaction.BrokerageCurrency,
+		transaction.Amount,
 	).Scan(&transaction.ID, &transaction.CreatedAt, &transaction.UpdatedAt)
 
 	database.RecordQuery("create", "transactions", time.Since(start).Seconds(), err)
@@ -65,8 +66,8 @@ func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions [
 	}()
 
 	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		INSERT INTO txn.transactions (user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency, amount)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`)
 	if err != nil {
 		return err
@@ -91,6 +92,7 @@ func (r *postgresTransactionRepo) BulkCreate(ctx context.Context, transactions [
 			txn.Notes,
 			txn.PriceCurrency,
 			txn.BrokerageCurrency,
+			txn.Amount,
 		)
 		if err != nil {
 			return err
@@ -109,13 +111,17 @@ func (r *postgresTransactionRepo) GetByID(ctx context.Context, id string) (*doma
 	start := time.Now()
 
 	query := `
-		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
+		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency, amount
 		FROM txn.transactions
 		WHERE id = $1
 	`
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var txn domain.Transaction
+	var symbol sql.NullString
+	var quantity sql.NullFloat64
+	var pricePerShare sql.NullFloat64
+	var amount sql.NullFloat64
 	var brokerage sql.NullFloat64
 	var notes sql.NullString
 	var priceCurrency sql.NullString
@@ -124,10 +130,10 @@ func (r *postgresTransactionRepo) GetByID(ctx context.Context, id string) (*doma
 	err := row.Scan(
 		&txn.ID,
 		&txn.UserID,
-		&txn.Symbol,
+		&symbol,
 		&txn.Type,
-		&txn.Quantity,
-		&txn.PricePerShare,
+		&quantity,
+		&pricePerShare,
 		&txn.ExecutedAt,
 		&txn.CreatedAt,
 		&txn.UpdatedAt,
@@ -135,6 +141,7 @@ func (r *postgresTransactionRepo) GetByID(ctx context.Context, id string) (*doma
 		&notes,
 		&priceCurrency,
 		&brokerageCurrency,
+		&amount,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -143,6 +150,18 @@ func (r *postgresTransactionRepo) GetByID(ctx context.Context, id string) (*doma
 		return nil, err
 	}
 
+	if symbol.Valid {
+		txn.Symbol = &symbol.String
+	}
+	if quantity.Valid {
+		txn.Quantity = &quantity.Float64
+	}
+	if pricePerShare.Valid {
+		txn.PricePerShare = &pricePerShare.Float64
+	}
+	if amount.Valid {
+		txn.Amount = &amount.Float64
+	}
 	if brokerage.Valid {
 		txn.Brokerage = brokerage.Float64
 	}
@@ -164,7 +183,7 @@ func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID strin
 	start := time.Now()
 
 	query := `
-		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
+		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency, amount
 		FROM txn.transactions
 		WHERE user_id = $1
 	`
@@ -210,6 +229,10 @@ func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID strin
 	var transactions []*domain.Transaction
 	for rows.Next() {
 		var txn domain.Transaction
+		var symbol sql.NullString
+		var quantity sql.NullFloat64
+		var pricePerShare sql.NullFloat64
+		var amount sql.NullFloat64
 		var brokerage sql.NullFloat64
 		var notes sql.NullString
 		var priceCurrency sql.NullString
@@ -218,10 +241,10 @@ func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID strin
 		if err := rows.Scan(
 			&txn.ID,
 			&txn.UserID,
-			&txn.Symbol,
+			&symbol,
 			&txn.Type,
-			&txn.Quantity,
-			&txn.PricePerShare,
+			&quantity,
+			&pricePerShare,
 			&txn.ExecutedAt,
 			&txn.CreatedAt,
 			&txn.UpdatedAt,
@@ -229,10 +252,23 @@ func (r *postgresTransactionRepo) ListByUserID(ctx context.Context, userID strin
 			&notes,
 			&priceCurrency,
 			&brokerageCurrency,
+			&amount,
 		); err != nil {
 			return nil, err
 		}
 
+		if symbol.Valid {
+			txn.Symbol = &symbol.String
+		}
+		if quantity.Valid {
+			txn.Quantity = &quantity.Float64
+		}
+		if pricePerShare.Valid {
+			txn.PricePerShare = &pricePerShare.Float64
+		}
+		if amount.Valid {
+			txn.Amount = &amount.Float64
+		}
 		if brokerage.Valid {
 			txn.Brokerage = brokerage.Float64
 		}
@@ -256,8 +292,8 @@ func (r *postgresTransactionRepo) Update(ctx context.Context, txn *domain.Transa
 	start := time.Now()
 	query := `
 		UPDATE txn.transactions
-		SET symbol = $1, type = $2, quantity = $3, price_per_share = $4, executed_at = $5, updated_at = $6, brokerage = $7, notes = $8, price_currency = $9, brokerage_currency = $10
-		WHERE id = $11
+		SET symbol = $1, type = $2, quantity = $3, price_per_share = $4, executed_at = $5, updated_at = $6, brokerage = $7, notes = $8, price_currency = $9, brokerage_currency = $10, amount = $11
+		WHERE id = $12
 	`
 	result, err := r.db.ExecContext(ctx, query,
 		txn.Symbol,
@@ -270,6 +306,7 @@ func (r *postgresTransactionRepo) Update(ctx context.Context, txn *domain.Transa
 		txn.Notes,
 		txn.PriceCurrency,
 		txn.BrokerageCurrency,
+		txn.Amount,
 		txn.ID,
 	)
 	database.RecordQuery("update", "transactions", time.Since(start).Seconds(), err)
@@ -319,7 +356,7 @@ func (r *postgresTransactionRepo) GetOldestByUserID(ctx context.Context, userID 
 	start := time.Now()
 
 	query := `
-		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency
+		SELECT id, user_id, symbol, type, quantity, price_per_share, executed_at, created_at, updated_at, brokerage, notes, price_currency, brokerage_currency, amount
 		FROM txn.transactions
 		WHERE user_id = $1
 		ORDER BY executed_at ASC
@@ -328,6 +365,10 @@ func (r *postgresTransactionRepo) GetOldestByUserID(ctx context.Context, userID 
 	row := r.db.QueryRowContext(ctx, query, userID)
 
 	var txn domain.Transaction
+	var symbol sql.NullString
+	var quantity sql.NullFloat64
+	var pricePerShare sql.NullFloat64
+	var amount sql.NullFloat64
 	var brokerage sql.NullFloat64
 	var notes sql.NullString
 	var priceCurrency sql.NullString
@@ -336,10 +377,10 @@ func (r *postgresTransactionRepo) GetOldestByUserID(ctx context.Context, userID 
 	err := row.Scan(
 		&txn.ID,
 		&txn.UserID,
-		&txn.Symbol,
+		&symbol,
 		&txn.Type,
-		&txn.Quantity,
-		&txn.PricePerShare,
+		&quantity,
+		&pricePerShare,
 		&txn.ExecutedAt,
 		&txn.CreatedAt,
 		&txn.UpdatedAt,
@@ -347,6 +388,7 @@ func (r *postgresTransactionRepo) GetOldestByUserID(ctx context.Context, userID 
 		&notes,
 		&priceCurrency,
 		&brokerageCurrency,
+		&amount,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -355,6 +397,18 @@ func (r *postgresTransactionRepo) GetOldestByUserID(ctx context.Context, userID 
 		return nil, err
 	}
 
+	if symbol.Valid {
+		txn.Symbol = &symbol.String
+	}
+	if quantity.Valid {
+		txn.Quantity = &quantity.Float64
+	}
+	if pricePerShare.Valid {
+		txn.PricePerShare = &pricePerShare.Float64
+	}
+	if amount.Valid {
+		txn.Amount = &amount.Float64
+	}
 	if brokerage.Valid {
 		txn.Brokerage = brokerage.Float64
 	}

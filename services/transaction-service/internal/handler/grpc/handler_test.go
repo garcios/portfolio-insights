@@ -53,7 +53,7 @@ func (m *MockTransactionUsecase) GetOldestTransaction(ctx context.Context, userI
 	if userID == "user-1" {
 		return &domain.Transaction{
 			UserID:     userID,
-			Symbol:     "TEST",
+			Symbol:     domain.StringPtr("TEST"),
 			ExecutedAt: time.Now(),
 		}, nil
 	}
@@ -67,12 +67,15 @@ func TestCreateTransactionHandler(t *testing.T) {
 	handler := NewTransactionHandler(mockUC)
 
 	t.Run("Success", func(t *testing.T) {
+		symbol := "AAPL"
+		quantity := 10.0
+		pricePerShare := 150.0
 		req := &pb.CreateTransactionRequest{
 			UserId:        "user-1",
-			Symbol:        "AAPL",
+			Symbol:        &symbol,
 			Type:          "BUY",
-			Quantity:      10,
-			PricePerShare: 150.0,
+			Quantity:      &quantity,
+			PricePerShare: &pricePerShare,
 		}
 		resp, err := handler.CreateTransaction(context.Background(), req)
 		if err != nil {

@@ -73,6 +73,36 @@ The resolver calls `portfolio-service`'s `GetHoldings` RPC, converts the protobu
 ```
 If the gRPC call fails, the resolver returns an error which appears in the GraphQL response under `errors`.
 
+## Integration Testing
+
+The gateway includes a comprehensive integration test suite that validates GraphQL operations and backend service integration.
+
+### Prerequisites
+
+- Gateway running on `localhost:8080`
+- All backend services running (user-service, portfolio-service, transaction-service)
+- PostgreSQL with test data
+- `curl` and `jq` installed
+
+### Running Integration Tests
+
+```bash
+cd apps/gateway
+chmod +x test_integration.sh
+./test_integration.sh
+```
+
+### What the Tests Cover
+
+- **Health Checks** - GraphQL Playground and metrics endpoints
+- **GraphQL Introspection** - Schema introspection queries
+- **User Operations** - CreateUser mutation, User query
+- **Portfolio Operations** - Portfolio query with auth protection
+- **Error Handling** - Invalid query validation
+- **Metrics Validation** - Prometheus metrics tracking
+
+The tests automatically validate end-to-end integration through the entire stack.
+
 ## Troubleshooting
 - **Connection errors** – Ensure `PORTFOLIO_SERVICE_ADDR` points to a running portfolio‑service container.
 - **Missing holdings** – Verify that the portfolio‑service has data for the given user ID.

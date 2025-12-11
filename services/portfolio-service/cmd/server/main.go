@@ -90,16 +90,17 @@ func main() {
 		l.Info("Asset caching enabled")
 	}
 
-	// Initialize Repository
-	repo := repository.NewPostgresHoldingRepository(db)
+	// Initialize Repositories
+	holdingRepo := repository.NewPostgresHoldingRepository(db)
 	historyRepo := repository.NewPostgresHistoryRepository(db)
+	cashBalanceRepo := repository.NewPostgresCashBalanceRepository(db)
 
 	// Start background metrics updater
 	go func() {
 		ticker := time.NewTicker(15 * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
-			count, err := repo.Count()
+			count, err := holdingRepo.Count()
 			if err == nil {
 				metrics.HoldingsTotal.Set(float64(count))
 			}
@@ -119,7 +120,7 @@ func main() {
 	}()
 
 	// Initialize Usecase
-	portfolioUsecase := usecase.NewPortfolioUsecase(repo, historyRepo, marketDataGateway)
+	portfolioUsecase := usecase.NewPortfolioUsecase(holdingRepo, historyRepo, marketDataGateway)
 
 	// Initialize gRPC Handler
 	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase, historyRepo)
@@ -138,7 +139,7 @@ func main() {
 	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
 	// Initialize NATS Subscriber
-	subscriber, err := infrastructure.NewNATSSubscriber(repo, marketDataGateway, transactionClient, assetCache, l, cfg)
+	subscriber, err := infrastructure.NewNATSSubscriber(holdingRepo, cashBalanceRepo, marketDataGateway, transactionClient, assetCache, l, cfg)
 	if err != nil {
 		l.Error("failed to create NATS subscriber", "error", err)
 		os.Exit(1)

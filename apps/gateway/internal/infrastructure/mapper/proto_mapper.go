@@ -53,13 +53,10 @@ func ProtoToPortfolioPerformancePointEntity(pb *portfoliopb.PortfolioPerformance
 
 // ProtoToTransactionEntity converts a protobuf Transaction to a Transaction entity
 func ProtoToTransactionEntity(pb *transactionpb.Transaction) *entity.Transaction {
-	return &entity.Transaction{
+	txn := &entity.Transaction{
 		ID:                pb.Id,
 		UserID:            pb.UserId,
-		Symbol:            pb.Symbol,
 		Type:              entity.TransactionType(pb.Type),
-		Quantity:          pb.Quantity,
-		PricePerShare:     pb.PricePerShare,
 		PriceCurrency:     pb.PriceCurrency,
 		ExecutedAt:        pb.ExecutedAt.AsTime(),
 		Notes:             pb.Notes,
@@ -68,22 +65,45 @@ func ProtoToTransactionEntity(pb *transactionpb.Transaction) *entity.Transaction
 		CreatedAt:         pb.CreatedAt.AsTime(),
 		UpdatedAt:         pb.UpdatedAt.AsTime(),
 	}
+
+	// Handle nullable fields
+	if pb.Symbol != nil {
+		txn.Symbol = *pb.Symbol
+	}
+	if pb.Quantity != nil {
+		txn.Quantity = *pb.Quantity
+	}
+	if pb.PricePerShare != nil {
+		txn.PricePerShare = *pb.PricePerShare
+	}
+
+	return txn
 }
 
 // CreateTransactionInputToProto converts a CreateTransactionInput to a protobuf CreateTransactionRequest
 func CreateTransactionInputToProto(input gateway.CreateTransactionInput) *transactionpb.CreateTransactionRequest {
-	return &transactionpb.CreateTransactionRequest{
+	req := &transactionpb.CreateTransactionRequest{
 		UserId:            input.UserID,
-		Symbol:            input.Symbol,
 		Type:              string(input.Type),
-		Quantity:          input.Quantity,
-		PricePerShare:     input.PricePerShare,
 		PriceCurrency:     input.PriceCurrency,
 		ExecutedAt:        timestamppb.New(input.ExecutedAt),
 		Notes:             input.Notes,
 		Brokerage:         input.Brokerage,
 		BrokerageCurrency: input.BrokerageCurrency,
 	}
+
+	// Set nullable fields if non-zero
+	if input.Symbol != "" {
+		req.Symbol = &input.Symbol
+	}
+	if input.Quantity != 0 {
+		req.Quantity = &input.Quantity
+	}
+	if input.PricePerShare != 0 {
+		req.PricePerShare = &input.PricePerShare
+	}
+
+	return req
 }
 
 // ListTransactionsInputToProto converts a ListTransactionsInput to a protobuf ListTransactionsRequest

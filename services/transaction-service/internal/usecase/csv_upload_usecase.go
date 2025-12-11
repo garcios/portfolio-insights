@@ -110,23 +110,25 @@ func (uc *csvUploadUsecase) UploadCSV(userID string, csvData []byte) (*domain.CS
 			continue
 		}
 
-		// Validate symbol exists
-		symbolExists, err := uc.marketGateway.Exists(ctx, tx.Symbol)
-		if err != nil {
-			errors = append(errors, domain.CSVRowError{
-				RowNumber: rowNumber,
-				Row:       rowMap,
-				Error:     fmt.Sprintf("failed to validate symbol: %v", err),
-			})
-			continue
-		}
-		if !symbolExists {
-			errors = append(errors, domain.CSVRowError{
-				RowNumber: rowNumber,
-				Row:       rowMap,
-				Error:     fmt.Sprintf("symbol %s does not exist", tx.Symbol),
-			})
-			continue
+		// Validate symbol exists (only for equity and dividend transactions)
+		if tx.Symbol != nil {
+			symbolExists, err := uc.marketGateway.Exists(ctx, *tx.Symbol)
+			if err != nil {
+				errors = append(errors, domain.CSVRowError{
+					RowNumber: rowNumber,
+					Row:       rowMap,
+					Error:     fmt.Sprintf("failed to validate symbol: %v", err),
+				})
+				continue
+			}
+			if !symbolExists {
+				errors = append(errors, domain.CSVRowError{
+					RowNumber: rowNumber,
+					Row:       rowMap,
+					Error:     fmt.Sprintf("symbol %s does not exist", *tx.Symbol),
+				})
+				continue
+			}
 		}
 
 		validTransactions = append(validTransactions, tx)
@@ -205,7 +207,8 @@ func (uc *csvUploadUsecase) parseCSVRow(record []string, headerMap map[string]in
 		return nil, err
 	}
 	txType = strings.ToUpper(txType)
-	if txType != "BUY" && txType != "SELL" && txType != "SPLIT" {
+	// Support BUY, SELL, and SPLIT for CSV (SPLIT for backward compatibility)
+	if txType != domain.TransactionTypeBuy && txType != domain.TransactionTypeSell && txType != "SPLIT" {
 		return nil, fmt.Errorf("type must be BUY, SELL, or SPLIT")
 	}
 
@@ -266,12 +269,13 @@ func (uc *csvUploadUsecase) parseCSVRow(record []string, headerMap map[string]in
 		return nil, err
 	}
 
+	symbolUpper := strings.ToUpper(symbol)
 	return &domain.Transaction{
 		UserID:            userID,
-		Symbol:            strings.ToUpper(symbol),
+		Symbol:            &symbolUpper,
 		Type:              txType,
-		Quantity:          quantity,
-		PricePerShare:     price,
+		Quantity:          &quantity,
+		PricePerShare:     &price,
 		ExecutedAt:        executedAt,
 		Brokerage:         brokerage,
 		Notes:             notes,
