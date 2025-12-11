@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	marketdatapb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	marketdatapb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/transaction-service/internal/domain"
 	"google.golang.org/grpc"
@@ -33,7 +33,8 @@ func NewMarketDataGateway(cfg config.Config) (domain.MarketDataGateway, error) {
 }
 
 func (g *marketDataGateway) Exists(ctx context.Context, symbol string) (bool, error) {
-	_, err := g.client.GetAsset(ctx, &marketdatapb.GetAssetRequest{Symbol: symbol})
+	// Use GetAssetBySymbol custom method (AIP-136) for symbol lookup
+	_, err := g.client.GetAssetBySymbol(ctx, &marketdatapb.GetAssetBySymbolRequest{Symbol: symbol})
 	if err != nil {
 		// TODO: Check specific gRPC error code for NotFound
 		return false, nil
