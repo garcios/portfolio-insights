@@ -323,3 +323,5 @@ Access the monitoring tools:
 -  [Antigravity](https://antigravity.google/) (IDE)
 -  LLMs (Gemini 3.0 Pro, Claude Sonnet 4.5)
 -  [Datagrip](https://www.jetbrains.com/datagrip/download/?section=mac)
+-  [Postman](https://www.postman.com/downloads/)
+-  [Stitch](https://stitch.withgoogle.com/home)
