@@ -30,11 +30,15 @@ func (m *MockUserUsecase) VerifyUser(email, password string) (*domain.User, erro
 }
 
 func TestUserHandler_GetUser(t *testing.T) {
+	// Use valid UUIDs for testing
+	existingUserID := "550e8400-e29b-41d4-a716-446655440000"
+	nonExistentUserID := "550e8400-e29b-41d4-a716-446655440001"
+
 	mockUC := &MockUserUsecase{
 		GetUserFunc: func(id string) (*domain.User, error) {
-			if id == "existing-id" {
+			if id == existingUserID {
 				return &domain.User{
-					ID:       "existing-id",
+					ID:       existingUserID,
 					Username: "Test User",
 					Email:    "test@example.com",
 				}, nil
@@ -53,13 +57,13 @@ func TestUserHandler_GetUser(t *testing.T) {
 	}{
 		{
 			name:       "Success",
-			req:        &pb.GetUserRequest{Name: resourcenames.UserName("existing-id")},
-			wantUserID: "existing-id",
+			req:        &pb.GetUserRequest{Name: resourcenames.UserName(existingUserID)},
+			wantUserID: existingUserID,
 			wantErr:    false,
 		},
 		{
 			name:       "NotFound",
-			req:        &pb.GetUserRequest{Name: resourcenames.UserName("non-existent-id")},
+			req:        &pb.GetUserRequest{Name: resourcenames.UserName(nonExistentUserID)},
 			wantUserID: "",
 			wantErr:    true,
 		},
@@ -91,13 +95,15 @@ func TestUserHandler_GetUser(t *testing.T) {
 }
 
 func TestUserHandler_CreateUser(t *testing.T) {
+	generatedUserID := "550e8400-e29b-41d4-a716-446655440002"
+
 	mockUC := &MockUserUsecase{
 		CreateUserFunc: func(email, username, password string) (*domain.User, error) {
 			if email == "error@example.com" {
 				return nil, errors.New("creation failed")
 			}
 			return &domain.User{
-				ID:       "generated-id",
+				ID:       generatedUserID,
 				Email:    email,
 				Username: username,
 			}, nil
@@ -121,7 +127,7 @@ func TestUserHandler_CreateUser(t *testing.T) {
 					Password: "password",
 				},
 			},
-			wantUserID: "generated-id",
+			wantUserID: generatedUserID,
 			wantErr:    false,
 		},
 		{
@@ -164,11 +170,13 @@ func TestUserHandler_CreateUser(t *testing.T) {
 }
 
 func TestUserHandler_VerifyUser(t *testing.T) {
+	verifiedUserID := "550e8400-e29b-41d4-a716-446655440003"
+
 	mockUC := &MockUserUsecase{
 		VerifyUserFunc: func(email, password string) (*domain.User, error) {
 			if email == "valid@example.com" && password == "password" {
 				return &domain.User{
-					ID:       "user-id",
+					ID:       verifiedUserID,
 					Email:    email,
 					Username: "Valid User",
 				}, nil
@@ -192,7 +200,7 @@ func TestUserHandler_VerifyUser(t *testing.T) {
 				Password: "password",
 			},
 			wantValid:  true,
-			wantUserID: "user-id",
+			wantUserID: verifiedUserID,
 		},
 		{
 			name: "Invalid",

@@ -1,0 +1,7 @@
+# Binaries
+transaction-client
+*.exe
+*.test
+
+# Test output
+*.out

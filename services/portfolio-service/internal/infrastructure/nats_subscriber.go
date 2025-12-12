@@ -35,6 +35,7 @@ type TransactionCreatedEvent struct {
 	// Cash-specific field (nullable)
 	Amount *float64 `json:"amount,omitempty"`
 
+	Notes      string    `json:"notes,omitempty"`
 	ExecutedAt time.Time `json:"executed_at"`
 }
 
@@ -52,6 +53,7 @@ type TransactionUpdatedEvent struct {
 	// Cash-specific field (nullable)
 	Amount *float64 `json:"amount,omitempty"`
 
+	Notes      string    `json:"notes,omitempty"`
 	ExecutedAt time.Time `json:"executed_at"`
 }
 
@@ -60,6 +62,7 @@ type TransactionDeletedEvent struct {
 	TransactionID string  `json:"transaction_id"`
 	UserID        string  `json:"user_id"`
 	AssetSymbol   *string `json:"asset_symbol,omitempty"` // Nullable for cash transactions
+	Notes         string  `json:"notes,omitempty"`
 }
 
 // NATSSubscriber subscribes to NATS events.
@@ -201,7 +204,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 			metrics.RecordNatsMessage(s.createdTopic, "missing_amount", time.Since(start).Seconds())
 			return
 		}
-		if err := s.updateCashBalance(event.UserID, "USD", *event.Amount); err != nil {
+		if err := s.updateCashBalance(event.UserID, "USD", *event.Amount, event.Notes); err != nil {
 			s.logger.Error("failed to update cash balance for INT", "error", err)
 			metrics.RecordNatsMessage(s.createdTopic, "cash_error", time.Since(start).Seconds())
 			return
@@ -214,7 +217,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 			metrics.RecordNatsMessage(s.createdTopic, "missing_amount", time.Since(start).Seconds())
 			return
 		}
-		if err := s.updateCashBalance(event.UserID, "USD", *event.Amount); err != nil {
+		if err := s.updateCashBalance(event.UserID, "USD", *event.Amount, event.Notes); err != nil {
 			s.logger.Error("failed to update cash balance for DIV", "error", err)
 			metrics.RecordNatsMessage(s.createdTopic, "cash_error", time.Since(start).Seconds())
 			return
@@ -227,7 +230,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 			metrics.RecordNatsMessage(s.createdTopic, "missing_amount", time.Since(start).Seconds())
 			return
 		}
-		if err := s.updateCashBalance(event.UserID, "USD", *event.Amount); err != nil {
+		if err := s.updateCashBalance(event.UserID, "USD", *event.Amount, event.Notes); err != nil {
 			s.logger.Error("failed to update cash balance for DEP", "error", err)
 			metrics.RecordNatsMessage(s.createdTopic, "cash_error", time.Since(start).Seconds())
 			return
@@ -241,7 +244,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 			return
 		}
 		// Withdrawal is negative
-		if err := s.updateCashBalance(event.UserID, "USD", -*event.Amount); err != nil {
+		if err := s.updateCashBalance(event.UserID, "USD", -*event.Amount, event.Notes); err != nil {
 			s.logger.Error("failed to update cash balance for WIT", "error", err)
 			metrics.RecordNatsMessage(s.createdTopic, "cash_error", time.Since(start).Seconds())
 			return
@@ -369,9 +372,9 @@ func (s *NATSSubscriber) handleEquityTransaction(event TransactionCreatedEvent) 
 }
 
 // updateCashBalance updates the cash balance for a user using the dedicated cash balance repository
-func (s *NATSSubscriber) updateCashBalance(userID, currency string, amount float64) error {
+func (s *NATSSubscriber) updateCashBalance(userID, currency string, amount float64, notes string) error {
 	// Use dedicated cash balance repository
-	err := s.cashBalanceRepo.AddAmount(userID, currency, amount)
+	err := s.cashBalanceRepo.AddAmount(userID, currency, amount, notes)
 	if err != nil {
 		return fmt.Errorf("failed to update cash balance: %w", err)
 	}
@@ -380,6 +383,7 @@ func (s *NATSSubscriber) updateCashBalance(userID, currency string, amount float
 		"user_id", userID,
 		"currency", currency,
 		"change", amount,
+		"notes", notes,
 	)
 
 	return nil

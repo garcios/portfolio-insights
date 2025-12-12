@@ -20,6 +20,7 @@ type TransactionCreatedEvent struct {
 	PricePerShare *float64  `json:"price_per_share,omitempty"`
 	Quantity      *float64  `json:"quantity,omitempty"`
 	Amount        *float64  `json:"amount,omitempty"`
+	Notes         string    `json:"notes,omitempty"`
 	ExecutedAt    time.Time `json:"executed_at"`
 }
 
@@ -32,6 +33,7 @@ type TransactionUpdatedEvent struct {
 	PricePerShare *float64  `json:"price_per_share,omitempty"`
 	Quantity      *float64  `json:"quantity,omitempty"`
 	Amount        *float64  `json:"amount,omitempty"`
+	Notes         string    `json:"notes,omitempty"`
 	ExecutedAt    time.Time `json:"executed_at"`
 }
 
@@ -41,6 +43,7 @@ type TransactionDeletedEvent struct {
 	UserID        string  `json:"user_id"`
 	Type          string  `json:"type"`
 	AssetSymbol   *string `json:"asset_symbol,omitempty"`
+	Notes         string  `json:"notes,omitempty"`
 }
 
 type natsEventPublisher struct {
@@ -92,6 +95,7 @@ func (p *natsEventPublisher) PublishTransactionCreated(ctx context.Context, tran
 		PricePerShare: transaction.PricePerShare,
 		Quantity:      transaction.Quantity,
 		Amount:        transaction.Amount,
+		Notes:         transaction.Notes,
 		ExecutedAt:    transaction.ExecutedAt,
 	}
 
@@ -116,6 +120,7 @@ func (p *natsEventPublisher) PublishTransactionUpdated(ctx context.Context, tran
 		PricePerShare: transaction.PricePerShare,
 		Quantity:      transaction.Quantity,
 		Amount:        transaction.Amount,
+		Notes:         transaction.Notes,
 		ExecutedAt:    transaction.ExecutedAt,
 	}
 
@@ -137,6 +142,7 @@ func (p *natsEventPublisher) PublishTransactionDeleted(ctx context.Context, tran
 		UserID:        transaction.UserID,
 		Type:          transaction.Type,
 		AssetSymbol:   transaction.Symbol,
+		Notes:         transaction.Notes,
 	}
 
 	data, err := json.Marshal(event)

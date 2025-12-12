@@ -1,0 +1,12 @@
+Create a dedicated test client for the transaction-service.
+
+Location: Place the new client application at apps/test-client/transaction-service.
+
+Reference: Use the structure and conventions of the existing apps/test-client/user-service as a template and guide.
+
+Core Functionality: Implement tests covering the primary business logic and transaction flows of the transaction-service (e.g., deposit, withdrawal, transfer).
+
+Error Handling Focus: Specifically include tests that validate user input errors (e.g., negative amounts, invalid account IDs, missing required fields) and ensure appropriate, user-friendly error responses are returned.
+
+Data Setup: Ensure the client includes necessary setup/teardown logic for realistic test scenarios.
+

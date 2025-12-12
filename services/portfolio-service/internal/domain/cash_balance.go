@@ -7,6 +7,7 @@ type CashBalance struct {
 	UserID    string
 	Currency  string
 	Balance   float64
+	Notes     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -24,5 +25,5 @@ type CashBalanceRepository interface {
 
 	// AddAmount adds (or subtracts if negative) to a cash balance
 	// This is the primary method for updating cash from transactions
-	AddAmount(userID, currency string, amount float64) error
+	AddAmount(userID, currency string, amount float64, notes string) error
 }

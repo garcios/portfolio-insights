@@ -11,6 +11,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type mockTransactionClient struct {
@@ -18,11 +19,11 @@ type mockTransactionClient struct {
 	err      error
 }
 
-func (m *mockTransactionClient) CreateTransaction(ctx context.Context, in *transactionpb.CreateTransactionRequest, opts ...grpc.CallOption) (*transactionpb.CreateTransactionResponse, error) {
+func (m *mockTransactionClient) CreateTransaction(ctx context.Context, in *transactionpb.CreateTransactionRequest, opts ...grpc.CallOption) (*transactionpb.Transaction, error) {
 	return nil, nil
 }
 
-func (m *mockTransactionClient) GetTransaction(ctx context.Context, in *transactionpb.GetTransactionRequest, opts ...grpc.CallOption) (*transactionpb.GetTransactionResponse, error) {
+func (m *mockTransactionClient) GetTransaction(ctx context.Context, in *transactionpb.GetTransactionRequest, opts ...grpc.CallOption) (*transactionpb.Transaction, error) {
 	return nil, nil
 }
 
@@ -30,21 +31,19 @@ func (m *mockTransactionClient) ListTransactions(ctx context.Context, in *transa
 	return nil, nil
 }
 
-func (m *mockTransactionClient) UpdateTransaction(ctx context.Context, in *transactionpb.UpdateTransactionRequest, opts ...grpc.CallOption) (*transactionpb.UpdateTransactionResponse, error) {
+func (m *mockTransactionClient) UpdateTransaction(ctx context.Context, in *transactionpb.UpdateTransactionRequest, opts ...grpc.CallOption) (*transactionpb.Transaction, error) {
 	return nil, nil
 }
 
-func (m *mockTransactionClient) DeleteTransaction(ctx context.Context, in *transactionpb.DeleteTransactionRequest, opts ...grpc.CallOption) (*transactionpb.DeleteTransactionResponse, error) {
+func (m *mockTransactionClient) DeleteTransaction(ctx context.Context, in *transactionpb.DeleteTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	return nil, nil
 }
 
-func (m *mockTransactionClient) GetOldestTransactionForUser(ctx context.Context, in *transactionpb.GetOldestTransactionForUserRequest, opts ...grpc.CallOption) (*transactionpb.GetOldestTransactionForUserResponse, error) {
+func (m *mockTransactionClient) GetOldestTransactionForUser(ctx context.Context, in *transactionpb.GetOldestTransactionForUserRequest, opts ...grpc.CallOption) (*transactionpb.Transaction, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &transactionpb.GetOldestTransactionForUserResponse{
-		Transaction: m.oldestTx,
-	}, nil
+	return m.oldestTx, nil
 }
 
 type mockPortfolioUsecase struct {

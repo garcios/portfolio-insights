@@ -1,0 +1,7 @@
+# Binaries
+user-client
+user-client-*
+*.exe
+
+# Go build artifacts
+go.sum

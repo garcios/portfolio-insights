@@ -101,7 +101,7 @@ func (m *MockCashBalanceRepository) ListByUser(userID string) ([]*domain.CashBal
 	return result, nil
 }
 
-func (m *MockCashBalanceRepository) AddAmount(userID, currency string, amount float64) error {
+func (m *MockCashBalanceRepository) AddAmount(userID, currency string, amount float64, notes string) error {
 	key := userID + "-" + currency
 	balance, exists := m.balances[key]
 	if !exists {
@@ -109,10 +109,15 @@ func (m *MockCashBalanceRepository) AddAmount(userID, currency string, amount fl
 			UserID:   userID,
 			Currency: currency,
 			Balance:  0,
+			Notes:    notes,
 		}
 		m.balances[key] = balance
 	}
 	balance.Balance += amount
+	// Update notes if provided
+	if notes != "" {
+		balance.Notes = notes
+	}
 	return nil
 }
 
@@ -367,7 +372,7 @@ func TestHandleTransactionCreated_WIT(t *testing.T) {
 
 			// Set initial balance if needed
 			if tt.initialBalance > 0 {
-				if err := cashRepo.AddAmount("user-1", "USD", tt.initialBalance); err != nil {
+				if err := cashRepo.AddAmount("user-1", "USD", tt.initialBalance, ""); err != nil {
 					t.Fatalf("failed to set initial balance: %v", err)
 				}
 			}
@@ -444,7 +449,7 @@ func TestUpdateCashBalance(t *testing.T) {
 				logger:          slog.Default(),
 			}
 
-			err := subscriber.updateCashBalance(tt.userID, tt.currency, tt.amount)
+			err := subscriber.updateCashBalance(tt.userID, tt.currency, tt.amount, "")
 			if err != nil {
 				t.Fatalf("updateCashBalance failed: %v", err)
 			}

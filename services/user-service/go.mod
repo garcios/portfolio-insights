@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/garcios/portfolio-insights/pkg v0.0.0
+	github.com/google/uuid v1.6.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/viper v1.21.0
 	golang.org/x/crypto v0.43.0
