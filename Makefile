@@ -10,28 +10,28 @@ run-portfolio:
 	cd services/portfolio-service && go run cmd/server/main.go
 
 services-up:
-	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build
 
 services-down:
-	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml down
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml down
 
 services-logs:
-	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml logs -f
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml logs -f
 
 build-gateway:
-	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build gateway
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build gateway
 
 build-user-service:
-	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build user-service
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build user-service
 
 build-portfolio-service:
-	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build portfolio-service
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build portfolio-service
 
 build-transaction-service:
-	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build transaction-service
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build transaction-service
 
 build-marketdata-service:
-	podman-compose --env-file deployments/docker-compose/.env -f deployments/docker-compose/docker-compose.yml up -d --build marketdata-service
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build marketdata-service
 
 monitoring-up:
 	./deployments/monitoring/start-monitoring.sh	
@@ -43,16 +43,16 @@ monitoring-logs:
 	podman logs -f prometheus
 
 hydra-build:
-	podman-compose -f deployments/docker-compose/docker-compose.hydra.yml build --no-cache login-consent-provider
+	podman-compose -f deployments/docker-compose-hydra/docker-compose.hydra.yml build --no-cache login-consent-provider
 
 hydra-up:
-	podman-compose -f deployments/docker-compose/docker-compose.hydra.yml up -d
+	podman-compose -f deployments/docker-compose-hydra/docker-compose.hydra.yml up -d
 
 hydra-down:
-	podman-compose -f deployments/docker-compose/docker-compose.hydra.yml down 
+	podman-compose -f deployments/docker-compose-hydra/docker-compose.hydra.yml down 
 
 hydra-logs:
-	podman-compose -f deployments/docker-compose/docker-compose.hydra.yml logs -f
+	podman-compose -f deployments/docker-compose-hydra/docker-compose.hydra.yml logs -f
 
 proto-gen:
 	@mkdir -p services/user-service/proto/user

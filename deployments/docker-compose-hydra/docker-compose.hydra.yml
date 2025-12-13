@@ -186,7 +186,7 @@ networks:
     driver: bridge
   default:
     external: true
-    name: docker-compose_default
+    name: docker-compose-services_default
 
 volumes:
   hydra-postgres-data:
