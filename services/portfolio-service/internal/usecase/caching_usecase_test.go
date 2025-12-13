@@ -139,7 +139,9 @@ func TestGetPortfolioSummary_CacheMiss(t *testing.T) {
 		t.Error("Expected result to be cached")
 	}
 	var cachedObj domain.PortfolioSummary
-	json.Unmarshal([]byte(cached), &cachedObj)
+	if err := json.Unmarshal([]byte(cached), &cachedObj); err != nil {
+		t.Fatalf("Failed to unmarshal cached object: %v", err)
+	}
 	if cachedObj.TotalValue != 200 {
 		t.Errorf("Expected cached value 200, got %f", cachedObj.TotalValue)
 	}
