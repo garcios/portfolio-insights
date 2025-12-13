@@ -18,12 +18,12 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
-	pb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
+	pb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 )
 
 func main() {
@@ -90,16 +90,17 @@ func main() {
 		l.Info("Asset caching enabled")
 	}
 
-	// Initialize Repository
-	repo := repository.NewPostgresHoldingRepository(db)
+	// Initialize Repositories
+	holdingRepo := repository.NewPostgresHoldingRepository(db)
 	historyRepo := repository.NewPostgresHistoryRepository(db)
+	cashBalanceRepo := repository.NewPostgresCashBalanceRepository(db)
 
 	// Start background metrics updater
 	go func() {
 		ticker := time.NewTicker(15 * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
-			count, err := repo.Count()
+			count, err := holdingRepo.Count()
 			if err == nil {
 				metrics.HoldingsTotal.Set(float64(count))
 			}
@@ -119,7 +120,14 @@ func main() {
 	}()
 
 	// Initialize Usecase
-	portfolioUsecase := usecase.NewPortfolioUsecase(repo, historyRepo, marketDataGateway)
+	var portfolioUsecase usecase.PortfolioUsecase
+	portfolioUsecase = usecase.NewPortfolioUsecase(holdingRepo, historyRepo, marketDataGateway)
+
+	if redisClient != nil {
+		wrappedRedis := database.NewRedisClientFromRaw(redisClient)
+		portfolioUsecase = usecase.NewCachingPortfolioUsecase(portfolioUsecase, wrappedRedis, cfg.Caching)
+		l.Info("Portfolio caching enabled")
+	}
 
 	// Initialize gRPC Handler
 	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase, historyRepo)
@@ -138,7 +146,7 @@ func main() {
 	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
 	// Initialize NATS Subscriber
-	subscriber, err := infrastructure.NewNATSSubscriber(repo, marketDataGateway, transactionClient, assetCache, l, cfg)
+	subscriber, err := infrastructure.NewNATSSubscriber(holdingRepo, cashBalanceRepo, marketDataGateway, transactionClient, assetCache, l, cfg)
 	if err != nil {
 		l.Error("failed to create NATS subscriber", "error", err)
 		os.Exit(1)

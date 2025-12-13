@@ -318,3 +318,13 @@ Access the monitoring tools:
 - **Prometheus**: `http://localhost:9081`
 - **Alertmanager**: `http://localhost:9093`
 
+## Development Tools
+
+-  [Antigravity](https://antigravity.google/) (IDE)
+-  LLMs (Gemini 3.0 Pro, Claude Sonnet 4.5)
+-  [Datagrip](https://www.jetbrains.com/datagrip/download/?section=mac)
+-  [Postman](https://www.postman.com/downloads/)
+-  [Stitch](https://stitch.withgoogle.com/home)
+
+### Coding Standards
+- [API Standards](https://google.aip.dev/general)

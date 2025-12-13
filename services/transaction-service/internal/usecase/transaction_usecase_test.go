@@ -27,7 +27,13 @@ func (m *MockTransactionRepository) Create(ctx context.Context, transaction *dom
 		return m.createError
 	}
 	// Generate unique ID
-	transaction.ID = "test-id-" + transaction.UserID + "-" + transaction.Symbol
+	idSuffix := transaction.UserID
+	if transaction.Symbol != nil {
+		idSuffix += "-" + *transaction.Symbol
+	} else {
+		idSuffix += "-" + transaction.Type
+	}
+	transaction.ID = "test-id-" + idSuffix
 	transaction.CreatedAt = time.Now()
 	transaction.UpdatedAt = time.Now()
 	m.transactions[transaction.ID] = transaction
@@ -52,7 +58,7 @@ func (m *MockTransactionRepository) ListByUserID(ctx context.Context, userID str
 	var result []*domain.Transaction
 	for _, tx := range m.transactions {
 		if tx.UserID == userID {
-			if filter.Symbol != "" && tx.Symbol != filter.Symbol {
+			if filter.Symbol != "" && *tx.Symbol != filter.Symbol {
 				continue
 			}
 			if filter.Type != "" && tx.Type != filter.Type {
@@ -179,10 +185,10 @@ func TestCreateTransaction(t *testing.T) {
 	t.Run("Success_BUY", func(t *testing.T) {
 		txn := &domain.Transaction{
 			UserID:        "user-1",
-			Symbol:        "AAPL",
+			Symbol:        domain.StringPtr("AAPL"),
 			Type:          "BUY",
-			Quantity:      10,
-			PricePerShare: 150.0,
+			Quantity:      domain.Float64Ptr(10),
+			PricePerShare: domain.Float64Ptr(150.0),
 			ExecutedAt:    time.Now(),
 		}
 		err := uc.CreateTransaction(context.Background(), txn)
@@ -195,8 +201,8 @@ func TestCreateTransaction(t *testing.T) {
 		if txn.Type != "BUY" {
 			t.Errorf("expected BUY, got %s", txn.Type)
 		}
-		if txn.Quantity != 10 {
-			t.Errorf("expected quantity 10, got %f", txn.Quantity)
+		if *txn.Quantity != 10 {
+			t.Errorf("expected quantity 10, got %f", *txn.Quantity)
 		}
 		if len(eventPublisher.published) != 1 {
 			t.Errorf("expected 1 published event, got %d", len(eventPublisher.published))
@@ -206,10 +212,10 @@ func TestCreateTransaction(t *testing.T) {
 	t.Run("Success_SELL", func(t *testing.T) {
 		txn := &domain.Transaction{
 			UserID:        "user-2",
-			Symbol:        "GOOGL",
+			Symbol:        domain.StringPtr("GOOGL"),
 			Type:          "SELL",
-			Quantity:      5,
-			PricePerShare: 2500.0,
+			Quantity:      domain.Float64Ptr(5),
+			PricePerShare: domain.Float64Ptr(2500.0),
 			ExecutedAt:    time.Now(),
 		}
 		err := uc.CreateTransaction(context.Background(), txn)
@@ -225,10 +231,10 @@ func TestCreateTransaction(t *testing.T) {
 		userGateway.exists = false
 		txn := &domain.Transaction{
 			UserID:        "user-2",
-			Symbol:        "AAPL",
+			Symbol:        domain.StringPtr("AAPL"),
 			Type:          "BUY",
-			Quantity:      10,
-			PricePerShare: 150.0,
+			Quantity:      domain.Float64Ptr(10),
+			PricePerShare: domain.Float64Ptr(150.0),
 			ExecutedAt:    time.Now(),
 		}
 		err := uc.CreateTransaction(context.Background(), txn)
@@ -242,10 +248,10 @@ func TestCreateTransaction(t *testing.T) {
 		marketGateway.exists = false
 		txn := &domain.Transaction{
 			UserID:        "user-1",
-			Symbol:        "INVALID",
+			Symbol:        domain.StringPtr("INVALID"),
 			Type:          "BUY",
-			Quantity:      10,
-			PricePerShare: 150.0,
+			Quantity:      domain.Float64Ptr(10),
+			PricePerShare: domain.Float64Ptr(150.0),
 			ExecutedAt:    time.Now(),
 		}
 		err := uc.CreateTransaction(context.Background(), txn)
@@ -271,10 +277,10 @@ func TestCreateTransaction(t *testing.T) {
 	t.Run("InvalidCurrency", func(t *testing.T) {
 		txn := &domain.Transaction{
 			UserID:            "user-1",
-			Symbol:            "AAPL",
+			Symbol:            domain.StringPtr("AAPL"),
 			Type:              "BUY",
-			Quantity:          10,
-			PricePerShare:     150.0,
+			Quantity:          domain.Float64Ptr(10),
+			PricePerShare:     domain.Float64Ptr(150.0),
 			ExecutedAt:        time.Now(),
 			PriceCurrency:     "US", // Invalid length
 			BrokerageCurrency: "USD",
@@ -303,10 +309,10 @@ func TestGetTransaction(t *testing.T) {
 	// Create a transaction first
 	txn := &domain.Transaction{
 		UserID:        "user-1",
-		Symbol:        "AAPL",
+		Symbol:        domain.StringPtr("AAPL"),
 		Type:          "BUY",
-		Quantity:      10,
-		PricePerShare: 150.0,
+		Quantity:      domain.Float64Ptr(10),
+		PricePerShare: domain.Float64Ptr(150.0),
 		ExecutedAt:    time.Now(),
 	}
 	_ = uc.CreateTransaction(context.Background(), txn)
@@ -338,13 +344,13 @@ func TestListTransactions(t *testing.T) {
 
 	// Create multiple transactions
 	// Create multiple transactions
-	if err := uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-1", Symbol: "AAPL", Type: "BUY", Quantity: 10, PricePerShare: 150.0, ExecutedAt: time.Now()}); err != nil {
+	if err := uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-1", Symbol: domain.StringPtr("AAPL"), Type: "BUY", Quantity: domain.Float64Ptr(10), PricePerShare: domain.Float64Ptr(150.0), ExecutedAt: time.Now()}); err != nil {
 		t.Fatalf("failed to create transaction: %v", err)
 	}
-	if err := uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-1", Symbol: "GOOGL", Type: "BUY", Quantity: 5, PricePerShare: 2500.0, ExecutedAt: time.Now()}); err != nil {
+	if err := uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-1", Symbol: domain.StringPtr("GOOGL"), Type: "BUY", Quantity: domain.Float64Ptr(5), PricePerShare: domain.Float64Ptr(2500.0), ExecutedAt: time.Now()}); err != nil {
 		t.Fatalf("failed to create transaction: %v", err)
 	}
-	if err := uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-2", Symbol: "MSFT", Type: "BUY", Quantity: 20, PricePerShare: 300.0, ExecutedAt: time.Now()}); err != nil {
+	if err := uc.CreateTransaction(context.Background(), &domain.Transaction{UserID: "user-2", Symbol: domain.StringPtr("MSFT"), Type: "BUY", Quantity: domain.Float64Ptr(20), PricePerShare: domain.Float64Ptr(300.0), ExecutedAt: time.Now()}); err != nil {
 		t.Fatalf("failed to create transaction: %v", err)
 	}
 
@@ -387,8 +393,8 @@ func TestListTransactions(t *testing.T) {
 		if len(txs) != 1 {
 			t.Errorf("expected 1 transaction for user-1 with symbol AAPL, got %d", len(txs))
 		}
-		if txs[0].Symbol != "AAPL" {
-			t.Errorf("expected symbol AAPL, got %s", txs[0].Symbol)
+		if *txs[0].Symbol != "AAPL" {
+			t.Errorf("expected symbol AAPL, got %s", *txs[0].Symbol)
 		}
 	})
 }
@@ -403,37 +409,37 @@ func TestUpdateTransaction(t *testing.T) {
 	// Create a transaction first
 	txn := &domain.Transaction{
 		UserID:        "user-1",
-		Symbol:        "AAPL",
+		Symbol:        domain.StringPtr("AAPL"),
 		Type:          "BUY",
-		Quantity:      10,
-		PricePerShare: 150.0,
+		Quantity:      domain.Float64Ptr(10),
+		PricePerShare: domain.Float64Ptr(150.0),
 		ExecutedAt:    time.Now(),
 	}
 	_ = uc.CreateTransaction(context.Background(), txn)
 
 	t.Run("Success", func(t *testing.T) {
-		txn.Quantity = 15
-		txn.PricePerShare = 155.0
+		txn.Quantity = domain.Float64Ptr(15)
+		txn.PricePerShare = domain.Float64Ptr(155.0)
 		err := uc.UpdateTransaction(context.Background(), txn)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
 
-		if txn.Quantity != 15 {
-			t.Errorf("expected quantity 15, got %f", txn.Quantity)
+		if *txn.Quantity != 15 {
+			t.Errorf("expected quantity 15, got %f", *txn.Quantity)
 		}
-		if txn.PricePerShare != 155.0 {
-			t.Errorf("expected price 155.0, got %f", txn.PricePerShare)
+		if *txn.PricePerShare != 155.0 {
+			t.Errorf("expected price 155.0, got %f", *txn.PricePerShare)
 		}
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
 		notFoundTxn := &domain.Transaction{
 			ID:            "invalid-id",
-			Symbol:        "AAPL",
+			Symbol:        domain.StringPtr("AAPL"),
 			Type:          "BUY",
-			Quantity:      10,
-			PricePerShare: 150.0,
+			Quantity:      domain.Float64Ptr(10),
+			PricePerShare: domain.Float64Ptr(150.0),
 			ExecutedAt:    time.Now(),
 		}
 		err := uc.UpdateTransaction(context.Background(), notFoundTxn)
@@ -453,10 +459,10 @@ func TestDeleteTransaction(t *testing.T) {
 	// Create a transaction first
 	txn := &domain.Transaction{
 		UserID:        "user-1",
-		Symbol:        "AAPL",
+		Symbol:        domain.StringPtr("AAPL"),
 		Type:          "BUY",
-		Quantity:      10,
-		PricePerShare: 150.0,
+		Quantity:      domain.Float64Ptr(10),
+		PricePerShare: domain.Float64Ptr(150.0),
 		ExecutedAt:    time.Now(),
 	}
 	_ = uc.CreateTransaction(context.Background(), txn)

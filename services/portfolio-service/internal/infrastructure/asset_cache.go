@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	pb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/redis/go-redis/v9"

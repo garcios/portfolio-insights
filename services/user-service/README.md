@@ -204,6 +204,36 @@ The service will log connection status on startup:
 Successfully connected to PostgreSQL database: garcios@postgres:5432/portfolio
 ```
 
+## Integration Testing
+
+The service includes a comprehensive integration test suite that tests all gRPC endpoints and database operations.
+
+### Prerequisites
+
+- User service running on `localhost:50051`
+- PostgreSQL running on `localhost:5432`
+- `grpcurl` installed (`brew install grpcurl`)
+- `psql` installed
+- `jq` installed (`brew install jq`)
+
+### Running Integration Tests
+
+```bash
+cd services/user-service
+chmod +x test_integration.sh
+./test_integration.sh
+```
+
+### What the Tests Cover
+
+- **CreateUser RPC** - Creates a new user and verifies database storage
+- **GetUser RPC** - Retrieves user details by ID
+- **VerifyUser RPC** - Tests authentication with valid/invalid credentials
+- **Database Schema Validation** - Verifies table structure and constraints
+- **Password Hashing** - Ensures passwords are properly hashed
+
+The tests automatically clean up test data after execution.
+
 ## Migration
 
 Database migrations are located in `/infra/db/`:

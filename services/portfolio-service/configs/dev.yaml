@@ -19,3 +19,8 @@ exchange_rate_topic: "marketdata.exchange_rates"
 marketdata_service_addr: "marketdata-service:50054"
 transaction_service_addr: "transaction-service:50053"
 asset_cache_ttl_seconds: 86400
+
+caching:
+  enabled: false
+  summary_ttl_seconds: 300
+  history_ttl_seconds: 86400

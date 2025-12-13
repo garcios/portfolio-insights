@@ -15,10 +15,12 @@ import (
 type TransactionCreatedEvent struct {
 	TransactionID string    `json:"transaction_id"`
 	UserID        string    `json:"user_id"`
-	AssetSymbol   string    `json:"asset_symbol"`
-	PricePerShare float64   `json:"price_per_share"`
-	Quantity      float64   `json:"quantity"`
 	Type          string    `json:"type"`
+	AssetSymbol   *string   `json:"asset_symbol,omitempty"`
+	PricePerShare *float64  `json:"price_per_share,omitempty"`
+	Quantity      *float64  `json:"quantity,omitempty"`
+	Amount        *float64  `json:"amount,omitempty"`
+	Notes         string    `json:"notes,omitempty"`
 	ExecutedAt    time.Time `json:"executed_at"`
 }
 
@@ -26,18 +28,22 @@ type TransactionCreatedEvent struct {
 type TransactionUpdatedEvent struct {
 	TransactionID string    `json:"transaction_id"`
 	UserID        string    `json:"user_id"`
-	AssetSymbol   string    `json:"asset_symbol"`
-	PricePerShare float64   `json:"price_per_share"`
-	Quantity      float64   `json:"quantity"`
 	Type          string    `json:"type"`
+	AssetSymbol   *string   `json:"asset_symbol,omitempty"`
+	PricePerShare *float64  `json:"price_per_share,omitempty"`
+	Quantity      *float64  `json:"quantity,omitempty"`
+	Amount        *float64  `json:"amount,omitempty"`
+	Notes         string    `json:"notes,omitempty"`
 	ExecutedAt    time.Time `json:"executed_at"`
 }
 
 // TransactionDeletedEvent represents the event payload for a deleted transaction.
 type TransactionDeletedEvent struct {
-	TransactionID string `json:"transaction_id"`
-	UserID        string `json:"user_id"`
-	AssetSymbol   string `json:"asset_symbol"`
+	TransactionID string  `json:"transaction_id"`
+	UserID        string  `json:"user_id"`
+	Type          string  `json:"type"`
+	AssetSymbol   *string `json:"asset_symbol,omitempty"`
+	Notes         string  `json:"notes,omitempty"`
 }
 
 type natsEventPublisher struct {
@@ -84,10 +90,12 @@ func (p *natsEventPublisher) PublishTransactionCreated(ctx context.Context, tran
 	event := TransactionCreatedEvent{
 		TransactionID: transaction.ID,
 		UserID:        transaction.UserID,
+		Type:          transaction.Type,
 		AssetSymbol:   transaction.Symbol,
 		PricePerShare: transaction.PricePerShare,
 		Quantity:      transaction.Quantity,
-		Type:          transaction.Type,
+		Amount:        transaction.Amount,
+		Notes:         transaction.Notes,
 		ExecutedAt:    transaction.ExecutedAt,
 	}
 
@@ -107,10 +115,12 @@ func (p *natsEventPublisher) PublishTransactionUpdated(ctx context.Context, tran
 	event := TransactionUpdatedEvent{
 		TransactionID: transaction.ID,
 		UserID:        transaction.UserID,
+		Type:          transaction.Type,
 		AssetSymbol:   transaction.Symbol,
 		PricePerShare: transaction.PricePerShare,
 		Quantity:      transaction.Quantity,
-		Type:          transaction.Type,
+		Amount:        transaction.Amount,
+		Notes:         transaction.Notes,
 		ExecutedAt:    transaction.ExecutedAt,
 	}
 
@@ -130,7 +140,9 @@ func (p *natsEventPublisher) PublishTransactionDeleted(ctx context.Context, tran
 	event := TransactionDeletedEvent{
 		TransactionID: transaction.ID,
 		UserID:        transaction.UserID,
+		Type:          transaction.Type,
 		AssetSymbol:   transaction.Symbol,
+		Notes:         transaction.Notes,
 	}
 
 	data, err := json.Marshal(event)

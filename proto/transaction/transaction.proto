@@ -4,81 +4,155 @@ package transaction;
 
 option go_package = "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction";
 
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 
 // TransactionService handles the management of financial transactions (buy/sell).
 service TransactionService {
+  option (google.api.default_host) = "transaction-service:50052";
+
   // CreateTransaction records a new transaction.
-  rpc CreateTransaction(CreateTransactionRequest) returns (CreateTransactionResponse);
+  rpc CreateTransaction(CreateTransactionRequest) returns (Transaction) {
+    option (google.api.http) = {
+      post: "/v1/{parent=users/*}/transactions"
+      body: "transaction"
+    };
+    option (google.api.method_signature) = "parent,transaction";
+  }
   
-  // GetTransaction retrieves a specific transaction by its ID.
-  rpc GetTransaction(GetTransactionRequest) returns (GetTransactionResponse);
+  // GetTransaction retrieves a specific transaction by its resource name.
+  rpc GetTransaction(GetTransactionRequest) returns (Transaction) {
+    option (google.api.http) = {
+      get: "/v1/{name=users/*/transactions/*}"
+    };
+    option (google.api.method_signature) = "name";
+  }
   
   // ListTransactions returns a paginated list of transactions for a user, optionally filtered.
-  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse);
+  rpc ListTransactions(ListTransactionsRequest) returns (ListTransactionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/{parent=users/*}/transactions"
+    };
+    option (google.api.method_signature) = "parent";
+  }
   
   // UpdateTransaction modifies an existing transaction.
-  rpc UpdateTransaction(UpdateTransactionRequest) returns (UpdateTransactionResponse);
+  rpc UpdateTransaction(UpdateTransactionRequest) returns (Transaction) {
+    option (google.api.http) = {
+      patch: "/v1/{transaction.name=users/*/transactions/*}"
+      body: "transaction"
+    };
+    option (google.api.method_signature) = "transaction,update_mask";
+  }
   
   // DeleteTransaction removes a transaction from the records.
-  rpc DeleteTransaction(DeleteTransactionRequest) returns (DeleteTransactionResponse);
+  rpc DeleteTransaction(DeleteTransactionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/{name=users/*/transactions/*}"
+    };
+    option (google.api.method_signature) = "name";
+  }
 
   // GetOldestTransactionForUser retrieves the oldest transaction for a user.
-  rpc GetOldestTransactionForUser(GetOldestTransactionForUserRequest) returns (GetOldestTransactionForUserResponse);
+  // This is a custom method.
+  rpc GetOldestTransactionForUser(GetOldestTransactionForUserRequest) returns (Transaction) {
+    option (google.api.http) = {
+      get: "/v1/{parent=users/*}/transactions:oldest"
+    };
+    option (google.api.method_signature) = "parent";
+  }
 }
 
 // Transaction represents a financial transaction record.
+// Supports equity transactions (BUY, SELL) and cash transactions (INT, DIV, DEP, WIT).
 message Transaction {
-  // Unique identifier for the transaction.
-  string id = 1;
-  // The ID of the user who made the transaction.
-  string user_id = 2;
+  option (google.api.resource) = {
+    type: "portfolioinsights.googleapis.com/Transaction"
+    pattern: "users/{user}/transactions/{transaction}"
+    singular: "transaction"
+    plural: "transactions"
+  };
+
+  // Resource name of the transaction.
+  // Format: users/{user}/transactions/{transaction}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Output only. The ID of the user who owns this transaction.
+  string user_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The type of transaction: "BUY", "SELL", "INT" (Interest), "DIV" (Dividend), "DEP" (Deposit), "WIT" (Withdraw).
+  string type = 4 [(google.api.field_behavior) = REQUIRED];
+  
+  // Equity-specific fields (required for BUY, SELL, DIV; null for INT, DEP, WIT)
   // The symbol of the asset (e.g., "AAPL").
-  string symbol = 3;
-  // The type of transaction ("BUY" or "SELL").
-  string type = 4;
+  optional string symbol = 3;
+
   // The quantity of assets bought or sold.
-  double quantity = 5;
+  optional double quantity = 5;
+
   // The price per unit at the time of execution.
-  double price_per_share = 6;
+  optional double price_per_share = 6;
+  
+  // Cash-specific field (required for INT, DIV, DEP, WIT; null for BUY, SELL)
+  // The cash amount for interest, dividends, deposits, or withdrawals.
+  optional double amount = 14;
+  
+  // Common fields
   // The timestamp when the transaction physically occurred.
-  google.protobuf.Timestamp executed_at = 7;
-  // The timestamp when the record was created.
-  google.protobuf.Timestamp created_at = 8;
-  // The timestamp when the record was last updated.
-  google.protobuf.Timestamp updated_at = 9;
+  google.protobuf.Timestamp executed_at = 7 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. The timestamp when the record was created.
+  google.protobuf.Timestamp created_at = 8 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (google.api.field_behavior) = IMMUTABLE
+  ];
+
+  // Output only. The timestamp when the record was last updated.
+  google.protobuf.Timestamp updated_at = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // Brokerage fees associated with the transaction.
   double brokerage = 10;
+
   // Optional notes attached to the transaction.
   string notes = 11;
+
   // The currency in which the price is quoted.
-  string price_currency = 12;
+  string price_currency = 12 [(google.api.field_behavior) = REQUIRED];
+
   // The currency in which brokerage fees are paid.
-  string brokerage_currency = 13;
+  string brokerage_currency = 13 [(google.api.field_behavior) = REQUIRED];
+
+  // Output only. The transaction ID extracted from the resource name.
+  // This is provided for convenience.
+  string transaction_id = 20 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // CreateTransactionRequest is the request message for CreateTransaction.
+// For equity transactions (BUY, SELL): provide symbol, quantity, price_per_share in the transaction.
+// For dividend transactions (DIV): provide symbol and amount in the transaction.
+// For cash transactions (INT, DEP, WIT): provide amount only in the transaction.
 message CreateTransactionRequest {
-  // The ID of the user creating the transaction.
-  string user_id = 1;
-  // The symbol of the asset.
-  string symbol = 2;
-  // The type of transaction ("BUY" or "SELL").
-  string type = 3;
-  // The quantity involved.
-  double quantity = 4;
-  // The price per share/unit.
-  double price_per_share = 5;
-  // The execution timestamp.
-  google.protobuf.Timestamp executed_at = 6;
-  // The brokerage fee amount.
-  double brokerage = 7;
-  // Optional notes.
-  string notes = 8;
-  // The currency code for the price.
-  string price_currency = 9;
-  // The currency code for the brokerage fee.
-  string brokerage_currency = 10;
+  // The parent resource name where the transaction will be created.
+  // Format: users/{user}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      child_type: "portfolioinsights.googleapis.com/Transaction"
+    }
+  ];
+
+  // The transaction to create.
+  // The transaction's name field is ignored; the server assigns the transaction ID.
+  Transaction transaction = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // Optional. The transaction ID to use for this transaction.
+  // If not provided, the server will generate one.
+  string transaction_id = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 // CreateTransactionResponse is the response message for CreateTransaction.
@@ -89,8 +163,14 @@ message CreateTransactionResponse {
 
 // GetTransactionRequest is the request message for GetTransaction.
 message GetTransactionRequest {
-  // The ID of the transaction to retrieve.
-  string id = 1;
+  // The resource name of the transaction to retrieve.
+  // Format: users/{user}/transactions/{transaction}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Transaction"
+    }
+  ];
 }
 
 // GetTransactionResponse is the response message for GetTransaction.
@@ -103,22 +183,39 @@ message GetTransactionResponse {
 message TransactionFilter {
   // Filter by asset symbol.
   string symbol = 1;
-  // Filter by transaction type ("BUY" or "SELL").
+
+  // Filter by transaction type: "BUY", "SELL", "INT", "DIV", "DEP", "WIT".
   string type = 2;
+
   // Filter transactions executed after this time.
   google.protobuf.Timestamp from_executed_at = 3;
+
   // Filter transactions executed before this time.
   google.protobuf.Timestamp to_executed_at = 4;
 }
 
 // ListTransactionsRequest is the request message for ListTransactions.
 message ListTransactionsRequest {
-  // The ID of the user.
-  string user_id = 1;
+  // The parent resource name.
+  // Format: users/{user}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      child_type: "portfolioinsights.googleapis.com/Transaction"
+    }
+  ];
+
   // The maximum number of transactions to return.
+  // The service may return fewer than this value.
+  // If unspecified, at most 50 transactions will be returned.
+  // The maximum value is 1000; values above 1000 will be coerced to 1000.
   int32 page_size = 2;
-  // The token for the next page of results.
+
+  // A page token, received from a previous ListTransactions call.
+  // Provide this to retrieve the subsequent page.
+  // When paginating, all other parameters must match the call that provided the page token.
   string page_token = 3;
+
   // Optional filter to apply.
   TransactionFilter filter = 4;
 }
@@ -127,32 +224,24 @@ message ListTransactionsRequest {
 message ListTransactionsResponse {
   // The list of transactions.
   repeated Transaction transactions = 1;
-  // The token to retrieve the next page of results.
+
+  // A token to retrieve the next page of results.
+  // Pass this value in the page_token field in the subsequent call.
+  // If empty, there are no more results.
   string next_page_token = 2;
 }
 
 // UpdateTransactionRequest is the request message for UpdateTransaction.
 message UpdateTransactionRequest {
-  // The ID of the transaction to update.
-  string id = 1;
-  // Updated symbol (if changed).
-  string symbol = 2;
-  // Updated type (if changed).
-  string type = 3;
-  // Updated quantity (if changed).
-  double quantity = 4;
-  // Updated price per share (if changed).
-  double price_per_share = 5;
-  // Updated execution time (if changed).
-  google.protobuf.Timestamp executed_at = 6;
-  // Updated brokerage fee (if changed).
-  double brokerage = 7;
-  // Updated notes (if changed).
-  string notes = 8;
-  // Updated price currency (if changed).
-  string price_currency = 9;
-  // Updated brokerage currency (if changed).
-  string brokerage_currency = 10;
+  // The transaction to update.
+  // The transaction's name field is used to identify the transaction to update.
+  // Format: users/{user}/transactions/{transaction}
+  Transaction transaction = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The list of fields to update.
+  // If empty or not provided, all mutable fields will be updated.
+  // Use "*" to update all fields.
+  google.protobuf.FieldMask update_mask = 2;
 }
 
 // UpdateTransactionResponse is the response message for UpdateTransaction.
@@ -163,20 +252,26 @@ message UpdateTransactionResponse {
 
 // DeleteTransactionRequest is the request message for DeleteTransaction.
 message DeleteTransactionRequest {
-  // The ID of the transaction to delete.
-  string id = 1;
-}
-
-// DeleteTransactionResponse is the response message for DeleteTransaction.
-message DeleteTransactionResponse {
-  // Indicates if the deletion was successful.
-  bool success = 1;
+  // The resource name of the transaction to delete.
+  // Format: users/{user}/transactions/{transaction}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Transaction"
+    }
+  ];
 }
 
 // GetOldestTransactionForUserRequest is the request message for GetOldestTransactionForUser.
 message GetOldestTransactionForUserRequest {
-  // The ID of the user.
-  string user_id = 1;
+  // The parent resource name.
+  // Format: users/{user}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      child_type: "portfolioinsights.googleapis.com/Transaction"
+    }
+  ];
 }
 
 // GetOldestTransactionForUserResponse is the response message for GetOldestTransactionForUser.

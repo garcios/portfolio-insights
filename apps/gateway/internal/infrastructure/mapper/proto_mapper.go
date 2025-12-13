@@ -4,15 +4,16 @@ package mapper
 import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/gateway"
-	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
-	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	"github.com/garcios/portfolio-insights/pkg/resourcenames"
+	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// ProtoToUserEntity converts a protobuf GetUserResponse to a User entity
-func ProtoToUserEntity(resp *userpb.GetUserResponse) *entity.User {
-	return entity.NewUser(resp.Id, resp.Username, resp.Email)
+// ProtoToUserEntity converts a protobuf User to a User entity
+func ProtoToUserEntity(user *userpb.User) *entity.User {
+	return entity.NewUser(user.UserId, user.Username, user.Email)
 }
 
 // ProtoToPortfolioSummaryEntity converts a protobuf PortfolioSummary to a PortfolioSummary entity
@@ -53,13 +54,10 @@ func ProtoToPortfolioPerformancePointEntity(pb *portfoliopb.PortfolioPerformance
 
 // ProtoToTransactionEntity converts a protobuf Transaction to a Transaction entity
 func ProtoToTransactionEntity(pb *transactionpb.Transaction) *entity.Transaction {
-	return &entity.Transaction{
-		ID:                pb.Id,
+	txn := &entity.Transaction{
+		ID:                pb.TransactionId,
 		UserID:            pb.UserId,
-		Symbol:            pb.Symbol,
 		Type:              entity.TransactionType(pb.Type),
-		Quantity:          pb.Quantity,
-		PricePerShare:     pb.PricePerShare,
 		PriceCurrency:     pb.PriceCurrency,
 		ExecutedAt:        pb.ExecutedAt.AsTime(),
 		Notes:             pb.Notes,
@@ -68,28 +66,53 @@ func ProtoToTransactionEntity(pb *transactionpb.Transaction) *entity.Transaction
 		CreatedAt:         pb.CreatedAt.AsTime(),
 		UpdatedAt:         pb.UpdatedAt.AsTime(),
 	}
+
+	// Handle nullable fields
+	if pb.Symbol != nil {
+		txn.Symbol = *pb.Symbol
+	}
+	if pb.Quantity != nil {
+		txn.Quantity = *pb.Quantity
+	}
+	if pb.PricePerShare != nil {
+		txn.PricePerShare = *pb.PricePerShare
+	}
+
+	return txn
 }
 
 // CreateTransactionInputToProto converts a CreateTransactionInput to a protobuf CreateTransactionRequest
 func CreateTransactionInputToProto(input gateway.CreateTransactionInput) *transactionpb.CreateTransactionRequest {
-	return &transactionpb.CreateTransactionRequest{
-		UserId:            input.UserID,
-		Symbol:            input.Symbol,
+	transaction := &transactionpb.Transaction{
 		Type:              string(input.Type),
-		Quantity:          input.Quantity,
-		PricePerShare:     input.PricePerShare,
 		PriceCurrency:     input.PriceCurrency,
 		ExecutedAt:        timestamppb.New(input.ExecutedAt),
 		Notes:             input.Notes,
 		Brokerage:         input.Brokerage,
 		BrokerageCurrency: input.BrokerageCurrency,
 	}
+
+	// Set nullable fields if non-zero
+	if input.Symbol != "" {
+		transaction.Symbol = &input.Symbol
+	}
+	if input.Quantity != 0 {
+		transaction.Quantity = &input.Quantity
+	}
+	if input.PricePerShare != 0 {
+		transaction.PricePerShare = &input.PricePerShare
+	}
+
+	return &transactionpb.CreateTransactionRequest{
+		Parent:      resourcenames.UserName(input.UserID),
+		Transaction: transaction,
+	}
 }
 
 // ListTransactionsInputToProto converts a ListTransactionsInput to a protobuf ListTransactionsRequest
 func ListTransactionsInputToProto(input gateway.ListTransactionsInput) *transactionpb.ListTransactionsRequest {
 	req := &transactionpb.ListTransactionsRequest{
-		UserId:    input.UserID,
+		Parent:    resourcenames.UserName(input.UserID),
 		PageSize:  input.PageSize,
 		PageToken: input.PageToken,
 	}

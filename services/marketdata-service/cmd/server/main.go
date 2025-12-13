@@ -19,7 +19,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/usecase"
 	"github.com/garcios/portfolio-insights/services/marketdata-service/internal/worker"
-	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	pb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 )

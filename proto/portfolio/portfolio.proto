@@ -4,70 +4,143 @@ package portfolio;
 
 option go_package = "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio";
 
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "google/protobuf/timestamp.proto";
 
 // PortfolioService handles portfolio calculations, summaries, and performance tracking.
 service PortfolioService {
+  option (google.api.default_host) = "portfolio-service:50053";
+
   // GetPortfolioSummary retrieves the overall summary of a user's portfolio, including total value and gain/loss.
-  rpc GetPortfolioSummary(GetPortfolioSummaryRequest) returns (GetPortfolioSummaryResponse);
+  rpc GetPortfolioSummary(GetPortfolioSummaryRequest) returns (PortfolioSummary) {
+    option (google.api.http) = {
+      get: "/v1/{name=users/*/portfolio}"
+    };
+    option (google.api.method_signature) = "name";
+  }
   
   // GetPortfolioPerformance retrieves historical performance data for charting and analysis over a specified period.
-  rpc GetPortfolioPerformance(GetPortfolioPerformanceRequest) returns (GetPortfolioPerformanceResponse);
+  rpc GetPortfolioPerformance(GetPortfolioPerformanceRequest) returns (GetPortfolioPerformanceResponse) {
+    option (google.api.http) = {
+      get: "/v1/{name=users/*/portfolio}/performance"
+    };
+    option (google.api.method_signature) = "name,period";
+  }
   
   // GetHoldings retrieves the list of current holdings in the user's portfolio.
-  rpc GetHoldings(GetHoldingsRequest) returns (GetHoldingsResponse);
+  rpc GetHoldings(GetHoldingsRequest) returns (GetHoldingsResponse) {
+    option (google.api.http) = {
+      get: "/v1/{parent=users/*}/holdings"
+    };
+    option (google.api.method_signature) = "parent";
+  }
   
   // BackfillHistory triggers a recalculation of historical portfolio snapshots.
-  // This is an administrative endpoint used to populate or correct historical data.
-  rpc BackfillHistory(BackfillHistoryRequest) returns (BackfillHistoryResponse);
+  // This is an administrative custom method used to populate or correct historical data.
+  rpc BackfillHistory(BackfillHistoryRequest) returns (BackfillHistoryResponse) {
+    option (google.api.http) = {
+      post: "/v1/{name=users/*/portfolio}:backfillHistory"
+      body: "*"
+    };
+  }
 }
 
 // PortfolioSummary represents the high-level status of a user's portfolio.
+// This is a singleton resource per user.
 message PortfolioSummary {
-  // The ID of the user who owns the portfolio.
-  string user_id = 1;
+  option (google.api.resource) = {
+    type: "portfolioinsights.googleapis.com/Portfolio"
+    pattern: "users/{user}/portfolio"
+    singular: "portfolio"
+    plural: "portfolios"
+  };
+
+  // Resource name of the portfolio.
+  // Format: users/{user}/portfolio (singleton)
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // Output only. The ID of the user who owns the portfolio.
+  string user_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The total current value of the portfolio.
-  double total_value = 2;
+  double total_value = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The total absolute gain or loss.
-  double total_gain_loss = 3;
+  double total_gain_loss = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The total gain or loss as a percentage.
-  double total_gain_loss_percentage = 4;
+  double total_gain_loss_percentage = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The currency code for the values (e.g., "USD").
-  string currency = 5;
-  // The timestamp when this summary was last calculated.
-  google.protobuf.Timestamp last_updated = 6;
+  string currency = 6;
+
+  // Output only. The timestamp when this summary was last calculated.
+  google.protobuf.Timestamp last_updated = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The absolute change in value over the last day.
-  double day_change = 7;
+  double day_change = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The percentage change in value over the last day.
-  double day_change_percentage = 8;
+  double day_change_percentage = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Holding represents a single asset held in the portfolio.
 message Holding {
+  option (google.api.resource) = {
+    type: "portfolioinsights.googleapis.com/Holding"
+    pattern: "users/{user}/holdings/{holding}"
+    singular: "holding"
+    plural: "holdings"
+  };
+
+  // Resource name of the holding.
+  // Format: users/{user}/holdings/{holding}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
   // The symbol of the held asset (e.g., "AAPL").
-  string symbol = 1;
+  string symbol = 2;
+
   // The quantity held.
-  double quantity = 2;
+  double quantity = 3;
+
   // The average purchase price per unit.
-  double average_price = 3;
+  double average_price = 4;
+
   // The current market price per unit.
-  double current_price = 4;
+  double current_price = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The total current value of this holding.
-  double current_value = 5;
+  double current_value = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The absolute gain or loss for this holding.
-  double gain_loss = 6;
+  double gain_loss = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The gain or loss as a percentage.
-  double gain_loss_percentage = 7;
+  double gain_loss_percentage = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+
   // The currency code for the prices (e.g., "USD").
-  string currency = 8;
+  string currency = 9;
+
   // The descriptive name of the asset.
-  string asset_name = 9;
+  string asset_name = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Output only. The holding ID extracted from the resource name.
+  string holding_id = 20 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // GetPortfolioSummaryRequest is the request message for GetPortfolioSummary.
 message GetPortfolioSummaryRequest {
-  // The ID of the user.
-  string user_id = 1;
+  // The resource name of the portfolio.
+  // Format: users/{user}/portfolio
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Portfolio"
+    }
+  ];
 }
 
 // GetPortfolioSummaryResponse is the response message for GetPortfolioSummary.
@@ -78,16 +151,24 @@ message GetPortfolioSummaryResponse {
 
 // GetPortfolioPerformanceRequest is the request message for GetPortfolioPerformance.
 message GetPortfolioPerformanceRequest {
-  // The ID of the user.
-  string user_id = 1;
+  // The resource name of the portfolio.
+  // Format: users/{user}/portfolio
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Portfolio"
+    }
+  ];
+
   // The time period for the performance data (e.g., "1d", "1w", "1m", "1y", "all").
-  string period = 2;
+  string period = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // PortfolioPerformancePoint represents the portfolio value at a specific point in time.
 message PortfolioPerformancePoint {
   // The timestamp of the data point.
   google.protobuf.Timestamp timestamp = 1;
+
   // The portfolio value at that timestamp.
   double value = 2;
 }
@@ -100,8 +181,14 @@ message GetPortfolioPerformanceResponse {
 
 // GetHoldingsRequest is the request message for GetHoldings.
 message GetHoldingsRequest {
-  // The ID of the user.
-  string user_id = 1;
+  // The parent resource name.
+  // Format: users/{user}
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      child_type: "portfolioinsights.googleapis.com/Holding"
+    }
+  ];
 }
 
 // GetHoldingsResponse is the response message for GetHoldings.
@@ -111,29 +198,45 @@ message GetHoldingsResponse {
 }
 
 // BackfillHistoryRequest is the request message for BackfillHistory.
+// This is a custom administrative method.
 message BackfillHistoryRequest {
-  // The user ID to backfill for. If empty, backfills for all users.
-  string user_id = 1;           
+  // The resource name of the portfolio to backfill.
+  // Format: users/{user}/portfolio
+  // If you want to backfill all users, use "users/-/portfolio"
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference) = {
+      type: "portfolioinsights.googleapis.com/Portfolio"
+    }
+  ];
+
   // The start date for the backfill in YYYY-MM-DD format.
-  string start_date = 2;        
+  string start_date = 2 [(google.api.field_behavior) = REQUIRED];
+
   // The end date for the backfill in YYYY-MM-DD format (optional, defaults to today).
-  string end_date = 3;          
+  string end_date = 3;
+
   // If true, performs a preview without writing changes to the database.
-  bool dry_run = 4;             
+  bool dry_run = 4;
+
   // Authentication token for admin access.
-  string admin_token = 5;       
+  string admin_token = 5 [(google.api.field_behavior) = INPUT_ONLY];
 }
 
 // BackfillHistoryResponse is the response message for BackfillHistory.
 message BackfillHistoryResponse {
   // The number of historical snapshots successfully created.
   int32 snapshots_created = 1;
+
   // The number of snapshots skipped (e.g., already exist or no data).
   int32 snapshots_skipped = 2;
+
   // The number of errors encountered during the process.
   int32 errors = 3;
+
   // A list of error messages describing any failures.
   repeated string error_messages = 4;
+
   // The overall status of the operation ("success", "partial", "failed").
-  string status = 5;            
+  string status = 5;
 }

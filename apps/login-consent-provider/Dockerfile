@@ -6,9 +6,10 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache git
 
-# Copy local dependencies (user-service)
+# Copy local dependencies (user-service and pkg)
 # We copy the entire directory to ensure we have go.mod and source code for the replace directive
 COPY services/user-service ./services/user-service
+COPY pkg ./pkg
 
 # Copy application go.mod and go.sum
 COPY apps/login-consent-provider/go.mod apps/login-consent-provider/go.sum ./apps/login-consent-provider/

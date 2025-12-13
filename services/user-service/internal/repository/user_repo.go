@@ -44,7 +44,7 @@ func (r *userRepository) GetByID(id string) (*domain.User, error) {
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("user not found: %s", id)
+		return nil, domain.ErrUserNotFound
 	}
 	if err != nil {
 		database.RecordQuery("get_by_id", "users", time.Since(start).Seconds(), err)
@@ -105,7 +105,7 @@ func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("user not found with email: %s", email)
+		return nil, domain.ErrUserNotFound
 	}
 	if err != nil {
 		database.RecordQuery("get_by_email", "users", time.Since(start).Seconds(), err)
@@ -134,8 +134,8 @@ func (r *userRepository) Update(user *domain.User) error {
 	).Scan(&user.UpdatedAt)
 
 	if err == sql.ErrNoRows {
-		database.RecordQuery("update", "users", time.Since(start).Seconds(), err)
-		return fmt.Errorf("user not found: %s", user.ID)
+		database.RecordQuery("update", "users", time.Since(start).Seconds(), domain.ErrUserNotFound)
+		return domain.ErrUserNotFound
 	}
 	if err != nil {
 		database.RecordQuery("update", "users", time.Since(start).Seconds(), err)
@@ -165,9 +165,8 @@ func (r *userRepository) Delete(id string) error {
 	}
 
 	if rowsAffected == 0 {
-		err = fmt.Errorf("user not found: %s", id)
-		database.RecordQuery("delete", "users", time.Since(start).Seconds(), err)
-		return err
+		database.RecordQuery("delete", "users", time.Since(start).Seconds(), domain.ErrUserNotFound)
+		return domain.ErrUserNotFound
 	}
 
 	database.RecordQuery("delete", "users", time.Since(start).Seconds(), nil)

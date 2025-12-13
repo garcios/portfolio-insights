@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	pb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
@@ -74,7 +74,7 @@ func (g *MarketDataGateway) GetCurrentPrice(ctx context.Context, symbol string) 
 
 	// Cache miss - fetch from service
 	req := &pb.GetLatestPriceRequest{
-		Symbol: symbol,
+		Name: fmt.Sprintf("assets/%s", symbol),
 	}
 
 	serviceStart := time.Now()
@@ -87,12 +87,12 @@ func (g *MarketDataGateway) GetCurrentPrice(ctx context.Context, symbol string) 
 	}
 	metrics.RecordMarketDataRequest("get_latest_price", "success", duration)
 
-	if resp.Price == nil {
+	if resp == nil {
 		return 0, fmt.Errorf("no price data available for %s", symbol)
 	}
 
-	price := resp.Price.Price
-	timestamp := resp.Price.Timestamp.AsTime()
+	price := resp.Price
+	timestamp := resp.Timestamp.AsTime()
 	metrics.RecordPriceFetch("service", 1)
 
 	// Cache the result
@@ -145,8 +145,14 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 
 	// Fetch uncached symbols from service
 	if len(uncachedSymbols) > 0 {
+		// Convert symbols to resource names
+		var resourceNames []string
+		for _, sym := range uncachedSymbols {
+			resourceNames = append(resourceNames, fmt.Sprintf("assets/%s", sym))
+		}
+
 		req := &pb.GetLatestPricesRequest{
-			Symbols: uncachedSymbols,
+			Names: resourceNames,
 		}
 
 		serviceStart := time.Now()
@@ -160,12 +166,24 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 		metrics.RecordMarketDataRequest("get_latest_prices_batch", "success", duration)
 
 		// Process response and cache results
+		// Map resource names back to symbols
+		resourceToSymbol := make(map[string]string)
+		for _, sym := range uncachedSymbols {
+			resourceToSymbol[fmt.Sprintf("assets/%s", sym)] = sym
+		}
+
 		fetchedPrices := make(map[string]float64)
 		timestamp := time.Now()
 		count := 0
 
-		for symbol, assetPrice := range resp.Prices {
+		for resourceName, assetPrice := range resp.Prices {
 			if assetPrice != nil {
+				symbol := resourceToSymbol[resourceName]
+				if symbol == "" {
+					// Fallback: the server might return the symbol directly as the key
+					// instead of the resource name.
+					symbol = resourceName
+				}
 				timestamp := time.Now()
 				if !assetPrice.Timestamp.AsTime().IsZero() {
 					timestamp = assetPrice.Timestamp.AsTime()
@@ -214,11 +232,11 @@ func (g *MarketDataGateway) GetCurrencyRate(ctx context.Context, baseCurrency, t
 	}
 	metrics.RecordMarketDataRequest("get_currency_rate", "success", duration)
 
-	if resp.CurrencyRate == nil {
+	if resp == nil {
 		return 0, fmt.Errorf("no currency rate available for %s/%s", baseCurrency, targetCurrency)
 	}
 
-	return resp.CurrencyRate.Rate, nil
+	return resp.Rate, nil
 }
 
 // GetAsset fetches asset details for a symbol
@@ -245,7 +263,7 @@ func (g *MarketDataGateway) GetAsset(ctx context.Context, symbol string) (*pb.As
 
 	// Cache miss - fetch from service
 	req := &pb.GetAssetRequest{
-		Symbol: symbol,
+		Name: fmt.Sprintf("assets/%s", symbol),
 	}
 
 	serviceStart := time.Now()
@@ -258,19 +276,19 @@ func (g *MarketDataGateway) GetAsset(ctx context.Context, symbol string) (*pb.As
 	}
 	metrics.RecordMarketDataRequest("get_asset", "success", duration)
 
-	if resp.Asset == nil {
+	if resp == nil {
 		return nil, fmt.Errorf("no asset data available for %s", symbol)
 	}
 
 	// Cache the result
 	if g.assetCache != nil {
 		cacheStart := time.Now()
-		err := g.assetCache.Set(ctx, resp.Asset)
+		err := g.assetCache.Set(ctx, resp)
 		metrics.RecordCacheOperation("set", "asset", err == nil, time.Since(cacheStart).Seconds())
 	}
 
 	metrics.RecordMarketDataRequest("total_asset_operation", "success", time.Since(start).Seconds())
-	return resp.Asset, nil
+	return resp, nil
 }
 
 // GetAssetName fetches just the name of the asset
@@ -297,7 +315,7 @@ func (g *MarketDataGateway) GetPriceOnDate(ctx context.Context, symbol string, d
 		endOfDay := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 23, 59, 59, 999999999, time.UTC)
 
 		req := &pb.GetHistoricalPricesRequest{
-			Symbol:    symbol,
+			Name:      fmt.Sprintf("assets/%s", symbol),
 			StartTime: timestamppb.New(startOfDay),
 			EndTime:   timestamppb.New(endOfDay),
 			Interval:  "1d",

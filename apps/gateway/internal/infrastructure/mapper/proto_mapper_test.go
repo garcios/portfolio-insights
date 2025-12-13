@@ -6,23 +6,23 @@ import (
 
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/gateway"
-	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/proto/portfolio"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
-	userpb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestProtoToUserEntity(t *testing.T) {
-	pb := &userpb.GetUserResponse{
-		Id:       "user-1",
+	pb := &userpb.User{
+		UserId:   "user-1",
 		Username: "testuser",
 		Email:    "test@example.com",
 	}
 
 	user := ProtoToUserEntity(pb)
 
-	if user.ID != pb.Id {
-		t.Errorf("expected ID %s, got %s", pb.Id, user.ID)
+	if user.ID != pb.UserId {
+		t.Errorf("expected ID %s, got %s", pb.UserId, user.ID)
 	}
 	if user.Username != pb.Username {
 		t.Errorf("expected Username %s, got %s", pb.Username, user.Username)
@@ -90,20 +90,21 @@ func TestProtoToPortfolioPerformancePointEntity(t *testing.T) {
 
 func TestProtoToTransactionEntity(t *testing.T) {
 	now := time.Now()
+	symbol := "AAPL"
 	pb := &transactionpb.Transaction{
-		Id:         "tx-1",
-		UserId:     "user-1",
-		Symbol:     "AAPL",
-		Type:       "BUY",
-		ExecutedAt: timestamppb.New(now),
-		CreatedAt:  timestamppb.New(now),
-		UpdatedAt:  timestamppb.New(now),
+		TransactionId: "tx-1",
+		UserId:        "user-1",
+		Symbol:        &symbol,
+		Type:          "BUY",
+		ExecutedAt:    timestamppb.New(now),
+		CreatedAt:     timestamppb.New(now),
+		UpdatedAt:     timestamppb.New(now),
 	}
 
 	tx := ProtoToTransactionEntity(pb)
 
-	if tx.ID != pb.Id {
-		t.Errorf("expected ID %s, got %s", pb.Id, tx.ID)
+	if tx.ID != pb.TransactionId {
+		t.Errorf("expected ID %s, got %s", pb.TransactionId, tx.ID)
 	}
 	if tx.Type != entity.TransactionTypeBuy {
 		t.Errorf("expected Type BUY, got %s", tx.Type)
@@ -122,13 +123,21 @@ func TestCreateTransactionInputToProto(t *testing.T) {
 
 	pb := CreateTransactionInputToProto(input)
 
-	if pb.UserId != input.UserID {
-		t.Errorf("expected UserId %s, got %s", input.UserID, pb.UserId)
+	// Check parent field (resource name)
+	expectedParent := "users/user-1"
+	if pb.Parent != expectedParent {
+		t.Errorf("expected Parent %s, got %s", expectedParent, pb.Parent)
 	}
-	if pb.Symbol != input.Symbol {
-		t.Errorf("expected Symbol %s, got %s", input.Symbol, pb.Symbol)
+
+	// Check transaction object
+	if pb.Transaction == nil {
+		t.Fatal("expected Transaction object, got nil")
 	}
-	if pb.Type != string(input.Type) {
-		t.Errorf("expected Type %s, got %s", input.Type, pb.Type)
+
+	if pb.Transaction.Symbol == nil || *pb.Transaction.Symbol != input.Symbol {
+		t.Errorf("expected Symbol %s, got %v", input.Symbol, pb.Transaction.Symbol)
+	}
+	if pb.Transaction.Type != string(input.Type) {
+		t.Errorf("expected Type %s, got %s", input.Type, pb.Transaction.Type)
 	}
 }

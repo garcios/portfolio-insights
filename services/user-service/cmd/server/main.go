@@ -15,7 +15,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/user-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/user-service/internal/usecase"
-	pb "github.com/garcios/portfolio-insights/services/user-service/proto/user"
+	pb "github.com/garcios/portfolio-insights/services/user-service/user"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	googleGrpc "google.golang.org/grpc"
 )

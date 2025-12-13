@@ -8,11 +8,11 @@ import (
 
 	"log/slog"
 
-	pb "github.com/garcios/portfolio-insights/services/marketdata-service/proto/marketdata"
+	pb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
-	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/proto/transaction"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 	"github.com/nats-io/nats.go"
 )
 
@@ -23,31 +23,46 @@ const (
 
 // TransactionCreatedEvent represents the event payload for a created transaction.
 type TransactionCreatedEvent struct {
-	TransactionID string    `json:"transaction_id"`
-	UserID        string    `json:"user_id"`
-	AssetSymbol   string    `json:"asset_symbol"`
-	PricePerShare float64   `json:"price_per_share"`
-	Quantity      float64   `json:"quantity"`
-	Type          string    `json:"type"`
-	ExecutedAt    time.Time `json:"executed_at"`
+	TransactionID string `json:"transaction_id"`
+	UserID        string `json:"user_id"`
+	Type          string `json:"type"`
+
+	// Equity-specific fields (nullable)
+	AssetSymbol   *string  `json:"asset_symbol,omitempty"`
+	PricePerShare *float64 `json:"price_per_share,omitempty"`
+	Quantity      *float64 `json:"quantity,omitempty"`
+
+	// Cash-specific field (nullable)
+	Amount *float64 `json:"amount,omitempty"`
+
+	Notes      string    `json:"notes,omitempty"`
+	ExecutedAt time.Time `json:"executed_at"`
 }
 
 // TransactionUpdatedEvent represents the event payload for an updated transaction.
 type TransactionUpdatedEvent struct {
-	TransactionID string    `json:"transaction_id"`
-	UserID        string    `json:"user_id"`
-	AssetSymbol   string    `json:"asset_symbol"`
-	PricePerShare float64   `json:"price_per_share"`
-	Quantity      float64   `json:"quantity"`
-	Type          string    `json:"type"`
-	ExecutedAt    time.Time `json:"executed_at"`
+	TransactionID string `json:"transaction_id"`
+	UserID        string `json:"user_id"`
+	Type          string `json:"type"`
+
+	// Equity-specific fields (nullable)
+	AssetSymbol   *string  `json:"asset_symbol,omitempty"`
+	PricePerShare *float64 `json:"price_per_share,omitempty"`
+	Quantity      *float64 `json:"quantity,omitempty"`
+
+	// Cash-specific field (nullable)
+	Amount *float64 `json:"amount,omitempty"`
+
+	Notes      string    `json:"notes,omitempty"`
+	ExecutedAt time.Time `json:"executed_at"`
 }
 
 // TransactionDeletedEvent represents the event payload for a deleted transaction.
 type TransactionDeletedEvent struct {
-	TransactionID string `json:"transaction_id"`
-	UserID        string `json:"user_id"`
-	AssetSymbol   string `json:"asset_symbol"`
+	TransactionID string  `json:"transaction_id"`
+	UserID        string  `json:"user_id"`
+	AssetSymbol   *string `json:"asset_symbol,omitempty"` // Nullable for cash transactions
+	Notes         string  `json:"notes,omitempty"`
 }
 
 // NATSSubscriber subscribes to NATS events.
@@ -57,6 +72,7 @@ type NATSSubscriber struct {
 	subUpdated        *nats.Subscription
 	subDeleted        *nats.Subscription
 	repo              domain.HoldingRepository
+	cashBalanceRepo   domain.CashBalanceRepository
 	marketDataGateway *MarketDataGateway
 	transactionClient transactionpb.TransactionServiceClient
 	assetCache        *AssetCache
@@ -70,6 +86,7 @@ type NATSSubscriber struct {
 // NewNATSSubscriber creates a new NATS subscriber.
 func NewNATSSubscriber(
 	repo domain.HoldingRepository,
+	cashBalanceRepo domain.CashBalanceRepository,
 	marketDataGateway *MarketDataGateway,
 	transactionClient transactionpb.TransactionServiceClient,
 	assetCache *AssetCache,
@@ -89,6 +106,7 @@ func NewNATSSubscriber(
 	return &NATSSubscriber{
 		nc:                nc,
 		repo:              repo,
+		cashBalanceRepo:   cashBalanceRepo,
 		marketDataGateway: marketDataGateway,
 		transactionClient: transactionClient,
 		assetCache:        assetCache,
@@ -162,20 +180,94 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 	s.logger.Info("Received transaction created event",
 		"transaction_id", event.TransactionID,
 		"user_id", event.UserID,
-		"symbol", event.AssetSymbol,
 		"type", event.Type,
-		"quantity", event.Quantity,
 	)
 
-	// Fallback to recalculation if we have the client, but keeping incremental logic for now as requested by plan.
-	// Actually, let's use recalculate for everything for consistency if possible, but incremental is faster.
-	// We'll keep incremental for CREATED as it's the happy path and less resource intensive.
+	// Handle based on transaction type
+	switch event.Type {
+	case "BUY", "SELL", "SPLIT":
+		// Equity transactions - require symbol
+		if event.AssetSymbol == nil {
+			s.logger.Error("equity transaction missing symbol", "type", event.Type, "transaction_id", event.TransactionID)
+			metrics.RecordNatsMessage(s.createdTopic, "missing_symbol", time.Since(start).Seconds())
+			return
+		}
+		if err := s.handleEquityTransaction(event); err != nil {
+			s.logger.Error("failed to handle equity transaction", "error", err, "type", event.Type)
+			metrics.RecordNatsMessage(s.createdTopic, "equity_error", time.Since(start).Seconds())
+			return
+		}
+
+	case "INT": // Interest Income
+		if event.Amount == nil {
+			s.logger.Error("INT transaction missing amount", "transaction_id", event.TransactionID)
+			metrics.RecordNatsMessage(s.createdTopic, "missing_amount", time.Since(start).Seconds())
+			return
+		}
+		if err := s.updateCashBalance(event.UserID, "USD", *event.Amount, event.Notes); err != nil {
+			s.logger.Error("failed to update cash balance for INT", "error", err)
+			metrics.RecordNatsMessage(s.createdTopic, "cash_error", time.Since(start).Seconds())
+			return
+		}
+		s.logger.Info("Processed INT transaction", "user_id", event.UserID, "amount", *event.Amount)
+
+	case "DIV": // Dividend Income
+		if event.Amount == nil {
+			s.logger.Error("DIV transaction missing amount", "transaction_id", event.TransactionID)
+			metrics.RecordNatsMessage(s.createdTopic, "missing_amount", time.Since(start).Seconds())
+			return
+		}
+		if err := s.updateCashBalance(event.UserID, "USD", *event.Amount, event.Notes); err != nil {
+			s.logger.Error("failed to update cash balance for DIV", "error", err)
+			metrics.RecordNatsMessage(s.createdTopic, "cash_error", time.Since(start).Seconds())
+			return
+		}
+		s.logger.Info("Processed DIV transaction", "user_id", event.UserID, "amount", *event.Amount, "symbol", event.AssetSymbol)
+
+	case "DEP": // Deposit
+		if event.Amount == nil {
+			s.logger.Error("DEP transaction missing amount", "transaction_id", event.TransactionID)
+			metrics.RecordNatsMessage(s.createdTopic, "missing_amount", time.Since(start).Seconds())
+			return
+		}
+		if err := s.updateCashBalance(event.UserID, "USD", *event.Amount, event.Notes); err != nil {
+			s.logger.Error("failed to update cash balance for DEP", "error", err)
+			metrics.RecordNatsMessage(s.createdTopic, "cash_error", time.Since(start).Seconds())
+			return
+		}
+		s.logger.Info("Processed DEP transaction", "user_id", event.UserID, "amount", *event.Amount)
+
+	case "WIT": // Withdrawal
+		if event.Amount == nil {
+			s.logger.Error("WIT transaction missing amount", "transaction_id", event.TransactionID)
+			metrics.RecordNatsMessage(s.createdTopic, "missing_amount", time.Since(start).Seconds())
+			return
+		}
+		// Withdrawal is negative
+		if err := s.updateCashBalance(event.UserID, "USD", -*event.Amount, event.Notes); err != nil {
+			s.logger.Error("failed to update cash balance for WIT", "error", err)
+			metrics.RecordNatsMessage(s.createdTopic, "cash_error", time.Since(start).Seconds())
+			return
+		}
+		s.logger.Info("Processed WIT transaction", "user_id", event.UserID, "amount", *event.Amount)
+
+	default:
+		s.logger.Warn("unknown transaction type", "type", event.Type, "transaction_id", event.TransactionID)
+		metrics.RecordNatsMessage(s.createdTopic, "unknown_type", time.Since(start).Seconds())
+		return
+	}
+
+	metrics.RecordNatsMessage(s.createdTopic, "success", time.Since(start).Seconds())
+}
+
+// handleEquityTransaction processes BUY, SELL, and SPLIT transactions
+func (s *NATSSubscriber) handleEquityTransaction(event TransactionCreatedEvent) error {
+	symbol := *event.AssetSymbol
 
 	// Get existing holding
-	holding, err := s.repo.GetByUserAndSymbol(event.UserID, event.AssetSymbol)
+	holding, err := s.repo.GetByUserAndSymbol(event.UserID, symbol)
 	if err != nil {
 		// If holding doesn't exist, create a new one
-		// Fetch currency from cache or marketdata service
 		currency := "USD" // Default currency
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -183,31 +275,28 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		// Try cache first
 		var cachedAsset *CachedAsset
 		if s.assetCache != nil {
-			cachedAsset, err = s.assetCache.Get(ctx, event.AssetSymbol)
+			cachedAsset, err = s.assetCache.Get(ctx, symbol)
 			if err != nil {
-				s.logger.Warn("failed to get asset from cache", "error", err, "symbol", event.AssetSymbol)
+				s.logger.Warn("failed to get asset from cache", "error", err, "symbol", symbol)
 			}
 		}
 
 		if cachedAsset != nil {
-			// Cache hit
 			currency = cachedAsset.Currency
-			s.logger.Debug("asset currency from cache", "symbol", event.AssetSymbol, "currency", currency)
+			s.logger.Debug("asset currency from cache", "symbol", symbol, "currency", currency)
 		} else if s.marketDataGateway != nil {
-			// Cache miss - fetch from marketdata service
 			assetResp, err := s.marketDataGateway.client.GetAsset(ctx, &pb.GetAssetRequest{
-				Symbol: event.AssetSymbol,
+				Name: fmt.Sprintf("assets/%s", symbol),
 			})
 			if err != nil {
-				s.logger.Warn("failed to fetch asset from marketdata service, using default USD", "error", err, "symbol", event.AssetSymbol)
-			} else if assetResp.Asset != nil {
-				currency = assetResp.Asset.Currency
-				s.logger.Debug("asset currency from marketdata service", "symbol", event.AssetSymbol, "currency", currency)
+				s.logger.Warn("failed to fetch asset from marketdata service, using default USD", "error", err, "symbol", symbol)
+			} else if assetResp != nil {
+				currency = assetResp.Currency
+				s.logger.Debug("asset currency from marketdata service", "symbol", symbol, "currency", currency)
 
-				// Cache the asset for future use
 				if s.assetCache != nil {
-					if err := s.assetCache.Set(ctx, assetResp.Asset); err != nil {
-						s.logger.Warn("failed to cache asset", "error", err, "symbol", event.AssetSymbol)
+					if err := s.assetCache.Set(ctx, assetResp); err != nil {
+						s.logger.Warn("failed to cache asset", "error", err, "symbol", symbol)
 					}
 				}
 			}
@@ -215,7 +304,7 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 
 		holding = &domain.Holding{
 			UserID:      event.UserID,
-			Symbol:      event.AssetSymbol,
+			Symbol:      symbol,
 			Quantity:    0,
 			AverageCost: 0,
 			Currency:    currency,
@@ -225,57 +314,79 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 	// Update holding based on transaction type
 	switch event.Type {
 	case "BUY":
+		if event.Quantity == nil || event.PricePerShare == nil {
+			return fmt.Errorf("BUY transaction missing quantity or price_per_share")
+		}
 		// Calculate new average cost
-		totalCost := (holding.Quantity * holding.AverageCost) + (event.Quantity * event.PricePerShare)
-		newQuantity := holding.Quantity + event.Quantity
+		totalCost := (holding.Quantity * holding.AverageCost) + (*event.Quantity * *event.PricePerShare)
+		newQuantity := holding.Quantity + *event.Quantity
 		if newQuantity > 0 {
 			holding.AverageCost = totalCost / newQuantity
 		}
 		holding.Quantity = newQuantity
+
 	case "SELL":
+		if event.Quantity == nil {
+			return fmt.Errorf("SELL transaction missing quantity")
+		}
 		// Reduce quantity, keep average cost the same
-		holding.Quantity -= event.Quantity
-		// If quantity goes to zero or negative, we might want to delete the holding
+		holding.Quantity -= *event.Quantity
 		if holding.Quantity <= 0 {
 			holding.Quantity = 0
 		}
+
 	case "SPLIT":
+		if event.Quantity == nil {
+			return fmt.Errorf("SPLIT transaction missing quantity")
+		}
 		// Stock split: increase quantity, decrease average cost proportionally
-		if holding.Quantity > 0 && event.Quantity > 0 {
-			splitRatio := (holding.Quantity + event.Quantity) / holding.Quantity
+		if holding.Quantity > 0 && *event.Quantity > 0 {
+			splitRatio := (holding.Quantity + *event.Quantity) / holding.Quantity
 			holding.AverageCost = holding.AverageCost / splitRatio
-			holding.Quantity += event.Quantity
+			holding.Quantity += *event.Quantity
 			s.logger.Info("Processed stock split",
-				"symbol", event.AssetSymbol,
+				"symbol", symbol,
 				"split_ratio", splitRatio,
 				"new_quantity", holding.Quantity,
 				"new_average_cost", holding.AverageCost,
 			)
 		}
-	default:
-		s.logger.Warn("unknown transaction type", "type", event.Type, "transaction_id", event.TransactionID)
-		metrics.RecordNatsMessage(s.createdTopic, "unknown_type", time.Since(start).Seconds())
-		return
 	}
 
 	holding.LastUpdated = time.Now()
 
 	// Save updated holding
 	if err := s.repo.Upsert(holding); err != nil {
-		s.logger.Error("failed to update holding", "error", err, "user_id", event.UserID, "symbol", event.AssetSymbol)
-		metrics.RecordNatsMessage(s.createdTopic, "db_error", time.Since(start).Seconds())
-		return
+		return fmt.Errorf("failed to update holding: %w", err)
 	}
 
 	s.logger.Info("Updated portfolio holding (created event)",
 		"user_id", event.UserID,
-		"symbol", event.AssetSymbol,
+		"symbol", symbol,
 		"new_quantity", holding.Quantity,
 		"average_cost", holding.AverageCost,
 		"currency", holding.Currency,
 	)
 
-	metrics.RecordNatsMessage(s.createdTopic, "success", time.Since(start).Seconds())
+	return nil
+}
+
+// updateCashBalance updates the cash balance for a user using the dedicated cash balance repository
+func (s *NATSSubscriber) updateCashBalance(userID, currency string, amount float64, notes string) error {
+	// Use dedicated cash balance repository
+	err := s.cashBalanceRepo.AddAmount(userID, currency, amount, notes)
+	if err != nil {
+		return fmt.Errorf("failed to update cash balance: %w", err)
+	}
+
+	s.logger.Info("Updated cash balance",
+		"user_id", userID,
+		"currency", currency,
+		"change", amount,
+		"notes", notes,
+	)
+
+	return nil
 }
 
 func (s *NATSSubscriber) handleTransactionUpdated(msg *nats.Msg) {
@@ -290,10 +401,17 @@ func (s *NATSSubscriber) handleTransactionUpdated(msg *nats.Msg) {
 
 	s.logger.Info("Received transaction updated event", "transaction_id", event.TransactionID)
 
-	if err := s.recalculateHolding(context.Background(), event.UserID, event.AssetSymbol); err != nil {
-		s.logger.Error("failed to recalculate holding after update", "error", err, "user_id", event.UserID, "symbol", event.AssetSymbol)
-		metrics.RecordNatsMessage(s.updatedTopic, "recalc_error", time.Since(start).Seconds())
-		return
+	// For equity transactions, recalculate holding
+	if event.AssetSymbol != nil {
+		if err := s.recalculateHolding(context.Background(), event.UserID, *event.AssetSymbol); err != nil {
+			s.logger.Error("failed to recalculate holding after update", "error", err, "user_id", event.UserID, "symbol", *event.AssetSymbol)
+			metrics.RecordNatsMessage(s.updatedTopic, "recalc_error", time.Since(start).Seconds())
+			return
+		}
+	} else {
+		// Cash transaction - recalculate cash balance
+		// For now, we'll trigger a full recalculation by fetching all transactions
+		s.logger.Info("Cash transaction updated, may need manual recalculation", "transaction_id", event.TransactionID)
 	}
 
 	metrics.RecordNatsMessage(s.updatedTopic, "success", time.Since(start).Seconds())
@@ -311,10 +429,16 @@ func (s *NATSSubscriber) handleTransactionDeleted(msg *nats.Msg) {
 
 	s.logger.Info("Received transaction deleted event", "transaction_id", event.TransactionID)
 
-	if err := s.recalculateHolding(context.Background(), event.UserID, event.AssetSymbol); err != nil {
-		s.logger.Error("failed to recalculate holding after delete", "error", err, "user_id", event.UserID, "symbol", event.AssetSymbol)
-		metrics.RecordNatsMessage(s.deletedTopic, "recalc_error", time.Since(start).Seconds())
-		return
+	// For equity transactions, recalculate holding
+	if event.AssetSymbol != nil {
+		if err := s.recalculateHolding(context.Background(), event.UserID, *event.AssetSymbol); err != nil {
+			s.logger.Error("failed to recalculate holding after delete", "error", err, "user_id", event.UserID, "symbol", *event.AssetSymbol)
+			metrics.RecordNatsMessage(s.deletedTopic, "recalc_error", time.Since(start).Seconds())
+			return
+		}
+	} else {
+		// Cash transaction - recalculate cash balance
+		s.logger.Info("Cash transaction deleted, may need manual recalculation", "transaction_id", event.TransactionID)
 	}
 
 	metrics.RecordNatsMessage(s.deletedTopic, "success", time.Since(start).Seconds())
@@ -329,7 +453,7 @@ func (s *NATSSubscriber) recalculateHolding(ctx context.Context, userID, symbol 
 
 	for {
 		resp, err := s.transactionClient.ListTransactions(ctx, &transactionpb.ListTransactionsRequest{
-			UserId: userID,
+			Parent: fmt.Sprintf("users/%s", userID),
 			Filter: &transactionpb.TransactionFilter{
 				Symbol: symbol,
 			},
@@ -371,18 +495,21 @@ func (s *NATSSubscriber) recalculateHolding(ctx context.Context, userID, symbol 
 		tx := allTxns[i]
 		switch tx.Type {
 		case "BUY":
-			cost := tx.Quantity * tx.PricePerShare
-			totalCost += cost // Add to total cost basis
-			quantity += tx.Quantity
+			// Check for nil pointers
+			if tx.Quantity != nil && tx.PricePerShare != nil {
+				cost := *tx.Quantity * *tx.PricePerShare
+				totalCost += cost // Add to total cost basis
+				quantity += *tx.Quantity
+			}
 		case "SELL":
 			// Reduce quantity.
 			// Average cost remains the same, so we reduce totalCost proportionally to keep AvgCost constant?
 			// AvgCost = TotalCost / Quantity
 			// NewTotalCost = (Quantity - SoldQty) * AvgCost
 			//              = (Quantity - SoldQty) * (TotalCost / Quantity)
-			if quantity > 0 {
+			if tx.Quantity != nil && quantity > 0 {
 				avgCost := totalCost / quantity
-				quantity -= tx.Quantity
+				quantity -= *tx.Quantity
 				if quantity < 0 {
 					quantity = 0
 				}
@@ -390,9 +517,13 @@ func (s *NATSSubscriber) recalculateHolding(ctx context.Context, userID, symbol 
 			}
 		case "SPLIT":
 			// Increase quantity, total cost stays same (so avg cost reduces)
-			if quantity > 0 && tx.Quantity > 0 {
-				quantity += tx.Quantity
+			if tx.Quantity != nil && quantity > 0 && *tx.Quantity > 0 {
+				quantity += *tx.Quantity
 			}
+		// Cash transactions don't affect equity holdings
+		case "INT", "DIV", "DEP", "WIT":
+			// Skip cash transactions when recalculating equity holdings
+			continue
 		}
 	}
 
