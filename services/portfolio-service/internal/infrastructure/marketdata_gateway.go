@@ -172,8 +172,7 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 			resourceToSymbol[fmt.Sprintf("assets/%s", sym)] = sym
 		}
 
-		fetchedPrices := make(map[string]float64)
-		timestamp := time.Now()
+		pricesToCache := make(map[string]CachedPrice)
 		count := 0
 
 		for resourceName, assetPrice := range resp.Prices {
@@ -184,24 +183,32 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 					// instead of the resource name.
 					symbol = resourceName
 				}
-				timestamp := time.Now()
+
+				assetTimestamp := time.Now()
 				if !assetPrice.Timestamp.AsTime().IsZero() {
-					timestamp = assetPrice.Timestamp.AsTime()
+					assetTimestamp = assetPrice.Timestamp.AsTime()
 				}
+
 				prices[symbol] = usecase.PriceData{
 					Price:     assetPrice.Price,
-					Timestamp: timestamp,
+					Timestamp: assetTimestamp,
 				}
-				fetchedPrices[symbol] = assetPrice.Price
+
+				pricesToCache[symbol] = CachedPrice{
+					Symbol:    symbol,
+					Price:     assetPrice.Price,
+					Timestamp: assetTimestamp,
+					CachedAt:  time.Now(),
+				}
 				count++
 			}
 		}
 		metrics.RecordPriceFetch("service", count)
 
 		// Cache the fetched prices
-		if g.cache != nil && len(fetchedPrices) > 0 {
+		if g.cache != nil && len(pricesToCache) > 0 {
 			cacheStart := time.Now()
-			err := g.cache.SetMultiple(ctx, fetchedPrices, timestamp)
+			err := g.cache.SetMultiple(ctx, pricesToCache)
 			metrics.RecordCacheOperation("set_multiple", "price", err == nil, time.Since(cacheStart).Seconds())
 		}
 	}

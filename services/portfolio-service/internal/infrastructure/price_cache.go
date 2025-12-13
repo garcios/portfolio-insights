@@ -155,8 +155,8 @@ func (pc *PriceCache) Set(ctx context.Context, symbol string, price float64, tim
 	return nil
 }
 
-// SetMultiple caches multiple prices
-func (pc *PriceCache) SetMultiple(ctx context.Context, prices map[string]float64, timestamp time.Time) error {
+// SetMultiple caches multiple prices with their individual timestamps
+func (pc *PriceCache) SetMultiple(ctx context.Context, prices map[string]CachedPrice) error {
 	start := time.Now()
 	if len(prices) == 0 {
 		return nil
@@ -164,16 +164,15 @@ func (pc *PriceCache) SetMultiple(ctx context.Context, prices map[string]float64
 
 	pipe := pc.client.Pipeline()
 
-	for symbol, price := range prices {
+	for symbol, cachedItem := range prices {
 		key := pc.priceKey(symbol)
-		cached := CachedPrice{
-			Symbol:    symbol,
-			Price:     price,
-			Timestamp: timestamp,
-			CachedAt:  time.Now(),
+
+		// Ensure CachedAt is set to now if not provided
+		if cachedItem.CachedAt.IsZero() {
+			cachedItem.CachedAt = time.Now()
 		}
 
-		data, err := json.Marshal(cached)
+		data, err := json.Marshal(cachedItem)
 		if err != nil {
 			continue // Skip errors for individual prices
 		}
