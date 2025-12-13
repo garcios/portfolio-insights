@@ -9,7 +9,7 @@ require (
 	github.com/garcios/portfolio-insights/services/transaction-service v0.0.0-00010101000000-000000000000
 	github.com/nats-io/nats.go v1.47.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/redis/go-redis/v9 v9.17.0
+	github.com/redis/go-redis/v9 v9.17.2
 	github.com/spf13/viper v1.21.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20251022142026-3a174f9686a8
 	google.golang.org/grpc v1.77.0

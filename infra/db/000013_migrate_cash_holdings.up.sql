@@ -4,7 +4,7 @@ SELECT
     user_id,
     SUBSTRING(symbol FROM 6) AS currency,  -- Extract 'USD' from 'CASH-USD'
     quantity AS balance,
-    created_at,
+    updated_at AS created_at,
     updated_at
 FROM investments.holdings
 WHERE symbol LIKE 'CASH-%'

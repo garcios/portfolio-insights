@@ -2225,3 +2225,55 @@ Enhanced the transaction service to publish NATS events for all transaction life
 **Configuration:**
 - Added environment variables for new topics in `portfolio-service`.
 - Wired up `TransactionServiceClient` in `NATSSubscriber`.
+
+## 2025-12-13 - HTTP Caching Implementation (Phase 1)
+
+### Overview
+Implemented the first phase of the HTTP caching strategy, introducing Redis infrastructure and a caching decorator pattern to the Portfolio Service. This optimization targets expensive operations like `GetPortfolioSummary` and `GetHistoricalPortfolioSummary`, aiming to significantly significantly reduce latency and database load for read-heavy workloads.
+
+### Features Implemented
+
+#### 1. Redis Infrastructure
+**Status:** ✅ Complete
+
+**Components:**
+- **Client:** `pkg/database/redis.go`
+- **Config:** `docker-compose.yaml` (verified)
+- **Dependency:** `github.com/redis/go-redis/v9`
+
+**Functionality:**
+- Reusable Redis client wrapper with connection pooling and context support.
+- `NewRedisClientFromRaw` factory enabled seamless integration with existing Redis connections if needed.
+
+#### 2. Portfolio Service Caching
+**Status:** ✅ Complete
+
+**Components:**
+- **Decorator:** `services/portfolio-service/internal/usecase/caching_usecase.go`
+- **Configuration:** Updated `config.go` and `dev.yaml`
+- **Metrics:** `services/portfolio-service/internal/metrics/metrics.go`
+
+**Capabilities:**
+- **Decorator Pattern:** Wraps the core `PortfolioUsecase` interface transparently.
+- **Configurable TTLs:**
+    - `portfolio:summary:{userID}`: **5 minutes** (default)
+    - `portfolio:history:{userID}:{date}`: **24 hours** (default)
+- **Toggleable:** Caching can be enabled/disabled via configuration.
+- **Observability:** Prometheus metrics for cache hits (`portfolio_cache_hits_total`), misses (`portfolio_cache_misses_total`), and operation latency.
+
+### Technical Details
+
+**Architecture:**
+- Used the **Decorator Pattern** to inject caching logic without modifying the core domain logic or business rules of `PortfolioUsecase`.
+- **Serialization:** JSON serialization used for storing cache values.
+- **Fail-Safe:** Failure to connect to Redis or cache errors (unmarshal) degrades gracefully to the underlying service call (cache miss behavior).
+
+**Metrics:**
+- `portfolio_cache_hits_total`: CounterVec broken down by cache type (`redis`).
+- `portfolio_cache_misses_total`: CounterVec broken down by cache type (`redis`).
+- `portfolio_cache_operation_duration_seconds`: Histogram of latency for cache `get/set` operations.
+
+### Next Steps
+1. **Analyze Performance:** Monitor cache hit rates and latency in the development/staging environment.
+2. **Phase 2:** Implement Gateway-level optimizations such as Automatic Persisted Queries (APQ) and response caching directives.
+3. **User Service:** Evaluate caching patterns for user profiles if load increases.

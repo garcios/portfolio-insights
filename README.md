@@ -325,3 +325,6 @@ Access the monitoring tools:
 -  [Datagrip](https://www.jetbrains.com/datagrip/download/?section=mac)
 -  [Postman](https://www.postman.com/downloads/)
 -  [Stitch](https://stitch.withgoogle.com/home)
+
+### Coding Standards
+- [API Standards](https://google.aip.dev/general)

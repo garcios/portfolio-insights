@@ -120,7 +120,14 @@ func main() {
 	}()
 
 	// Initialize Usecase
-	portfolioUsecase := usecase.NewPortfolioUsecase(holdingRepo, historyRepo, marketDataGateway)
+	var portfolioUsecase usecase.PortfolioUsecase
+	portfolioUsecase = usecase.NewPortfolioUsecase(holdingRepo, historyRepo, marketDataGateway)
+
+	if redisClient != nil {
+		wrappedRedis := database.NewRedisClientFromRaw(redisClient)
+		portfolioUsecase = usecase.NewCachingPortfolioUsecase(portfolioUsecase, wrappedRedis, cfg.Caching)
+		l.Info("Portfolio caching enabled")
+	}
 
 	// Initialize gRPC Handler
 	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase, historyRepo)

@@ -26,14 +26,22 @@ type Config struct {
 	RedisPassword string `mapstructure:"redis_password"`
 	RedisDB       int    `mapstructure:"redis_db"`
 
-	NatsURL                 string `mapstructure:"nats_url"`
-	ExchangeRateTopic       string `mapstructure:"exchange_rate_topic"`
-	TransactionCreatedTopic string `mapstructure:"transaction_created_topic"`
-	TransactionUpdatedTopic string `mapstructure:"transaction_updated_topic"`
-	TransactionDeletedTopic string `mapstructure:"transaction_deleted_topic"`
-	MarketDataServiceAddr   string `mapstructure:"marketdata_service_addr"`
-	TransactionServiceAddr  string `mapstructure:"transaction_service_addr"`
-	AssetCacheTTL           int    `mapstructure:"asset_cache_ttl_seconds"`
+	NatsURL                 string        `mapstructure:"nats_url"`
+	ExchangeRateTopic       string        `mapstructure:"exchange_rate_topic"`
+	TransactionCreatedTopic string        `mapstructure:"transaction_created_topic"`
+	TransactionUpdatedTopic string        `mapstructure:"transaction_updated_topic"`
+	TransactionDeletedTopic string        `mapstructure:"transaction_deleted_topic"`
+	MarketDataServiceAddr   string        `mapstructure:"marketdata_service_addr"`
+	TransactionServiceAddr  string        `mapstructure:"transaction_service_addr"`
+	AssetCacheTTL           int           `mapstructure:"asset_cache_ttl_seconds"`
+	Caching                 CachingConfig `mapstructure:"caching"`
+}
+
+// CachingConfig holds configuration for portfolio caching
+type CachingConfig struct {
+	Enabled           bool `mapstructure:"enabled"`
+	SummaryTTLSeconds int  `mapstructure:"summary_ttl_seconds"`
+	HistoryTTLSeconds int  `mapstructure:"history_ttl_seconds"`
 }
 
 // LoadConfig loads the configuration from file and environment variables.
@@ -50,6 +58,9 @@ func LoadConfig() Config {
 	viper.SetDefault("marketdata_service_addr", "localhost:50054")
 	viper.SetDefault("transaction_service_addr", "localhost:50053")
 	viper.SetDefault("redis_addr", "localhost:6379")
+	viper.SetDefault("caching.enabled", true)
+	viper.SetDefault("caching.summary_ttl_seconds", 300)
+	viper.SetDefault("caching.history_ttl_seconds", 86400)
 
 	// 2. Load Config File
 	viper.SetConfigName("config")
@@ -68,26 +79,29 @@ func LoadConfig() Config {
 
 	// 3. Bind to Environment Variables
 	bindKeys := map[string]string{
-		"port":                      "PORT",
-		"metrics_port":              "METRICS_PORT",
-		"log_level":                 "LOG_LEVEL",
-		"db_host":                   "DB_HOST",
-		"db_port":                   "DB_PORT",
-		"db_user":                   "DB_USER",
-		"db_password":               "DB_PASSWORD",
-		"db_name":                   "DB_NAME",
-		"db_sslmode":                "DB_SSLMODE",
-		"redis_addr":                "REDIS_ADDR",
-		"redis_password":            "REDIS_PASSWORD",
-		"redis_db":                  "REDIS_DB",
-		"nats_url":                  "NATS_URL",
-		"exchange_rate_topic":       "EXCHANGE_RATE_TOPIC",
-		"transaction_created_topic": "TRANSACTION_CREATED_TOPIC",
-		"transaction_updated_topic": "TRANSACTION_UPDATED_TOPIC",
-		"transaction_deleted_topic": "TRANSACTION_DELETED_TOPIC",
-		"marketdata_service_addr":   "MARKETDATA_SERVICE_ADDR",
-		"transaction_service_addr":  "TRANSACTION_SERVICE_ADDR",
-		"asset_cache_ttl_seconds":   "ASSET_CACHE_TTL_SECONDS",
+		"port":                        "PORT",
+		"metrics_port":                "METRICS_PORT",
+		"log_level":                   "LOG_LEVEL",
+		"db_host":                     "DB_HOST",
+		"db_port":                     "DB_PORT",
+		"db_user":                     "DB_USER",
+		"db_password":                 "DB_PASSWORD",
+		"db_name":                     "DB_NAME",
+		"db_sslmode":                  "DB_SSLMODE",
+		"redis_addr":                  "REDIS_ADDR",
+		"redis_password":              "REDIS_PASSWORD",
+		"redis_db":                    "REDIS_DB",
+		"nats_url":                    "NATS_URL",
+		"exchange_rate_topic":         "EXCHANGE_RATE_TOPIC",
+		"transaction_created_topic":   "TRANSACTION_CREATED_TOPIC",
+		"transaction_updated_topic":   "TRANSACTION_UPDATED_TOPIC",
+		"transaction_deleted_topic":   "TRANSACTION_DELETED_TOPIC",
+		"marketdata_service_addr":     "MARKETDATA_SERVICE_ADDR",
+		"transaction_service_addr":    "TRANSACTION_SERVICE_ADDR",
+		"asset_cache_ttl_seconds":     "ASSET_CACHE_TTL_SECONDS",
+		"caching.enabled":             "CACHING_ENABLED",
+		"caching.summary_ttl_seconds": "CACHING_SUMMARY_TTL_SECONDS",
+		"caching.history_ttl_seconds": "CACHING_HISTORY_TTL_SECONDS",
 	}
 
 	for key, env := range bindKeys {

@@ -180,7 +180,9 @@ func (g *MarketDataGateway) GetCurrentPrices(ctx context.Context, symbols []stri
 			if assetPrice != nil {
 				symbol := resourceToSymbol[resourceName]
 				if symbol == "" {
-					continue
+					// Fallback: the server might return the symbol directly as the key
+					// instead of the resource name.
+					symbol = resourceName
 				}
 				timestamp := time.Now()
 				if !assetPrice.Timestamp.AsTime().IsZero() {
