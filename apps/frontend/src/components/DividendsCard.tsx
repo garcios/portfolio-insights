@@ -7,7 +7,7 @@ const DividendsCard: React.FC = () => {
     // In a real implementation, these would likely come from props or a hook.
     const dividendsAmount = 5808.52;
     const dividendsGrowth = 1.47;
-    const currency = 'USD';
+    const currency = 'AUD';
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('en-US', {

@@ -6,7 +6,7 @@ const CurrencyGainCard: React.FC = () => {
     // Example values as per requirements.
     const currencyGainAmount = -2091.91;
     const currencyGainGrowth = -0.53;
-    const currency = 'USD';
+    const currency = 'AUD';
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('en-US', {

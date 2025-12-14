@@ -6,7 +6,7 @@ const CapitalGainCard: React.FC = () => {
     // Example values as per requirements.
     const capitalGainsAmount = 104093.68;
     const capitalGainsGrowth = 25.13;
-    const currency = 'USD';
+    const currency = 'AUD';
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('en-US', {
