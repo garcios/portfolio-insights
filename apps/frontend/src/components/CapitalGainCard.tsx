@@ -2,7 +2,7 @@ import React from 'react';
 import { TrendingUp } from 'lucide-react';
 import StatsCard from './StatsCard';
 
-const CapitalGainsCard: React.FC = () => {
+const CapitalGainCard: React.FC = () => {
     // Example values as per requirements.
     const capitalGainsAmount = 104093.68;
     const capitalGainsGrowth = 25.13;
@@ -30,4 +30,4 @@ const CapitalGainsCard: React.FC = () => {
     );
 };
 
-export default CapitalGainsCard;
+export default CapitalGainCard;

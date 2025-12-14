@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import StatsCard from '../components/StatsCard';
 import DividendsCard from '../components/DividendsCard';
-import CapitalGainsCard from '../components/CapitalGainsCard';
+import CapitalGainCard from '../components/CapitalGainCard';
+import CurrencyGainCard from '../components/CurrencyGainCard';
 import PortfolioChart from '../components/PortfolioChart';
 import HoldingsTable from '../components/HoldingsTable';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -158,7 +159,12 @@ const OverviewPage = () => {
                 padding: '32px 24px',
             }}>
                 {/* Stats Grid */}
-                <div className="grid grid-cols-4" style={{ marginBottom: '32px' }}>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(5, 1fr)',
+                    gap: '24px',
+                    marginBottom: '32px'
+                }}>
                     <StatsCard
                         title="Total Value"
                         value={formatCurrency(summary.totalValue, summary.currency)}
@@ -173,10 +179,12 @@ const OverviewPage = () => {
                         change={summary.dayChangePercentage}
                         changeLabel="Today"
                         icon={TrendingUp}
-                        iconColor="var(--color-success)"
+                        iconColor={summary.dayChange >= 0 ? "var(--color-success)" : "var(--color-danger)"}
+                        valueColor={summary.dayChange >= 0 ? "var(--color-success)" : "var(--color-danger)"}
                     />
-                    <CapitalGainsCard />
+                    <CapitalGainCard />
                     <DividendsCard />
+                    <CurrencyGainCard />
                 </div>
 
                 {/* Chart and Activity Section */}

@@ -54,7 +54,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
                         {title}
                     </p>
                     <h3 style={{
-                        fontSize: '2rem',
+                        fontSize: '1.75rem',
                         fontWeight: '700',
                         color: valueColor,
                         marginBottom: '8px',
