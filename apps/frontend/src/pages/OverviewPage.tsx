@@ -3,10 +3,10 @@ import { useQuery, gql } from '@apollo/client';
 import {
     TrendingUp,
     DollarSign,
-    PieChart,
 } from 'lucide-react';
 import StatsCard from '../components/StatsCard';
 import DividendsCard from '../components/DividendsCard';
+import CapitalGainsCard from '../components/CapitalGainsCard';
 import PortfolioChart from '../components/PortfolioChart';
 import HoldingsTable from '../components/HoldingsTable';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -175,12 +175,7 @@ const OverviewPage = () => {
                         icon={TrendingUp}
                         iconColor="var(--color-success)"
                     />
-                    <StatsCard
-                        title="Holdings"
-                        value={portfolio.holdings.length.toString()}
-                        icon={PieChart}
-                        iconColor="var(--color-accent)"
-                    />
+                    <CapitalGainsCard />
                     <DividendsCard />
                 </div>
 

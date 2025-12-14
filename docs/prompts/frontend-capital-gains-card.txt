@@ -1,0 +1,27 @@
+Goal: On the 'Overview' dashboard, replace the existing 'Holdings'  card at the top between 'Day Change' card amd 'Dividends' card, ensuring appropriate visual representation.
+
+1. Component Replacement and Placement
+Location: Target the main 'Overview' page/screen.
+
+Component to Replace: Completely remove the existing 'Holdings Card' found at top between 'Day Change' card amd 'Dividends' card.
+
+New Component: Implement a new card named 'Capital Gains Card' in the exact same location as the replaced card.
+
+2. Icon and Visual Design
+Icon Update: Replace the current card icon with a relevant symbol for capital gains. Suggested options (choose one):
+
+Stock Chart with Upward Arrow: A small line graph with the line sharply rising, often with a green arrow on the side. This is very direct and specific to investments.
+
+
+Coloring: The primary metric color for the card should be green.
+
+3. Required Data and Structure
+The new 'Capital Gains Card' must clearly display two primary metrics:
+
+Primary Metric (Large Font): The total amount of capital gains received for the current time period.
+
+Example Value: $104,093.68
+
+Secondary Metric (Small Font/Sub-text): A comparison metric showing the annual percentage.
+
+Example Value: +25.13% p.a.
