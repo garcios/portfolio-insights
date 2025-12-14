@@ -1,0 +1,14 @@
+Goal: Integrate two new dashboard cards into the existing layout, specifying their content, placement, and key design features.
+
+1. Context & Placement
+Integrate two new cards into the existing dashboard layout, following the existing card styles (e.g., dark background, rounded corners, padding).
+
+Card A (Top Right): Place this card above the existing "Recent Activity" area, aligning it with the top edge of the primary chart component (Performance History).
+
+Card B (Bottom Right): Place this card directly below Card A, maintaining standard vertical spacing between the two.
+
+
+2. Card A: Asset AllocationAttributeSpecificationTitleAsset AllocationContentA Donut Chart visualization.Data BreakdownDisplay the top three asset classes as discrete color segments in the chart and an accompanying legend: Technology (60%), Automotive (30%), Cash (10%).Design DetailThe largest segment (Technology, 60%) should feature prominently with a bold, bright green color (matching the portfolio line). The 60% figure should be centrally displayed within the donut hole.
+
+
+3. 📝 Card B: Recent ActivityAttributeSpecificationTitleRecent ActivityContentA vertical List View of the most recent transactions, ordered by date (most recent first).Design DetailEach list item must clearly indicate the Action (e.g., "Bought", "Sold", "Dividend"), the Asset (e.g., "AAPL"), the Date, and the corresponding Dollar Amount. Positive transactions (Dividends, Sales) should be highlighted in green; Negative transactions (Purchases) should be in red/standard text.
