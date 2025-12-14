@@ -4,9 +4,9 @@ import {
     TrendingUp,
     DollarSign,
     PieChart,
-    Wallet,
 } from 'lucide-react';
 import StatsCard from '../components/StatsCard';
+import DividendsCard from '../components/DividendsCard';
 import PortfolioChart from '../components/PortfolioChart';
 import HoldingsTable from '../components/HoldingsTable';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -181,12 +181,7 @@ const OverviewPage = () => {
                         icon={PieChart}
                         iconColor="var(--color-accent)"
                     />
-                    <StatsCard
-                        title="Portfolio"
-                        value={portfolio.name}
-                        icon={Wallet}
-                        iconColor="var(--color-secondary)"
-                    />
+                    <DividendsCard />
                 </div>
 
                 {/* Chart and Activity Section */}
