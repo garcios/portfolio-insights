@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { useQuery, gql } from '@apollo/client';
-import {
-    TrendingUp,
-    DollarSign,
-} from 'lucide-react';
-import StatsCard from '../components/StatsCard';
+import TotalValueCard from '../components/TotalValueCard';
+import DayChangeCard from '../components/DayChangeCard';
 import DividendsCard from '../components/DividendsCard';
 import CapitalGainCard from '../components/CapitalGainCard';
 import CurrencyGainCard from '../components/CurrencyGainCard';
@@ -74,14 +71,7 @@ const OverviewPage = () => {
         setSelectedPeriod(period);
     };
 
-    const formatCurrency = (value: number, currency: string = 'USD') => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: currency,
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(value);
-    };
+
 
     if (loading && !data) {
         return (
@@ -165,22 +155,15 @@ const OverviewPage = () => {
                     gap: '24px',
                     marginBottom: '32px'
                 }}>
-                    <StatsCard
-                        title="Total Value"
-                        value={formatCurrency(summary.totalValue, summary.currency)}
+                    <TotalValueCard
+                        value={summary.totalValue}
                         change={summary.totalGainLossPercentage}
-                        changeLabel="All time"
-                        icon={DollarSign}
-                        iconColor="var(--color-primary)"
+                        currency={summary.currency}
                     />
-                    <StatsCard
-                        title="Day Change"
-                        value={formatCurrency(summary.dayChange, summary.currency)}
+                    <DayChangeCard
+                        value={summary.dayChange}
                         change={summary.dayChangePercentage}
-                        changeLabel="Today"
-                        icon={TrendingUp}
-                        iconColor={summary.dayChange >= 0 ? "var(--color-success)" : "var(--color-danger)"}
-                        valueColor={summary.dayChange >= 0 ? "var(--color-success)" : "var(--color-danger)"}
+                        currency={summary.currency}
                     />
                     <CapitalGainCard />
                     <DividendsCard />
