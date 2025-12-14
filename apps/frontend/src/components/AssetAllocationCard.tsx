@@ -2,11 +2,11 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 
 const AssetAllocationCard = () => {
     // Hardcoded data as per requirements
-    // Technology (60%, Green), Automotive (30%, Blue/Gray), Cash (10%, Gray)
+    // GOOGL (60%, Green), AMZN (30%, Blue/Gray), MSFT (10%, Gray)
     const data = [
-        { name: 'Technology', value: 60, color: '#10b981' }, // Green matching portfolio line
-        { name: 'Automotive', value: 30, color: '#3b82f6' }, // Blue
-        { name: 'Cash', value: 10, color: '#6b7280' },       // Gray
+        { name: 'GOOGL', value: 60, color: '#10b981' }, // Green matching portfolio line
+        { name: 'AMZN', value: 30, color: '#3b82f6' }, // Blue
+        { name: 'MSFT', value: 10, color: '#6b7280' },       // Gray
     ];
 
     return (
