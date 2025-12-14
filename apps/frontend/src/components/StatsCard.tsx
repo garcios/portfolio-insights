@@ -8,6 +8,7 @@ interface StatsCardProps {
     changeLabel?: string;
     icon: LucideIcon;
     iconColor?: string;
+    valueColor?: string;
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({
@@ -17,6 +18,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
     changeLabel,
     icon: Icon,
     iconColor = 'var(--color-primary)',
+    valueColor = 'var(--color-text-primary)',
 }) => {
     const isPositive = change !== undefined && change >= 0;
 
@@ -52,9 +54,9 @@ const StatsCard: React.FC<StatsCardProps> = ({
                         {title}
                     </p>
                     <h3 style={{
-                        fontSize: '2rem',
+                        fontSize: '1.30rem',
                         fontWeight: '700',
-                        color: 'var(--color-text-primary)',
+                        color: valueColor,
                         marginBottom: '8px',
                         lineHeight: '1',
                     }}>

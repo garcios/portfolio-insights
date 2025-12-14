@@ -1,0 +1,30 @@
+Goal: On the 'Overview' dashboard, replace the existing 'Portfolio'  card at the top right with a new 'Dividends' card, ensuring appropriate visual representation.
+
+1. Component Replacement and Placement
+Location: Target the main 'Overview' page/screen.
+
+Component to Replace: Completely remove the existing 'Portfolio Card' found at the top right.
+
+New Component: Implement a new card named 'Dividends Card' in the exact same location as the replaced card.
+
+2. Icon and Visual Design
+Icon Update: Replace the current card icon with a relevant symbol for financial income or dividends. Suggested options (choose one):
+
+A small green sack/bag of money.
+
+A stack of coins or currency bills.
+
+A rising arrow within a circle (representing growth/payouts).
+
+Coloring: The primary metric color for the card should be green (to signify income/positive flow).
+
+3. Required Data and Structure
+The new 'Dividends Card' must clearly display two primary metrics:
+
+Primary Metric (Large Font): The total amount of dividends received for the current month/quarter.
+
+Example Value: $5,808.52
+
+Secondary Metric (Small Font/Sub-text): A comparison metric showing the annual percentage.
+
+Example Value: +1.47% p.a.

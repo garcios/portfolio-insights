@@ -1,0 +1,32 @@
+Goal: Integrate a new 'Currency Gain' metric card into the 'Overview' dashboard, maintaining visual consistency and providing key performance indicators (KPIs) for currency movement impact.
+
+1. Component Placement and Name
+Target Location: The main 'Overview' dashboard/screen.
+
+Card Name: Currency Gain
+
+Placement: Insert the new card immediately to the right of the existing 'Dividends' card, positioned among the primary summary metrics at the top of the dashboard.
+
+2. Iconography and Visual Design
+Card Color (Primary Metric): The main metric value (large font) must use Green for visual consistency with positive financial movements (or Red/Green based on the value, but the primary focus should be the Green-associated card family).
+
+Icon Requirement: A clear, standard representation of currency exchange/Foreign Exchange (FX).
+
+Description: Use a circular or horizontal icon depicting two opposing exchange arrows with or between generic/standard currency symbols (e.g., $ \leftrightarrow €$).
+
+3. Required Data Structure and Metrics
+The card must prominently display the following two metrics:
+
+A. Primary Metric (Total Currency Gain/Loss)
+
+- Description: The Total Currency Gain/Loss over the current reporting period.
+- Formatting/Style: Large, prominent font. Must include appropriate currency symbol and reflect positive/negative status.
+- Example Value: $- \$2,091.91$
+
+B. Secondary Metric (Annual Percentage Change)
+
+- Description: The Annual Percentage Change (p.a.) comparison for the current gain/loss.
+- Formatting/Style: Small font/Sub-text, positioned below the primary metric. Must include the 'p.a.' suffix.
+- Example Value: $-0.53\% \text{ p.a.}$
+
+
