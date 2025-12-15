@@ -193,7 +193,7 @@ func TestPortfolioResolver_Summary(t *testing.T) {
 		UserID: "user-123",
 	}
 
-	summary, err := portfolioResolver.Summary(context.Background(), portfolio)
+	summary, err := portfolioResolver.Summary(context.Background(), portfolio, nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

@@ -41,7 +41,7 @@ func PortfolioEntityToGraphQL(portfolio *entity.Portfolio) *model.Portfolio {
 
 // PortfolioSummaryEntityToGraphQL converts a PortfolioSummary entity to a GraphQL PortfolioSummary model
 func PortfolioSummaryEntityToGraphQL(summary *entity.PortfolioSummary) *model.PortfolioSummary {
-	return &model.PortfolioSummary{
+	result := &model.PortfolioSummary{
 		TotalValue:              summary.TotalValue,
 		TotalGainLoss:           summary.TotalGainLoss,
 		TotalGainLossPercentage: summary.TotalGainLossPercentage,
@@ -49,7 +49,24 @@ func PortfolioSummaryEntityToGraphQL(summary *entity.PortfolioSummary) *model.Po
 		DayChangePercentage:     summary.DayChangePercentage,
 		Currency:                summary.Currency,
 		LastUpdated:             summary.LastUpdated.Format("2006-01-02T15:04:05Z07:00"),
+		CapitalGain:             summary.CapitalGain,
+		CapitalGainPercentage:   summary.CapitalGainPercentage,
+		CurrencyGain:            summary.CurrencyGain,
+		CurrencyGainPercentage:  summary.CurrencyGainPercentage,
+		Dividends:               summary.Dividends,
+		DividendsPercentage:     summary.DividendsPercentage,
 	}
+
+	if summary.StartDate != nil {
+		s := summary.StartDate.Format("2006-01-02")
+		result.StartDate = &s
+	}
+	if summary.EndDate != nil {
+		s := summary.EndDate.Format("2006-01-02")
+		result.EndDate = &s
+	}
+
+	return result
 }
 
 // HoldingEntityToGraphQL converts a Holding entity to a GraphQL Holding model

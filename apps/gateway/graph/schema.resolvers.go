@@ -63,9 +63,9 @@ func (r *mutationResolver) UploadTransactionCSV(ctx context.Context, file graphq
 }
 
 // Summary is the resolver for the summary field.
-func (r *portfolioResolver) Summary(ctx context.Context, obj *model.Portfolio) (*model.PortfolioSummary, error) {
+func (r *portfolioResolver) Summary(ctx context.Context, obj *model.Portfolio, startDate *string, endDate *string) (*model.PortfolioSummary, error) {
 	// This resolver only executes if the query requests the summary field
-	summary, err := r.Container.PortfolioUseCase.GetPortfolioSummary(ctx, obj.UserID)
+	summary, err := r.Container.PortfolioUseCase.GetPortfolioSummary(ctx, obj.UserID, startDate, endDate)
 	if err != nil {
 		// Return nil for optional field if it fails
 		return nil, nil

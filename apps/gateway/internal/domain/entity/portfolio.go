@@ -20,6 +20,14 @@ type PortfolioSummary struct {
 	DayChangePercentage     float64
 	Currency                string
 	LastUpdated             time.Time
+	StartDate               *time.Time
+	EndDate                 *time.Time
+	CapitalGain             float64
+	CapitalGainPercentage   float64
+	CurrencyGain            float64
+	CurrencyGainPercentage  float64
+	Dividends               float64
+	DividendsPercentage     float64
 }
 
 // Holding represents a single asset holding in the portfolio

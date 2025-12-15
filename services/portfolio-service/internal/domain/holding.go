@@ -25,8 +25,16 @@ type PortfolioSummary struct {
 	GainLossPct  float64
 	DayChange    float64
 	DayChangePct float64
-	Currency     string // Currency of the summary (e.g., USD, AUD)
-	LastUpdated  time.Time
+	Currency       string // Currency of the summary (e.g., USD, AUD)
+	LastUpdated    time.Time
+	StartDate      time.Time
+	EndDate        time.Time
+	CapitalGain    float64
+	CapitalGainPct float64
+	CurrencyGain   float64
+	CurrencyGainPct float64
+	Dividends      float64
+	DividendsPct   float64
 }
 
 // HoldingRepository defines the interface for holding persistence

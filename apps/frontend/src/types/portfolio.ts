@@ -12,6 +12,12 @@ export interface PortfolioSummary {
     dayChangePercentage: number;
     currency: string;
     lastUpdated: string;
+    capitalGain: number;
+    capitalGainPercentage: number;
+    currencyGain: number;
+    currencyGainPercentage: number;
+    dividends: number;
+    dividendsPercentage: number;
 }
 
 export interface Holding {

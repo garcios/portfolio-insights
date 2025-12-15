@@ -18,7 +18,7 @@ func ProtoToUserEntity(user *userpb.User) *entity.User {
 
 // ProtoToPortfolioSummaryEntity converts a protobuf PortfolioSummary to a PortfolioSummary entity
 func ProtoToPortfolioSummaryEntity(pb *portfoliopb.PortfolioSummary) *entity.PortfolioSummary {
-	return &entity.PortfolioSummary{
+	summary := &entity.PortfolioSummary{
 		TotalValue:              pb.TotalValue,
 		TotalGainLoss:           pb.TotalGainLoss,
 		TotalGainLossPercentage: pb.TotalGainLossPercentage,
@@ -26,7 +26,24 @@ func ProtoToPortfolioSummaryEntity(pb *portfoliopb.PortfolioSummary) *entity.Por
 		DayChangePercentage:     pb.DayChangePercentage,
 		Currency:                pb.Currency,
 		LastUpdated:             pb.LastUpdated.AsTime(),
+		CapitalGain:             pb.CapitalGainLoss,
+		CapitalGainPercentage:   pb.CapitalGainLossPercentage,
+		CurrencyGain:            pb.CurrencyGainLoss,
+		CurrencyGainPercentage:  pb.CurrencyGainLossPercentage,
+		Dividends:               pb.DividendsReceived,
+		DividendsPercentage:     pb.DividendsReceivedPercentage,
 	}
+
+	if pb.StartDate != nil {
+		t := pb.StartDate.AsTime()
+		summary.StartDate = &t
+	}
+	if pb.EndDate != nil {
+		t := pb.EndDate.AsTime()
+		summary.EndDate = &t
+	}
+
+	return summary
 }
 
 // ProtoToHoldingEntity converts a protobuf Holding to a Holding entity

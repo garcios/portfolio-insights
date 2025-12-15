@@ -33,12 +33,18 @@ func (uc *cachingPortfolioUsecase) GetHoldings(ctx context.Context, userID strin
 	return uc.delegate.GetHoldings(ctx, userID)
 }
 
-func (uc *cachingPortfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string) (*domain.PortfolioSummary, error) {
+func (uc *cachingPortfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *time.Time) (*domain.PortfolioSummary, error) {
 	if !uc.cfg.Enabled {
-		return uc.delegate.GetPortfolioSummary(ctx, userID)
+		return uc.delegate.GetPortfolioSummary(ctx, userID, startDate, endDate)
 	}
 
 	key := fmt.Sprintf("portfolio:summary:%s", userID)
+	if startDate != nil {
+		key += fmt.Sprintf(":start:%s", startDate.Format("2006-01-02"))
+	}
+	if endDate != nil {
+		key += fmt.Sprintf(":end:%s", endDate.Format("2006-01-02"))
+	}
 
 	// Try to get from cache
 	start := time.Now()
@@ -55,7 +61,7 @@ func (uc *cachingPortfolioUsecase) GetPortfolioSummary(ctx context.Context, user
 	metrics.RecordCacheOperation("get_summary", "redis", false, time.Since(start).Seconds())
 
 	// Fetch from delegate
-	summary, err := uc.delegate.GetPortfolioSummary(ctx, userID)
+	summary, err := uc.delegate.GetPortfolioSummary(ctx, userID, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}

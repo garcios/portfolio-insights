@@ -4,9 +4,11 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
+	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 )
 
 // BackfillResult represents the result of a backfill operation.
@@ -21,7 +23,7 @@ type BackfillResult struct {
 // PortfolioUsecase defines the business logic for portfolio operations
 type PortfolioUsecase interface {
 	GetHoldings(ctx context.Context, userID string) ([]*domain.Holding, error)
-	GetPortfolioSummary(ctx context.Context, userID string) (*domain.PortfolioSummary, error)
+	GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *time.Time) (*domain.PortfolioSummary, error)
 	GetHistoricalPortfolioSummary(ctx context.Context, userID string, date time.Time) (*domain.PortfolioSummary, error)
 	BackfillPortfolioHistory(ctx context.Context, userIDs []string, startDate, endDate time.Time, dryRun bool) BackfillResult
 }
@@ -35,7 +37,9 @@ type PriceData struct {
 type portfolioUsecase struct {
 	holdingRepo       domain.HoldingRepository
 	historyRepo       domain.PortfolioHistoryRepository
+	cashBalanceRepo   domain.CashBalanceRepository
 	marketDataGateway MarketDataGateway
+	transactionClient transactionpb.TransactionServiceClient
 }
 
 // MarketDataGateway defines the interface for fetching current market prices
@@ -52,12 +56,16 @@ type MarketDataGateway interface {
 func NewPortfolioUsecase(
 	holdingRepo domain.HoldingRepository,
 	historyRepo domain.PortfolioHistoryRepository,
+	cashBalanceRepo domain.CashBalanceRepository,
 	marketDataGateway MarketDataGateway,
+	transactionClient transactionpb.TransactionServiceClient,
 ) PortfolioUsecase {
 	return &portfolioUsecase{
 		holdingRepo:       holdingRepo,
 		historyRepo:       historyRepo,
+		cashBalanceRepo:   cashBalanceRepo,
 		marketDataGateway: marketDataGateway,
+		transactionClient: transactionClient,
 	}
 }
 
@@ -106,7 +114,9 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 
 // GetPortfolioSummary calculates the portfolio summary for a user
 // All values are converted to USD (default currency)
-func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string) (*domain.PortfolioSummary, error) {
+// GetPortfolioSummary calculates the portfolio summary for a user
+// All values are converted to USD (default currency)
+func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *time.Time) (*domain.PortfolioSummary, error) {
 	const defaultCurrency = "AUD"
 
 	// Get holdings with current prices
@@ -123,7 +133,7 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		GainLossPct: 0,
 	}
 
-	// Calculate totals with currency conversion
+	// Calculate totals with currency conversion (Holdings)
 	for _, holding := range holdings {
 		// Get exchange rate if currency is not AUD
 		exchangeRate := 1.0
@@ -131,7 +141,6 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 			rate, err := uc.marketDataGateway.GetCurrencyRate(ctx, holding.Currency, defaultCurrency)
 			if err != nil {
 				// Log error but continue with rate of 1.0
-				// In production, you might want to handle this differently
 				fmt.Printf("Warning: Failed to get exchange rate for %s to %s: %v. Using rate 1.0\n",
 					holding.Currency, defaultCurrency, err)
 			} else {
@@ -147,53 +156,207 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		summary.TotalValue += currentValue
 	}
 
-	// Calculate gain/loss
-	summary.GainLoss = summary.TotalValue - summary.TotalCost
+	// Snapshot Holdings Value before adding cash
+	holdingsValue := summary.TotalValue
 
-	// Calculate percentage (avoid division by zero)
-	if summary.TotalCost > 0 {
-		summary.GainLossPct = (summary.GainLoss / summary.TotalCost) * 100
+	// Add Cash Balance to Total Value (Current)
+	cashBalances, err := uc.cashBalanceRepo.ListByUser(userID)
+	if err != nil {
+		fmt.Printf("Warning: Failed to fetch cash balances: %v\n", err)
+	} else {
+		for _, cb := range cashBalances {
+			value := cb.Balance
+			if cb.Currency != defaultCurrency {
+				rate, err := uc.marketDataGateway.GetCurrencyRate(ctx, cb.Currency, defaultCurrency)
+				if err == nil {
+					value *= rate
+				}
+			}
+			summary.TotalValue += value
+		}
 	}
 
-	// Calculate Day Change
-	// Determine the reference date for "yesterday"
-	// If we have recent price data, use that as the anchor.
-	// Otherwise, default to time.Now()
-	// anchorDate := time.Now()
-	/*
-		for _, h := range holdings {
-			if !h.PriceLastUpdated.IsZero() && h.PriceLastUpdated.After(anchorDate.Add(-24*time.Hour)) {
-				// If we have a price update from "today" (or recent), use it.
-				// But wait, if the price is from "yesterday" (UTC), we want to compare with "day before yesterday".
-				// Let's use the latest price timestamp as the "current" time.
-				if h.PriceLastUpdated.After(anchorDate) {
-					// This shouldn't happen if anchorDate is Now(), unless clock skew.
+	// Calculate Current Capital Gain
+	currentCapitalGain := holdingsValue - summary.TotalCost
+
+	// Fetch Transactions for Net Invested and Dividends
+	netInvested := 0.0
+	dividends := 0.0
+
+	// Default start/end dates for the entire history
+	summary.StartDate = time.Time{}
+	summary.EndDate = time.Now()
+	if endDate != nil {
+		summary.EndDate = *endDate
+	}
+
+	// If startDate is set, we need the historical snapshot
+	var startTotalValue, startCapitalGain float64
+	if startDate != nil {
+		summary.StartDate = *startDate
+		startSnapshot, err := uc.GetHistoricalPortfolioSummary(ctx, userID, *startDate)
+		if err != nil {
+			fmt.Printf("Warning: Failed to fetch historical snapshot for %s: %v. Assuming 0.\n", startDate.Format("2006-01-02"), err)
+		} else {
+			startTotalValue = startSnapshot.TotalValue
+			startCapitalGain = startSnapshot.GainLoss // In historical summary, GainLoss is CapitalGain (TotalValue - TotalCost)
+		}
+	} else {
+		// If no startDate, find the first transaction date
+		var firstTxnDate time.Time
+		pageToken := ""
+		for {
+			resp, err := uc.transactionClient.ListTransactions(ctx, &transactionpb.ListTransactionsRequest{
+				Parent:    fmt.Sprintf("users/%s", userID),
+				PageSize:  1000,
+				PageToken: pageToken,
+			})
+			if err != nil {
+				break
+			}
+			for _, txn := range resp.Transactions {
+				executedAt := txn.ExecutedAt.AsTime()
+				if firstTxnDate.IsZero() || executedAt.Before(firstTxnDate) {
+					firstTxnDate = executedAt
 				}
-				// We want the max timestamp?
+			}
+			if resp.NextPageToken == "" {
+				break
+			}
+			pageToken = resp.NextPageToken
+		}
+		summary.StartDate = firstTxnDate
+	}
+
+	// Fetch transactions again (efficient enough for now, or could optimize to single pass if needed)
+	// We need to filter transactions within [StartDate, EndDate]
+	var pageToken string
+	for {
+		resp, err := uc.transactionClient.ListTransactions(ctx, &transactionpb.ListTransactionsRequest{
+			Parent:    fmt.Sprintf("users/%s", userID),
+			PageSize:  1000,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			fmt.Printf("Warning: Failed to fetch transactions: %v\n", err)
+			break
+		}
+
+		for _, txn := range resp.Transactions {
+			executedAt := txn.ExecutedAt.AsTime()
+
+			// Filter by date range
+			if !summary.StartDate.IsZero() && executedAt.Before(summary.StartDate) {
+				continue
+			}
+			if endDate != nil && executedAt.After(*endDate) {
+				continue
+			}
+
+			// Handle cash flows
+			amount := 0.0
+			if txn.Amount != nil {
+				amount = *txn.Amount
+			}
+
+			// Convert amount to default currency if needed
+			if txn.PriceCurrency != defaultCurrency {
+				rate, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, txn.PriceCurrency, defaultCurrency, executedAt)
+				if err != nil {
+					fmt.Printf("Warning: Failed to get exchange rate for transaction %s (%s to %s) on %s: %v. Using rate 1.0\n",
+						txn.Name, txn.PriceCurrency, defaultCurrency, executedAt.Format("2006-01-02"), err)
+				} else {
+					amount *= rate
+				}
+			}
+
+			switch txn.Type {
+			case "DEP":
+				netInvested += amount
+			case "WIT":
+				netInvested -= amount
+			case "DIV":
+				dividends += amount
 			}
 		}
-	*/
-	// Actually, simpler: Find the latest PriceLastUpdated.
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		pageToken = resp.NextPageToken
+	}
+
+	// Calculate Deltas
+	summary.CapitalGain = currentCapitalGain - startCapitalGain
+	summary.Dividends = dividends
+
+	// Total Gain for Period = (EndValue - StartValue) - NetInvestedPeriod
+	// EndValue is Current TotalValue (assuming endDate is effectively now or we use current value as requested)
+	totalGain := (summary.TotalValue - startTotalValue) - netInvested
+
+	// Currency Gain = Total Gain - Capital Gain - Dividends
+	summary.CurrencyGain = totalGain - summary.CapitalGain - summary.Dividends
+
+	// Percentages
+	denominator := netInvested
+	// Fallback for denominator if NetInvested is 0 (e.g. no flows in period), use Start Value
+	if denominator == 0 {
+		denominator = startTotalValue
+	}
+	// Fallback if Period Start was 0, use Total Cost as proxy for "invested"
+	if denominator == 0 {
+		denominator = summary.TotalCost
+	}
+
+	if summary.TotalCost > 0 {
+		summary.CapitalGainPct = (summary.CapitalGain / summary.TotalCost) * 100
+	}
+	if denominator > 0 {
+		summary.CurrencyGainPct = (summary.CurrencyGain / denominator) * 100
+		summary.DividendsPct = (summary.Dividends / denominator) * 100
+	}
+
+	// Annualized Returns (CAGR) if period > 1 year
+	years := 0.0
+	if !summary.StartDate.IsZero() {
+		years = time.Since(summary.StartDate).Hours() / (24 * 365.25)
+	}
+
+	if years > 1 {
+		// Applying CAGR logic to the components relative to the denominator
+		if summary.TotalCost > 0 && summary.TotalCost+summary.CapitalGain > 0 {
+			ratio := (summary.TotalCost + summary.CapitalGain) / summary.TotalCost
+			summary.CapitalGainPct = (math.Pow(ratio, 1.0/years) - 1) * 100
+		}
+		if denominator > 0 && denominator+summary.CurrencyGain > 0 {
+			ratio := (denominator + summary.CurrencyGain) / denominator
+			summary.CurrencyGainPct = (math.Pow(ratio, 1.0/years) - 1) * 100
+		}
+		if denominator > 0 && denominator+summary.Dividends > 0 {
+			ratio := (denominator + summary.Dividends) / denominator
+			summary.DividendsPct = (math.Pow(ratio, 1.0/years) - 1) * 100
+		}
+	}
+
+	// Overall Gain/Loss fields
+	summary.GainLoss = totalGain
+	if denominator > 0 {
+		summary.GainLossPct = (summary.GainLoss / denominator) * 100
+	}
+
+	// Day Change (Keep existing logic)
 	var latestUpdate time.Time
 	for _, h := range holdings {
 		if h.PriceLastUpdated.After(latestUpdate) {
 			latestUpdate = h.PriceLastUpdated
 		}
 	}
-
-	// If we have a valid latest update, use it to calculate "yesterday".
-	// If latestUpdate is zero (no prices), use Now().
 	if latestUpdate.IsZero() {
 		latestUpdate = time.Now()
 	}
-
-	// Calculate yesterday relative to the latest data we have.
-	// e.g. if data is from Dec 1, we want comparison with Nov 30.
-	// if data is from Dec 2, we want comparison with Dec 1.
 	yesterday := latestUpdate.Add(-24 * time.Hour)
 	prevSummary, err := uc.GetHistoricalPortfolioSummary(ctx, userID, yesterday)
 	if err != nil {
-		// Log warning but don't fail the request
 		fmt.Printf("Warning: Failed to get historical summary for day change calculation: %v\n", err)
 	} else {
 		summary.DayChange = summary.TotalValue - prevSummary.TotalValue
@@ -202,7 +365,6 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		}
 	}
 
-	// Set the currency of the summary (default currency)
 	summary.Currency = defaultCurrency
 	return summary, nil
 }
@@ -210,6 +372,30 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 // GetHistoricalPortfolioSummary calculates the portfolio summary for a user at a specific date
 func (uc *portfolioUsecase) GetHistoricalPortfolioSummary(ctx context.Context, userID string, date time.Time) (*domain.PortfolioSummary, error) {
 	const defaultCurrency = "AUD"
+
+	// Try to get from history repo first
+	// We check for a snapshot at the exact start of the day (or the provided time)
+	// Since we care about "end of previous day" usually, or "start of this day".
+	// The backfill creates snapshots at 00:00:00 UTC usually.
+	// Let's assume the date passed is normalized.
+
+	// Check if snapshot exists
+	exists, err := uc.historyRepo.SnapshotExists(ctx, userID, date)
+	if err == nil && exists {
+		snapshots, err := uc.historyRepo.GetHistory(ctx, userID, date, date)
+		if err == nil && len(snapshots) > 0 {
+			// Found snapshot
+			s := snapshots[0]
+			return &domain.PortfolioSummary{
+				UserID:      s.UserID,
+				TotalValue:  s.TotalValue,
+				TotalCost:   s.TotalCostBasis,
+				GainLoss:    s.TotalValue - s.TotalCostBasis,
+				GainLossPct: 0, // Recalculate if needed: (val-cost)/cost * 100
+				LastUpdated: s.Timestamp,
+			}, nil
+		}
+	}
 
 	// Get holdings (Note: using current holdings as proxy for historical holdings)
 	holdings, err := uc.holdingRepo.ListByUser(userID)

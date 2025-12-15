@@ -57,7 +57,7 @@ type mockDelegateUsecase struct {
 	called  bool
 }
 
-func (m *mockDelegateUsecase) GetPortfolioSummary(ctx context.Context, userID string) (*domain.PortfolioSummary, error) {
+func (m *mockDelegateUsecase) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *time.Time) (*domain.PortfolioSummary, error) {
 	m.called = true
 	if m.err != nil {
 		return nil, m.err
@@ -96,7 +96,7 @@ func TestGetPortfolioSummary_CacheHit(t *testing.T) {
 	uc := NewCachingPortfolioUsecase(mockDelegate, mockRedis, config.CachingConfig{Enabled: true, SummaryTTLSeconds: 300})
 
 	// Execute
-	summary, err := uc.GetPortfolioSummary(context.Background(), "user-1")
+	summary, err := uc.GetPortfolioSummary(context.Background(), "user-1", nil, nil)
 
 	// Assert
 	if err != nil {
@@ -120,7 +120,7 @@ func TestGetPortfolioSummary_CacheMiss(t *testing.T) {
 	uc := NewCachingPortfolioUsecase(mockDelegate, mockRedis, config.CachingConfig{Enabled: true, SummaryTTLSeconds: 300})
 
 	// Execute
-	summary, err := uc.GetPortfolioSummary(context.Background(), "user-1")
+	summary, err := uc.GetPortfolioSummary(context.Background(), "user-1", nil, nil)
 
 	// Assert
 	if err != nil {

@@ -29,7 +29,7 @@ func (m *mockPortfolioUsecase) GetHoldings(ctx context.Context, userID string) (
 	return m.holdings, nil
 }
 
-func (m *mockPortfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string) (*domain.PortfolioSummary, error) {
+func (m *mockPortfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *time.Time) (*domain.PortfolioSummary, error) {
 	if m.err != nil {
 		return nil, m.err
 	}

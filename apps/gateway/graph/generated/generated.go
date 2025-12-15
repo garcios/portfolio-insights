@@ -70,7 +70,7 @@ type ComplexityRoot struct {
 		Holdings func(childComplexity int) int
 		ID       func(childComplexity int) int
 		Name     func(childComplexity int) int
-		Summary  func(childComplexity int) int
+		Summary  func(childComplexity int, startDate *string, endDate *string) int
 		UserID   func(childComplexity int) int
 	}
 
@@ -80,10 +80,18 @@ type ComplexityRoot struct {
 	}
 
 	PortfolioSummary struct {
+		CapitalGain             func(childComplexity int) int
+		CapitalGainPercentage   func(childComplexity int) int
 		Currency                func(childComplexity int) int
+		CurrencyGain            func(childComplexity int) int
+		CurrencyGainPercentage  func(childComplexity int) int
 		DayChange               func(childComplexity int) int
 		DayChangePercentage     func(childComplexity int) int
+		Dividends               func(childComplexity int) int
+		DividendsPercentage     func(childComplexity int) int
+		EndDate                 func(childComplexity int) int
 		LastUpdated             func(childComplexity int) int
+		StartDate               func(childComplexity int) int
 		TotalGainLoss           func(childComplexity int) int
 		TotalGainLossPercentage func(childComplexity int) int
 		TotalValue              func(childComplexity int) int
@@ -131,7 +139,7 @@ type MutationResolver interface {
 	UploadTransactionCSV(ctx context.Context, file graphql.Upload) (bool, error)
 }
 type PortfolioResolver interface {
-	Summary(ctx context.Context, obj *model.Portfolio) (*model.PortfolioSummary, error)
+	Summary(ctx context.Context, obj *model.Portfolio, startDate *string, endDate *string) (*model.PortfolioSummary, error)
 	Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error)
 }
 type QueryResolver interface {
@@ -286,7 +294,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Portfolio.Summary(childComplexity), true
+		args, err := ec.field_Portfolio_summary_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Portfolio.Summary(childComplexity, args["startDate"].(*string), args["endDate"].(*string)), true
 
 	case "Portfolio.userId":
 		if e.complexity.Portfolio.UserID == nil {
@@ -309,12 +322,40 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PortfolioPerformancePoint.Value(childComplexity), true
 
+	case "PortfolioSummary.capitalGain":
+		if e.complexity.PortfolioSummary.CapitalGain == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.CapitalGain(childComplexity), true
+
+	case "PortfolioSummary.capitalGainPercentage":
+		if e.complexity.PortfolioSummary.CapitalGainPercentage == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.CapitalGainPercentage(childComplexity), true
+
 	case "PortfolioSummary.currency":
 		if e.complexity.PortfolioSummary.Currency == nil {
 			break
 		}
 
 		return e.complexity.PortfolioSummary.Currency(childComplexity), true
+
+	case "PortfolioSummary.currencyGain":
+		if e.complexity.PortfolioSummary.CurrencyGain == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.CurrencyGain(childComplexity), true
+
+	case "PortfolioSummary.currencyGainPercentage":
+		if e.complexity.PortfolioSummary.CurrencyGainPercentage == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.CurrencyGainPercentage(childComplexity), true
 
 	case "PortfolioSummary.dayChange":
 		if e.complexity.PortfolioSummary.DayChange == nil {
@@ -330,12 +371,40 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PortfolioSummary.DayChangePercentage(childComplexity), true
 
+	case "PortfolioSummary.dividends":
+		if e.complexity.PortfolioSummary.Dividends == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.Dividends(childComplexity), true
+
+	case "PortfolioSummary.dividendsPercentage":
+		if e.complexity.PortfolioSummary.DividendsPercentage == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.DividendsPercentage(childComplexity), true
+
+	case "PortfolioSummary.endDate":
+		if e.complexity.PortfolioSummary.EndDate == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.EndDate(childComplexity), true
+
 	case "PortfolioSummary.lastUpdated":
 		if e.complexity.PortfolioSummary.LastUpdated == nil {
 			break
 		}
 
 		return e.complexity.PortfolioSummary.LastUpdated(childComplexity), true
+
+	case "PortfolioSummary.startDate":
+		if e.complexity.PortfolioSummary.StartDate == nil {
+			break
+		}
+
+		return e.complexity.PortfolioSummary.StartDate(childComplexity), true
 
 	case "PortfolioSummary.totalGainLoss":
 		if e.complexity.PortfolioSummary.TotalGainLoss == nil {
@@ -674,7 +743,7 @@ type Portfolio {
   id: ID!
   userId: ID!
   name: String!
-  summary: PortfolioSummary
+  summary(startDate: String, endDate: String): PortfolioSummary
   holdings: [Holding!]!
 }
 
@@ -686,6 +755,14 @@ type PortfolioSummary {
   dayChangePercentage: Float!
   currency: String!
   lastUpdated: String!
+  startDate: String
+  endDate: String
+  capitalGain: Float!
+  capitalGainPercentage: Float!
+  currencyGain: Float!
+  currencyGainPercentage: Float!
+  dividends: Float!
+  dividendsPercentage: Float!
 }
 
 type Holding {
@@ -822,6 +899,30 @@ func (ec *executionContext) field_Mutation_uploadTransactionCSV_args(ctx context
 		}
 	}
 	args["file"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Portfolio_summary_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["startDate"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("startDate"))
+		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["startDate"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["endDate"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("endDate"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["endDate"] = arg1
 	return args, nil
 }
 
@@ -1724,7 +1825,7 @@ func (ec *executionContext) _Portfolio_summary(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Portfolio().Summary(rctx, obj)
+		return ec.resolvers.Portfolio().Summary(rctx, obj, fc.Args["startDate"].(*string), fc.Args["endDate"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1760,9 +1861,36 @@ func (ec *executionContext) fieldContext_Portfolio_summary(ctx context.Context, 
 				return ec.fieldContext_PortfolioSummary_currency(ctx, field)
 			case "lastUpdated":
 				return ec.fieldContext_PortfolioSummary_lastUpdated(ctx, field)
+			case "startDate":
+				return ec.fieldContext_PortfolioSummary_startDate(ctx, field)
+			case "endDate":
+				return ec.fieldContext_PortfolioSummary_endDate(ctx, field)
+			case "capitalGain":
+				return ec.fieldContext_PortfolioSummary_capitalGain(ctx, field)
+			case "capitalGainPercentage":
+				return ec.fieldContext_PortfolioSummary_capitalGainPercentage(ctx, field)
+			case "currencyGain":
+				return ec.fieldContext_PortfolioSummary_currencyGain(ctx, field)
+			case "currencyGainPercentage":
+				return ec.fieldContext_PortfolioSummary_currencyGainPercentage(ctx, field)
+			case "dividends":
+				return ec.fieldContext_PortfolioSummary_dividends(ctx, field)
+			case "dividendsPercentage":
+				return ec.fieldContext_PortfolioSummary_dividendsPercentage(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PortfolioSummary", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Portfolio_summary_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -2222,6 +2350,352 @@ func (ec *executionContext) fieldContext_PortfolioSummary_lastUpdated(ctx contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_startDate(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_startDate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_startDate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_endDate(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_endDate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_endDate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_capitalGain(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_capitalGain(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CapitalGain, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_capitalGain(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_capitalGainPercentage(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_capitalGainPercentage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CapitalGainPercentage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_capitalGainPercentage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_currencyGain(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_currencyGain(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CurrencyGain, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_currencyGain(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_currencyGainPercentage(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_currencyGainPercentage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CurrencyGainPercentage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_currencyGainPercentage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_dividends(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_dividends(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Dividends, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_dividends(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PortfolioSummary_dividendsPercentage(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PortfolioSummary_dividendsPercentage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DividendsPercentage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PortfolioSummary_dividendsPercentage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PortfolioSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
 		},
 	}
 	return fc, nil
@@ -5845,6 +6319,40 @@ func (ec *executionContext) _PortfolioSummary(ctx context.Context, sel ast.Selec
 			}
 		case "lastUpdated":
 			out.Values[i] = ec._PortfolioSummary_lastUpdated(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "startDate":
+			out.Values[i] = ec._PortfolioSummary_startDate(ctx, field, obj)
+		case "endDate":
+			out.Values[i] = ec._PortfolioSummary_endDate(ctx, field, obj)
+		case "capitalGain":
+			out.Values[i] = ec._PortfolioSummary_capitalGain(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "capitalGainPercentage":
+			out.Values[i] = ec._PortfolioSummary_capitalGainPercentage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "currencyGain":
+			out.Values[i] = ec._PortfolioSummary_currencyGain(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "currencyGainPercentage":
+			out.Values[i] = ec._PortfolioSummary_currencyGainPercentage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dividends":
+			out.Values[i] = ec._PortfolioSummary_dividends(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dividendsPercentage":
+			out.Values[i] = ec._PortfolioSummary_dividendsPercentage(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

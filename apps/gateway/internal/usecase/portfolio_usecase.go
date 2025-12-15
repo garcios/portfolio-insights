@@ -31,8 +31,8 @@ func (uc *PortfolioUseCase) GetPortfolio(ctx context.Context, userID string) (*e
 }
 
 // GetPortfolioSummary retrieves portfolio summary metrics
-func (uc *PortfolioUseCase) GetPortfolioSummary(ctx context.Context, userID string) (*entity.PortfolioSummary, error) {
-	return uc.portfolioGateway.GetPortfolioSummary(ctx, userID)
+func (uc *PortfolioUseCase) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *string) (*entity.PortfolioSummary, error) {
+	return uc.portfolioGateway.GetPortfolioSummary(ctx, userID, startDate, endDate)
 }
 
 // GetHoldings retrieves all holdings for a user
