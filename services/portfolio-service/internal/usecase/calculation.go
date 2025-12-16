@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"fmt"
+	"log"
 )
 
 // ValuationHolding represents the minimal data required to value a holding.
@@ -38,6 +39,7 @@ func CalculatePortfolioValue(
 	var warnings []string
 
 	for _, h := range holdings {
+		log.Printf("Processing holding: %s, Quantity: %f, AssetCurrency: %s", h.Ticker, h.Quantity, h.AssetCurrency)
 		// 1. Fetch Market Price
 		price, ok := marketQuotes[h.Ticker]
 		if !ok {
@@ -58,6 +60,7 @@ func CalculatePortfolioValue(
 			if !found {
 				// Try reverse? The requirement implies specific Key format.
 				// We stick to requirement.
+				log.Printf("Missing FX rate for: %s", fxKey)
 				warnings = append(warnings, fmt.Sprintf("Missing FX rate for: %s", fxKey))
 				continue
 			}
