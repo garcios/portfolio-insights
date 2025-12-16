@@ -1,0 +1,31 @@
+port: "50054"
+metrics_port: "9099"
+log_level: "debug"
+
+db_host: "localhost"
+db_port: "5432"
+db_user: "garcios"
+db_password: "Password123"
+db_name: "portfolio"
+db_sslmode: "disable"
+
+eodhd_api_base_url: "https://eodhd.com/api"
+
+minio_endpoint: "localhost:9000"
+minio_access_key: "minioadmin"
+minio_secret_key: "minioadmin"
+minio_use_ssl: false
+minio_bucket_name: "market-data"
+
+currency_sync_interval: "24h"
+currency_stale_duration: "24h"
+currency_sync_batch_size: 10
+currency_sync_max_concurrency: 2
+currency_sync_historical_days: 30
+
+price_sync_interval: "12h"
+price_stale_duration: "24h"
+price_sync_batch_size: 50
+price_sync_max_concurrency: 5
+price_sync_historical_days: 365
+eodhd_rate_limit: 5.0

@@ -2,8 +2,10 @@
 package config
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -60,10 +62,36 @@ func LoadConfig() Config {
 	viper.SetDefault("currency_sync_historical_days", 30)
 
 	// 2. Load Config File
-	viper.SetConfigName("config")
+	appConfigPath := os.Getenv("APP_CONFIG_PATH")
+	log.Printf("***App Config Path: %s\n", appConfigPath)
+
+	appEnv := os.Getenv("APP_ENV")
+	appEnv = strings.ToLower(appEnv)
+	log.Printf("***App Env: %s\n", appEnv)
+
+	if appEnv == "local" {
+		//ask for EODHD_API_TOKEN
+		fmt.Printf("Please enter EODHD_API_TOKEN: ")
+		reader := bufio.NewReader(os.Stdin)
+		token, _ := reader.ReadString('\n')
+		os.Setenv("EODHD_API_TOKEN", token)
+
+	}
+
+	if appEnv != "" {
+		viper.SetConfigName(appEnv)
+	} else {
+		viper.SetConfigName("config")
+	}
+
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("/etc/app/")
+
+	if appConfigPath != "" {
+		viper.AddConfigPath(appConfigPath)
+	} else {
+		viper.AddConfigPath(".")
+		viper.AddConfigPath("/etc/app/")
+	}
 
 	err := viper.ReadInConfig()
 	if err != nil {

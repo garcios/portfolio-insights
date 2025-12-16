@@ -1,0 +1,58 @@
+Role: Act as a Senior Backend Engineer specializing in FinTech.
+
+Context: 
+The current logic for computing the total value is wrong.
+I am building the dashboard for a multi-currency stock portfolio application. I need a function/service that calculates the Total Current Value of a user's portfolio.
+
+The Challenge: A user holds stocks in multiple currencies (e.g., USD, AUD, JPY). To display their "Total Portfolio Value," I need to:
+
+Fetch the current holdings using GetHoldings in portfolio-service.
+
+Fetch the latest market price for every stock.
+
+Calculate the market value of each holding in its native currency.
+
+Convert that native value into the user's Target Currency using the latest exchange rates.
+
+Sum everything up.
+
+Input Data Structures: Assume I have the following inputs available:
+
+Holdings: A list of objects containing { Ticker, Quantity, AssetCurrency }.
+
+MarketQuotes: A map/dictionary where Key=Ticker and Value=CurrentPrice.
+
+FXRates: A map/dictionary where Key=AssetCurrency/BaseCurrency and Value=ExchangeRate. (e.g., "USD/AUD" : 1.50).
+
+Requirements:
+
+The Algorithm: Iterate through holdings, find the matching price, calculate the value, find the matching FX rate, convert to Base, and sum.
+
+Missing Data Handling: If a price or FX rate is missing, the code should return an error or a partial result with a warning flag (do not silently assume 0).
+
+Base Currency Check: If the Asset Currency matches the Base Currency, the FX rate is effectively 1.0 (no conversion needed).
+
+Test Case:
+
+User Base Currency: AUD
+
+Holding 1: 10 units of AAPL (USD). Price: $150 USD. FX (USD/AUD): 1.50.
+
+Calc: $150 * 10 = $1,500 USD -> $2,250 AUD.
+
+Holding 2: 5 units of CBA (AUD). Price: $100 AUD. FX (AUD/AUD): 1.0.
+
+Calc: $100 * 5 = $500 AUD.
+
+Total Expected Output: $2,750 AUD.
+
+Deliverables:
+
+- Define the Data Structures/Models.
+
+- Write the "CalculatePortfolioValue" function.
+
+- Include comments explaining how you handle floating-point precision (avoiding binary floating-point errors).
+
+- Write unit test for CalculatePortfolioValue function with edge cases included.
+

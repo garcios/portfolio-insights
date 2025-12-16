@@ -1,0 +1,12 @@
+port: "8080"
+portfolio_service_addr: "localhost:50052"
+user_service_addr: "localhost:50051"
+transaction_service_addr: "localhost:50053"
+transaction_service_http_addr: "http://localhost:8081"
+
+hydra_public_url: "http://hydra-public:4444"
+jwks_url: "http://hydra-public:4444/.well-known/jwks.json"
+jwt_issuer: "http://hydra-public:4444"
+jwt_audience: "portfolio-insights-spa"
+
+log_level: "debug"

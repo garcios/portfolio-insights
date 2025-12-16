@@ -268,6 +268,16 @@ func TestGetPortfolioSummary_FXBreakdown(t *testing.T) {
 		return 1.40, nil
 	}
 
+	// Setup Holding (Repo must be consistent with Transactions for GetHoldings/TotalValue)
+	repo.holdings["user-fx-detailed:AAPL"] = &domain.Holding{
+		UserID:      "user-fx-detailed",
+		Symbol:      "AAPL",
+		Quantity:    10,
+		AverageCost: 150.00,
+		Currency:    "USD",
+		LastUpdated: time.Now(),
+	}
+
 	uc := NewPortfolioUsecase(repo, historyRepo, cashBalanceRepo, marketData, transactionClient)
 
 	// Execute

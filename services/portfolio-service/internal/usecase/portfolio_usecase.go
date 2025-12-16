@@ -112,17 +112,11 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 }
 
 // GetPortfolioSummary calculates the portfolio summary for a user
-// All values are converted to USD (default currency)
-// GetPortfolioSummary calculates the portfolio summary for a user
-// All values are converted to USD (default currency)
-// GetPortfolioSummary calculates the portfolio summary for a user
-// All values are converted to USD (default currency)
-// GetPortfolioSummary calculates the portfolio summary for a user
-// All values are converted to USD (default currency)
+// All values are converted to AUD (default currency)
 func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *time.Time) (*domain.PortfolioSummary, error) {
-	const defaultCurrency = "AUD"
+	const defaultCurrency = "AUD" // TODO: Retrieve this value from user preferences via user service.
 
-	// 1. Determine Dates
+	// 1. Determine Date
 	summary := &domain.PortfolioSummary{
 		UserID:      userID,
 		Currency:    defaultCurrency,
@@ -152,36 +146,66 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	summary.Dividends = replayResult.Dividends
 	// NetInvested is internal metric, mostly for Total Gain calc
 
-	// 3. Calculate Unrealized Gains (on FinalPositions)
-	var totalUnrealizedCapital float64
-	var totalUnrealizedFX float64
-	var endTotalCost float64
-	var endHoldingsValue float64
-
-	// Determine if we are "live" or "historical"
+	// 3. Prepare Data for Valuation & Breakdown
 	isCurrent := endDate == nil || calcEndDate.After(time.Now().Add(-12*time.Hour))
 
-	// Collect symbols
-	var symbols []string
-	for sym, pos := range replayResult.FinalPositions {
-		if pos.Quantity > 0.000001 { // active position
-			symbols = append(symbols, sym)
-		}
+	// Collect unique symbols and currencies
+	var valuationHoldings []ValuationHolding
+	uniqueSymbols := make(map[string]bool)
+	uniqueCurrencies := make(map[string]bool)
+
+	holdings, err := uc.GetHoldings(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get holdings: %w", err)
 	}
 
-	// Fetch Prices and track Recency
-	currentPrices := make(map[string]float64)
+	for _, holding := range holdings {
+		if holding.Quantity <= 0.000001 {
+			continue
+		}
+		uniqueSymbols[holding.Symbol] = true
+		uniqueCurrencies[holding.Currency] = true
+
+		valuationHoldings = append(valuationHoldings, ValuationHolding{
+			Ticker:        holding.Symbol,
+			Quantity:      holding.Quantity,
+			AssetCurrency: holding.Currency,
+		})
+	}
+
+	var symbols []string
+	for s := range uniqueSymbols {
+		symbols = append(symbols, s)
+	}
+
+	// Fetch and Populates Prices (marketQuotes)
+	marketQuotes := make(map[string]float64)
 	var latestUpdate time.Time
 
+	// 3a. Batch Fetch (Current)
 	if isCurrent && len(symbols) > 0 {
-		// Batch Fetch
 		prices, err := uc.marketDataGateway.GetCurrentPrices(ctx, symbols)
 		if err == nil {
 			for s, data := range prices {
-				currentPrices[s] = data.Price
+				marketQuotes[s] = data.Price
 				if data.Timestamp.After(latestUpdate) {
 					latestUpdate = data.Timestamp
 				}
+			}
+		}
+	}
+
+	// 3b. Fill Missing Prices (Single Fetch fallback or Historical)
+	for _, sym := range symbols {
+		if _, ok := marketQuotes[sym]; !ok {
+			var price float64
+			if isCurrent {
+				price, _ = uc.marketDataGateway.GetCurrentPrice(ctx, sym)
+			} else {
+				price, _ = uc.marketDataGateway.GetPriceOnDate(ctx, sym, calcEndDate)
+			}
+			if price > 0 {
+				marketQuotes[sym] = price
 			}
 		}
 	}
@@ -190,53 +214,64 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		summary.LastUpdated = latestUpdate
 	}
 
+	// Fetch FX Rates (fxRates)
+	fxRates := make(map[string]float64)
+	// Ensure default currency mapping exists (optimization for CalculatePortfolioValue)
+	fxRates[fmt.Sprintf("%s/%s", defaultCurrency, defaultCurrency)] = 1.0
+
+	for currency := range uniqueCurrencies {
+		if currency == defaultCurrency {
+			continue
+		}
+		key := fmt.Sprintf("%s/%s", currency, defaultCurrency)
+		var rate float64
+		var err error
+
+		if isCurrent {
+			rate, err = uc.marketDataGateway.GetCurrencyRate(ctx, currency, defaultCurrency)
+		} else {
+			rate, err = uc.marketDataGateway.GetCurrencyRateOnDate(ctx, currency, defaultCurrency, calcEndDate)
+		}
+
+		if err == nil && rate > 0 {
+			fxRates[key] = rate
+		}
+	}
+
+	// 4. Calculate Total Value (Using Shared Logic)
+	valResult, _ := CalculatePortfolioValue(valuationHoldings, marketQuotes, fxRates, defaultCurrency)
+	// We could log valResult.Warnings here if a logger were available.
+
+	// 5. Calculate Breakdown (Unrealized Gains) using SAME data
+	var totalUnrealizedCapital float64
+	var totalUnrealizedFX float64
+	var endTotalCost float64
+
 	for sym, pos := range replayResult.FinalPositions {
 		if pos.Quantity <= 0.000001 {
 			continue
 		}
 
-		var price float64
-		// Get price
-		if isCurrent {
-			if p, ok := currentPrices[sym]; ok {
-				price = p
-			} else {
-				// Fallback
-				price, _ = uc.marketDataGateway.GetCurrentPrice(ctx, sym)
-				// Fallback timestamp? Ignore. End of Day logic will use latestUpdate or Now defaults.
-			}
-		} else {
-			price, _ = uc.marketDataGateway.GetPriceOnDate(ctx, sym, calcEndDate)
+		price, ok := marketQuotes[sym]
+		if !ok {
+			continue // Should match Calc skipping
 		}
 
-		// Get FX
 		fxRate := 1.0
 		if pos.Currency != defaultCurrency {
-			if isCurrent {
-				r, err := uc.marketDataGateway.GetCurrencyRate(ctx, pos.Currency, defaultCurrency)
-				if err == nil {
-					fxRate = r
-				}
-			} else {
-				r, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, pos.Currency, defaultCurrency, calcEndDate)
-				if err == nil {
-					fxRate = r
-				}
+			key := fmt.Sprintf("%s/%s", pos.Currency, defaultCurrency)
+			if r, found := fxRates[key]; found {
+				fxRate = r
 			}
 		}
 
-		// Calculate Metrics
 		qty := pos.Quantity
-
-		// Value = Price * Qty * FXCurrent
-		val := price * qty * fxRate
-		endHoldingsValue += val
 
 		// Cost (Base) = AverageCost * Qty
 		baseCost := pos.AverageCost * qty
 		endTotalCost += baseCost
 
-		// Breakdown
+		// Breakdown Logic
 		// Effective Buy FX = AvgCostBase / AvgForeignCost
 		avgFXBuy := 1.0
 		if pos.AverageForeignCost != 0 {
@@ -253,8 +288,8 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		totalUnrealizedFX += unrealizedFX
 	}
 
-	// 4. Assemble Summary
-	summary.TotalValue = endHoldingsValue + replayResult.CurrentCash
+	// 6. Assemble Summary
+	summary.TotalValue = valResult.TotalValue + replayResult.CurrentCash
 	summary.TotalCost = endTotalCost // Usually cost of HOLDINGS. Cash has no cost basis? Or Cost=Value.
 	// If TotalCost excludes cash, then UnrealizedGain should exclude cash.
 	// summary.GainLoss (Total Period Gain) = FinalValue - StartValue - NetInvested.

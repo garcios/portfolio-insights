@@ -1,13 +1,19 @@
-.PHONY: run-gateway run-user run-portfolio tidy-all
+.PHONY: run-gateway run-local-user-service run-local-portfolio-service run-local-transaction-service run-local-marketdata-service tidy-all build-postgres
 
 run-gateway:
-	cd apps/gateway && HYDRA_PUBLIC_URL=http://localhost:4444 go run cmd/server/main.go
+	cd apps/gateway && HYDRA_PUBLIC_URL=http://localhost:4444 APP_ENV=local APP_CONFIG_PATH=./configs go run cmd/server/main.go
 
-run-user:
-	cd services/user-service && go run cmd/server/main.go
+run-local-user-service: 
+	cd services/user-service &&  APP_ENV=local APP_CONFIG_PATH=./configs go run cmd/server/main.go
 
-run-portfolio:
-	cd services/portfolio-service && go run cmd/server/main.go
+run-local-portfolio-service: 
+	cd services/portfolio-service &&  APP_ENV=local APP_CONFIG_PATH=./configs go run cmd/server/main.go
+
+run-local-transaction-service: 
+	cd services/transaction-service &&  APP_ENV=local APP_CONFIG_PATH=./configs go run cmd/server/main.go
+
+run-local-marketdata-service: 
+	cd services/marketdata-service &&  APP_ENV=local APP_CONFIG_PATH=./configs go run cmd/server/main.go
 
 services-up:
 	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build
@@ -32,6 +38,20 @@ build-transaction-service:
 
 build-marketdata-service:
 	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build marketdata-service
+
+build-postgres:
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build postgres
+
+build-redis:
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build redis
+
+build-minio:
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build minio
+
+build-nats:
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build nats
+
+build-infra: build-postgres build-redis build-minio build-nats
 
 monitoring-up:
 	./deployments/monitoring/start-monitoring.sh	
