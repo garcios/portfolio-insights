@@ -656,9 +656,20 @@ func TestGetPortfolioSummary_DayChange(t *testing.T) {
 	// Current: AAPL 150, GOOGL 2800
 	// Yesterday: AAPL 140, GOOGL 2700
 	marketData.getPriceOnDateFunc = func(symbol string, date time.Time) (float64, error) {
-		// Check if date is roughly yesterday (within a minute tolerance or just check if it's in the past)
-		// Since the usecase subtracts exactly 24 hours, we can check if it's before now.
-		// For this test, we assume any call to GetPriceOnDate is for the historical calculation.
+		// Distinguish between Current (Now) and Historical (Yesterday)
+		// Current calc calls with time.Now(). Yesterday calc calls with time.Now().Add(-24h).
+		// accurate check: is date recent?
+		if time.Since(date).Hours() < 1.0 {
+			// Current
+			if symbol == "AAPL" {
+				return 150.0, nil
+			}
+			if symbol == "GOOGL" {
+				return 2800.0, nil
+			}
+		}
+
+		// Historical (Yesterday)
 		if symbol == "AAPL" {
 			return 140.0, nil
 		}
