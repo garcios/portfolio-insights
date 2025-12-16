@@ -94,6 +94,8 @@ const OverviewPage = () => {
     };
 
     const { startDate, endDate } = getPeriodDates(selectedPeriod);
+    console.log("Period Dates:", startDate, endDate);
+
 
     const { loading, error, data } = useQuery(GET_PORTFOLIO, {
         variables: { startDate, endDate },

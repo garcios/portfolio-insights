@@ -1,0 +1,49 @@
+Role: Act as a Senior Financial Software Architect and Developer.
+
+Context:
+Review the current currency gain/loss calculation logic. 
+I need to implement the business logic to calculate Total Gain/Loss, Capital Gain (Stock Performance), and Currency Gain/Loss (FX Impact).
+
+The Problem:Users buy stocks in foreign currencies (e.g., USD) using a base currency (e.g., AUD). When the exchange rate fluctuates, it affects their total return in their base currency. 
+I need to isolate how much gain/loss comes from the stock price movement vs. the currency fluctuation.
+
+Variables:
+ - Qty: Quantity of shares held.
+ - Price_Buy: Unit price of the stock at purchase (in Foreign Currency).
+ - Price_Current: Current unit price of the stock (in Foreign Currency).
+ - FX_Buy: Exchange rate at the time of purchase (Base / Foreign).
+ - FX_Current: Current exchange rate (Base / Foreign).
+ 
+ Required Logic & Formulas:
+ Please implement the following logic. Note that "Foreign Value" refers to Price * Qty.
+ 
+1. Total Gain (Base Currency):
+The simple difference between what the position is worth now (in Base) versus what was paid (in Base).
+   $$TotalGain = (Price_{Current} \times Qty \times FX_{Current}) - (Price_{Buy} \times Qty \times FX_{Buy})$$
+   
+2. Capital Gain (Stock Component): Calculates the gain driven only by stock price movement, neutralizing FX by using the original purchase rate.
+  $$CapitalGain = (Price_{Current} - Price_{Buy}) \times Qty \times FX_{Buy}$$
+  
+3.FX Gain (Currency Component):Calculates the impact of the exchange rate fluctuation on the current total value of the asset.
+
+  $$FXGain = (Price_{Current} \times Qty) \times (FX_{Current} - FX_{Buy})$$
+  
+  (Note: Ensure that Capital Gain + FX Gain roughly equals Total Gain)
+  
+  
+  
+  Test Case (Use this to verify your logic):
+  
+  - Scenario: Buy 10 AAPL @ $150 USD. Current Price is $160 USD.
+  - FX Rates: Bought when 1 USD = 1.50 AUD. Now 1 USD = 1.40 AUD.
+  - Expected Results:
+    - Cost Basis: $2,250 AUD
+    - Current Value: $2,240 AUD
+    - Total Gain: -$10 AUD
+    - Capital Gain: +$150 AUD (Stock went up)FX Gain: -$160 AUD (Currency went down)
+    
+  Deliverables:
+  1. Write the data structures/classes required to hold this data.
+  2. Write the function/method to perform the calculation.
+  3. Write a unit test that implements the "Test Case" above to prove the logic is correct.
+ 

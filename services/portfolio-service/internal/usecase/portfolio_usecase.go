@@ -4,7 +4,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/domain"
@@ -116,121 +115,232 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 // All values are converted to USD (default currency)
 // GetPortfolioSummary calculates the portfolio summary for a user
 // All values are converted to USD (default currency)
+// GetPortfolioSummary calculates the portfolio summary for a user
+// All values are converted to USD (default currency)
+// GetPortfolioSummary calculates the portfolio summary for a user
+// All values are converted to USD (default currency)
 func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *time.Time) (*domain.PortfolioSummary, error) {
 	const defaultCurrency = "AUD"
 
-	// Get holdings with current prices
-	holdings, err := uc.GetHoldings(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get holdings: %w", err)
-	}
-
+	// 1. Determine Dates
 	summary := &domain.PortfolioSummary{
 		UserID:      userID,
-		TotalValue:  0,
-		TotalCost:   0,
-		GainLoss:    0,
-		GainLossPct: 0,
+		Currency:    defaultCurrency,
+		LastUpdated: time.Now(),
 	}
 
-	// Calculate totals with currency conversion (Holdings)
-	for _, holding := range holdings {
-		// Get exchange rate if currency is not AUD
-		exchangeRate := 1.0
-		if holding.Currency != defaultCurrency {
-			rate, err := uc.marketDataGateway.GetCurrencyRate(ctx, holding.Currency, defaultCurrency)
-			if err != nil {
-				// Log error but continue with rate of 1.0
-				fmt.Printf("Warning: Failed to get exchange rate for %s to %s: %v. Using rate 1.0\n",
-					holding.Currency, defaultCurrency, err)
-			} else {
-				exchangeRate = rate
-			}
-		}
+	calcStartDate := time.Time{}
+	calcEndDate := time.Now()
 
-		// Convert to default currency
-		costBasis := holding.Quantity * holding.AverageCost * exchangeRate
-		currentValue := holding.Quantity * holding.CurrentPrice * exchangeRate
-
-		summary.TotalCost += costBasis
-		summary.TotalValue += currentValue
-	}
-
-	// Snapshot Holdings Value before adding cash
-	holdingsValue := summary.TotalValue
-
-	// Add Cash Balance to Total Value (Current)
-	cashBalances, err := uc.cashBalanceRepo.ListByUser(userID)
-	if err != nil {
-		fmt.Printf("Warning: Failed to fetch cash balances: %v\n", err)
-	} else {
-		for _, cb := range cashBalances {
-			value := cb.Balance
-			if cb.Currency != defaultCurrency {
-				rate, err := uc.marketDataGateway.GetCurrencyRate(ctx, cb.Currency, defaultCurrency)
-				if err == nil {
-					value *= rate
-				}
-			}
-			summary.TotalValue += value
-		}
-	}
-
-	// Calculate Current Capital Gain
-	currentCapitalGain := holdingsValue - summary.TotalCost
-
-	// Fetch Transactions for Net Invested and Dividends
-	netInvested := 0.0
-	dividends := 0.0
-
-	// Default start/end dates for the entire history
-	summary.StartDate = time.Time{}
-	summary.EndDate = time.Now()
-	if endDate != nil {
-		summary.EndDate = *endDate
-	}
-
-	// If startDate is set, we need the historical snapshot
-	var startTotalValue, startCapitalGain float64
 	if startDate != nil {
+		calcStartDate = *startDate
 		summary.StartDate = *startDate
-		startSnapshot, err := uc.GetHistoricalPortfolioSummary(ctx, userID, *startDate)
-		if err != nil {
-			fmt.Printf("Warning: Failed to fetch historical snapshot for %s: %v. Assuming 0.\n", startDate.Format("2006-01-02"), err)
-		} else {
-			startTotalValue = startSnapshot.TotalValue
-			startCapitalGain = startSnapshot.GainLoss // In historical summary, GainLoss is CapitalGain (TotalValue - TotalCost)
-		}
+	}
+	if endDate != nil {
+		calcEndDate = *endDate
+		summary.EndDate = calcEndDate
 	} else {
-		// If no startDate, find the first transaction date
-		var firstTxnDate time.Time
-		pageToken := ""
-		for {
-			resp, err := uc.transactionClient.ListTransactions(ctx, &transactionpb.ListTransactionsRequest{
-				Parent:    fmt.Sprintf("users/%s", userID),
-				PageSize:  1000,
-				PageToken: pageToken,
-			})
-			if err != nil {
-				break
-			}
-			for _, txn := range resp.Transactions {
-				executedAt := txn.ExecutedAt.AsTime()
-				if firstTxnDate.IsZero() || executedAt.Before(firstTxnDate) {
-					firstTxnDate = executedAt
-				}
-			}
-			if resp.NextPageToken == "" {
-				break
-			}
-			pageToken = resp.NextPageToken
-		}
-		summary.StartDate = firstTxnDate
+		summary.EndDate = calcEndDate
 	}
 
-	// Fetch transactions again (efficient enough for now, or could optimize to single pass if needed)
-	// We need to filter transactions within [StartDate, EndDate]
-	var pageToken string
+	// 2. Perform Replay
+	replayResult, err := uc.calculatePeriodGains(ctx, userID, calcStartDate, calcEndDate, defaultCurrency)
+	if err != nil {
+		return nil, fmt.Errorf("failed to calculate period gains: %w", err)
+	}
+
+	summary.Dividends = replayResult.Dividends
+	// NetInvested is internal metric, mostly for Total Gain calc
+
+	// 3. Calculate Unrealized Gains (on FinalPositions)
+	var totalUnrealizedCapital float64
+	var totalUnrealizedFX float64
+	var endTotalCost float64
+	var endHoldingsValue float64
+
+	// Determine if we are "live" or "historical"
+	isCurrent := endDate == nil || calcEndDate.After(time.Now().Add(-12*time.Hour))
+
+	// Collect symbols
+	var symbols []string
+	for sym, pos := range replayResult.FinalPositions {
+		if pos.Quantity > 0.000001 { // active position
+			symbols = append(symbols, sym)
+		}
+	}
+
+	// Fetch Prices and track Recency
+	currentPrices := make(map[string]float64)
+	var latestUpdate time.Time
+
+	if isCurrent && len(symbols) > 0 {
+		// Batch Fetch
+		prices, err := uc.marketDataGateway.GetCurrentPrices(ctx, symbols)
+		if err == nil {
+			for s, data := range prices {
+				currentPrices[s] = data.Price
+				if data.Timestamp.After(latestUpdate) {
+					latestUpdate = data.Timestamp
+				}
+			}
+		}
+	}
+
+	if isCurrent && !latestUpdate.IsZero() {
+		summary.LastUpdated = latestUpdate
+	}
+
+	for sym, pos := range replayResult.FinalPositions {
+		if pos.Quantity <= 0.000001 {
+			continue
+		}
+
+		var price float64
+		// Get price
+		if isCurrent {
+			if p, ok := currentPrices[sym]; ok {
+				price = p
+			} else {
+				// Fallback
+				price, _ = uc.marketDataGateway.GetCurrentPrice(ctx, sym)
+				// Fallback timestamp? Ignore. End of Day logic will use latestUpdate or Now defaults.
+			}
+		} else {
+			price, _ = uc.marketDataGateway.GetPriceOnDate(ctx, sym, calcEndDate)
+		}
+
+		// Get FX
+		fxRate := 1.0
+		if pos.Currency != defaultCurrency {
+			if isCurrent {
+				r, err := uc.marketDataGateway.GetCurrencyRate(ctx, pos.Currency, defaultCurrency)
+				if err == nil {
+					fxRate = r
+				}
+			} else {
+				r, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, pos.Currency, defaultCurrency, calcEndDate)
+				if err == nil {
+					fxRate = r
+				}
+			}
+		}
+
+		// Calculate Metrics
+		qty := pos.Quantity
+
+		// Value = Price * Qty * FXCurrent
+		val := price * qty * fxRate
+		endHoldingsValue += val
+
+		// Cost (Base) = AverageCost * Qty
+		baseCost := pos.AverageCost * qty
+		endTotalCost += baseCost
+
+		// Breakdown
+		// Effective Buy FX = AvgCostBase / AvgForeignCost
+		avgFXBuy := 1.0
+		if pos.AverageForeignCost != 0 {
+			avgFXBuy = pos.AverageCost / pos.AverageForeignCost
+		}
+
+		// Unrealized Capital Gain = (CurrentPrice - AvgForeignCost) * Qty * AvgFXBuy
+		unrealizedCap := (price - pos.AverageForeignCost) * qty * avgFXBuy
+
+		// Unrealized FX Gain = (CurrentPrice * Qty) * (FXCurrent - AvgFXBuy)
+		unrealizedFX := (price * qty) * (fxRate - avgFXBuy)
+
+		totalUnrealizedCapital += unrealizedCap
+		totalUnrealizedFX += unrealizedFX
+	}
+
+	// 4. Assemble Summary
+	summary.TotalValue = endHoldingsValue + replayResult.CurrentCash
+	summary.TotalCost = endTotalCost // Usually cost of HOLDINGS. Cash has no cost basis? Or Cost=Value.
+	// If TotalCost excludes cash, then UnrealizedGain should exclude cash.
+	// summary.GainLoss (Total Period Gain) = FinalValue - StartValue - NetInvested.
+
+	// Start Value Calculation
+	var startTotalValue float64
+	if !calcStartDate.IsZero() {
+		// We need historical value at start date.
+		// Use existing method?
+		snap, err := uc.GetHistoricalPortfolioSummary(ctx, userID, calcStartDate)
+		if err == nil {
+			startTotalValue = snap.TotalValue
+		}
+	}
+
+	totalGain := (summary.TotalValue - startTotalValue) - replayResult.NetInvested
+	summary.GainLoss = totalGain
+
+	// Capital Gain = Realized Capital + Unrealized Capital
+	summary.CapitalGain = replayResult.RealizedCapitalGain + totalUnrealizedCapital
+
+	// Currency Gain = Realized FX + Unrealized FX
+	summary.CurrencyGain = replayResult.RealizedFXGain + totalUnrealizedFX
+
+	// Percentages
+	if summary.TotalCost > 0 {
+		summary.CapitalGainPct = (summary.CapitalGain / summary.TotalCost) * 100
+		summary.CurrencyGainPct = (summary.CurrencyGain / summary.TotalCost) * 100
+	}
+	// For Total Return %, usually (TotalGain / NetInvested) * 100? or (TotalGain / StartValue)?
+	// If NetInvested > 0:
+	divisor := replayResult.NetInvested
+	if divisor == 0 && startTotalValue > 0 {
+		divisor = startTotalValue
+	}
+	if divisor > 0 {
+		summary.GainLossPct = (totalGain / divisor) * 100
+	}
+
+	// Day Change
+	// Simplified: Use simple historical lookup for yesterday
+	yesterday := calcEndDate.Add(-24 * time.Hour)
+	prevSummary, err := uc.GetHistoricalPortfolioSummary(ctx, userID, yesterday)
+	if err == nil {
+		summary.DayChange = summary.TotalValue - prevSummary.TotalValue
+		if prevSummary.TotalValue > 0 {
+			summary.DayChangePct = (summary.DayChange / prevSummary.TotalValue) * 100
+		}
+	}
+
+	return summary, nil
+}
+
+// AssetPosition tracks the cost basis of an asset for realized gain calculation
+type AssetPosition struct {
+	Quantity           float64
+	AverageCost        float64 // In Base Currency (Total Cost / Qty)
+	AverageForeignCost float64 // In Foreign Currency (Total Foreign Cost / Qty)
+	Currency           string
+}
+
+// ReplayResult contains the results of replaying transactions to calculate realized gains and final positions.
+type ReplayResult struct {
+	RealizedTotalGain   float64
+	RealizedCapitalGain float64
+	RealizedFXGain      float64
+	Dividends           float64
+	NetInvested         float64
+	CurrentCash         float64
+	FinalPositions      map[string]*AssetPosition
+}
+
+// Helper to calculate realized gains and net invested by replaying transactions
+func (uc *portfolioUsecase) calculatePeriodGains(
+	ctx context.Context,
+	userID string,
+	startDate, endDate time.Time,
+	defaultCurrency string,
+) (*ReplayResult, error) {
+	result := &ReplayResult{
+		FinalPositions: make(map[string]*AssetPosition),
+	}
+
+	// 1. Fetch ALL transactions
+	var allTxns []*transactionpb.Transaction
+	pageToken := ""
 	for {
 		resp, err := uc.transactionClient.ListTransactions(ctx, &transactionpb.ListTransactionsRequest{
 			Parent:    fmt.Sprintf("users/%s", userID),
@@ -238,135 +348,148 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 			PageToken: pageToken,
 		})
 		if err != nil {
-			fmt.Printf("Warning: Failed to fetch transactions: %v\n", err)
-			break
+			return nil, fmt.Errorf("failed to list transactions: %w", err)
 		}
-
-		for _, txn := range resp.Transactions {
-			executedAt := txn.ExecutedAt.AsTime()
-
-			// Filter by date range
-			if !summary.StartDate.IsZero() && executedAt.Before(summary.StartDate) {
-				continue
-			}
-			if endDate != nil && executedAt.After(*endDate) {
-				continue
-			}
-
-			// Handle cash flows
-			amount := 0.0
-			if txn.Amount != nil {
-				amount = *txn.Amount
-			}
-
-			// Convert amount to default currency if needed
-			if txn.PriceCurrency != defaultCurrency {
-				rate, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, txn.PriceCurrency, defaultCurrency, executedAt)
-				if err != nil {
-					fmt.Printf("Warning: Failed to get exchange rate for transaction %s (%s to %s) on %s: %v. Using rate 1.0\n",
-						txn.Name, txn.PriceCurrency, defaultCurrency, executedAt.Format("2006-01-02"), err)
-				} else {
-					amount *= rate
-				}
-			}
-
-			switch txn.Type {
-			case "DEP":
-				netInvested += amount
-			case "WIT":
-				netInvested -= amount
-			case "DIV":
-				dividends += amount
-			}
-		}
-
+		allTxns = append(allTxns, resp.Transactions...)
 		if resp.NextPageToken == "" {
 			break
 		}
 		pageToken = resp.NextPageToken
 	}
 
-	// Calculate Deltas
-	summary.CapitalGain = currentCapitalGain - startCapitalGain
-	summary.Dividends = dividends
-
-	// Total Gain for Period = (EndValue - StartValue) - NetInvestedPeriod
-	// EndValue is Current TotalValue (assuming endDate is effectively now or we use current value as requested)
-	totalGain := (summary.TotalValue - startTotalValue) - netInvested
-
-	// Currency Gain = Total Gain - Capital Gain - Dividends
-	summary.CurrencyGain = totalGain - summary.CapitalGain - summary.Dividends
-
-	// Percentages
-	denominator := netInvested
-	// Fallback for denominator if NetInvested is 0 (e.g. no flows in period), use Start Value
-	if denominator == 0 {
-		denominator = startTotalValue
-	}
-	// Fallback if Period Start was 0, use Total Cost as proxy for "invested"
-	if denominator == 0 {
-		denominator = summary.TotalCost
-	}
-
-	if summary.TotalCost > 0 {
-		summary.CapitalGainPct = (summary.CapitalGain / summary.TotalCost) * 100
-	}
-	if denominator > 0 {
-		summary.CurrencyGainPct = (summary.CurrencyGain / denominator) * 100
-		summary.DividendsPct = (summary.Dividends / denominator) * 100
-	}
-
-	// Annualized Returns (CAGR) if period > 1 year
-	years := 0.0
-	if !summary.StartDate.IsZero() {
-		years = time.Since(summary.StartDate).Hours() / (24 * 365.25)
-	}
-
-	if years > 1 {
-		// Applying CAGR logic to the components relative to the denominator
-		if summary.TotalCost > 0 && summary.TotalCost+summary.CapitalGain > 0 {
-			ratio := (summary.TotalCost + summary.CapitalGain) / summary.TotalCost
-			summary.CapitalGainPct = (math.Pow(ratio, 1.0/years) - 1) * 100
-		}
-		if denominator > 0 && denominator+summary.CurrencyGain > 0 {
-			ratio := (denominator + summary.CurrencyGain) / denominator
-			summary.CurrencyGainPct = (math.Pow(ratio, 1.0/years) - 1) * 100
-		}
-		if denominator > 0 && denominator+summary.Dividends > 0 {
-			ratio := (denominator + summary.Dividends) / denominator
-			summary.DividendsPct = (math.Pow(ratio, 1.0/years) - 1) * 100
+	// 2. Sort transactions by ExecutedAt
+	for i := 0; i < len(allTxns); i++ {
+		for j := i + 1; j < len(allTxns); j++ {
+			ti := allTxns[i].ExecutedAt.AsTime()
+			tj := allTxns[j].ExecutedAt.AsTime()
+			if ti.After(tj) {
+				allTxns[i], allTxns[j] = allTxns[j], allTxns[i]
+			}
 		}
 	}
 
-	// Overall Gain/Loss fields
-	summary.GainLoss = totalGain
-	if denominator > 0 {
-		summary.GainLossPct = (summary.GainLoss / denominator) * 100
-	}
+	// 3. Replay
+	for _, txn := range allTxns {
+		executedAt := txn.ExecutedAt.AsTime()
 
-	// Day Change (Keep existing logic)
-	var latestUpdate time.Time
-	for _, h := range holdings {
-		if h.PriceLastUpdated.After(latestUpdate) {
-			latestUpdate = h.PriceLastUpdated
+		if !endDate.IsZero() && executedAt.After(endDate) {
+			continue
+		}
+
+		inPeriod := true
+		if !startDate.IsZero() && executedAt.Before(startDate) {
+			inPeriod = false
+		}
+
+		// Helper to get transaction amount in Default Currency
+		// Returns (AmountInDefault, ExchangeRateUsed, error)
+		getAmountAndRate := func(amt float64, currency string) (float64, float64, error) {
+			if currency == defaultCurrency {
+				return amt, 1.0, nil
+			}
+			rate, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, currency, defaultCurrency, executedAt)
+			if err != nil {
+				// Log error? For now assume 1.0 implies error handling upstream or rough justice
+				return amt, 1.0, nil
+			}
+			return amt * rate, rate, nil
+		}
+
+		switch txn.Type {
+		case "DEP":
+			if txn.Amount != nil {
+				val, _, _ := getAmountAndRate(*txn.Amount, txn.PriceCurrency)
+				result.CurrentCash += val // Always update cash state
+				if inPeriod {
+					result.NetInvested += val
+				}
+			}
+		case "WIT":
+			if txn.Amount != nil {
+				val, _, _ := getAmountAndRate(*txn.Amount, txn.PriceCurrency)
+				result.CurrentCash -= val
+				if inPeriod {
+					result.NetInvested -= val
+				}
+			}
+		case "DIV":
+			if txn.Amount != nil {
+				val, _, _ := getAmountAndRate(*txn.Amount, txn.PriceCurrency)
+				result.CurrentCash += val
+				if inPeriod {
+					result.Dividends += val
+				}
+			}
+		case "BUY":
+			if txn.Symbol != nil && txn.Quantity != nil && txn.PricePerShare != nil {
+				symbol := *txn.Symbol
+				qty := *txn.Quantity
+				price := *txn.PricePerShare
+
+				priceInDefault, _, _ := getAmountAndRate(price, txn.PriceCurrency)
+				totalCost := qty * priceInDefault
+
+				result.CurrentCash -= totalCost
+
+				pos, exists := result.FinalPositions[symbol]
+				if !exists {
+					pos = &AssetPosition{
+						Quantity:           0,
+						AverageCost:        0,
+						AverageForeignCost: 0,
+						Currency:           txn.PriceCurrency,
+					}
+					result.FinalPositions[symbol] = pos
+				}
+
+				currentTotalCost := (pos.Quantity * pos.AverageCost) + (qty * priceInDefault)
+				currentTotalForeignCost := (pos.Quantity * pos.AverageForeignCost) + (qty * price)
+
+				pos.Quantity += qty
+				if pos.Quantity > 0 {
+					pos.AverageCost = currentTotalCost / pos.Quantity
+					pos.AverageForeignCost = currentTotalForeignCost / pos.Quantity
+				}
+			}
+		case "SELL":
+			if txn.Symbol != nil && txn.Quantity != nil && txn.PricePerShare != nil {
+				symbol := *txn.Symbol
+				qty := *txn.Quantity
+				price := *txn.PricePerShare // Foreign Price
+
+				priceInDefault, fxSell, _ := getAmountAndRate(price, txn.PriceCurrency)
+				totalProceeds := qty * priceInDefault
+
+				result.CurrentCash += totalProceeds
+
+				pos, exists := result.FinalPositions[symbol]
+				if exists {
+					if inPeriod {
+						// Total Realized Gain
+						gain := (priceInDefault - pos.AverageCost) * qty
+						result.RealizedTotalGain += gain
+
+						// Detailed Breakdown
+						avgFXBuy := 1.0
+						if pos.AverageForeignCost != 0 {
+							avgFXBuy = pos.AverageCost / pos.AverageForeignCost
+						}
+
+						capitalGain := (price - pos.AverageForeignCost) * qty * avgFXBuy
+						fxGain := (price * qty) * (fxSell - avgFXBuy)
+
+						result.RealizedCapitalGain += capitalGain
+						result.RealizedFXGain += fxGain
+					}
+					pos.Quantity -= qty
+					if pos.Quantity < 0 {
+						pos.Quantity = 0
+					} // Should not happen
+				}
+			}
 		}
 	}
-	if latestUpdate.IsZero() {
-		latestUpdate = time.Now()
-	}
-	yesterday := latestUpdate.Add(-24 * time.Hour)
-	prevSummary, err := uc.GetHistoricalPortfolioSummary(ctx, userID, yesterday)
-	if err != nil {
-		fmt.Printf("Warning: Failed to get historical summary for day change calculation: %v\n", err)
-	} else {
-		summary.DayChange = summary.TotalValue - prevSummary.TotalValue
-		if prevSummary.TotalValue > 0 {
-			summary.DayChangePct = (summary.DayChange / prevSummary.TotalValue) * 100
-		}
-	}
-
-	summary.Currency = defaultCurrency
-	return summary, nil
+	return result, nil
 }
 
 // GetHistoricalPortfolioSummary calculates the portfolio summary for a user at a specific date
