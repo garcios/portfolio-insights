@@ -32,9 +32,11 @@ func (g *PortfolioGRPCGateway) GetPortfolio(ctx context.Context, userID string) 
 }
 
 // GetPortfolioSummary retrieves portfolio summary metrics using AIP singleton resource
-func (g *PortfolioGRPCGateway) GetPortfolioSummary(ctx context.Context, userID string) (*entity.PortfolioSummary, error) {
+func (g *PortfolioGRPCGateway) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *string) (*entity.PortfolioSummary, error) {
 	req := &portfoliopb.GetPortfolioSummaryRequest{
-		Name: resourcenames.PortfolioName(userID),
+		Name:      resourcenames.PortfolioName(userID),
+		StartDate: startDate,
+		EndDate:   endDate,
 	}
 
 	resp, err := g.client.GetPortfolioSummary(ctx, req)

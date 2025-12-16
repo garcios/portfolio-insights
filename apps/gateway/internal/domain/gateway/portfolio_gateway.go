@@ -13,7 +13,7 @@ type PortfolioGateway interface {
 	GetPortfolio(ctx context.Context, userID string) (*entity.Portfolio, error)
 
 	// GetPortfolioSummary retrieves portfolio summary metrics
-	GetPortfolioSummary(ctx context.Context, userID string) (*entity.PortfolioSummary, error)
+	GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *string) (*entity.PortfolioSummary, error)
 
 	// GetHoldings retrieves all holdings for a user
 	GetHoldings(ctx context.Context, userID string) ([]*entity.Holding, error)

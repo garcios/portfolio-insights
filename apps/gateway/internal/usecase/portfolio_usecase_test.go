@@ -11,7 +11,7 @@ import (
 // MockPortfolioGateway is a manual mock for PortfolioGateway
 type MockPortfolioGateway struct {
 	GetPortfolioFunc            func(ctx context.Context, userID string) (*entity.Portfolio, error)
-	GetPortfolioSummaryFunc     func(ctx context.Context, userID string) (*entity.PortfolioSummary, error)
+	GetPortfolioSummaryFunc     func(ctx context.Context, userID string, startDate, endDate *string) (*entity.PortfolioSummary, error)
 	GetHoldingsFunc             func(ctx context.Context, userID string) ([]*entity.Holding, error)
 	GetPortfolioPerformanceFunc func(ctx context.Context, userID, period string) ([]*entity.PortfolioPerformancePoint, error)
 }
@@ -23,9 +23,9 @@ func (m *MockPortfolioGateway) GetPortfolio(ctx context.Context, userID string) 
 	return nil, nil
 }
 
-func (m *MockPortfolioGateway) GetPortfolioSummary(ctx context.Context, userID string) (*entity.PortfolioSummary, error) {
+func (m *MockPortfolioGateway) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *string) (*entity.PortfolioSummary, error) {
 	if m.GetPortfolioSummaryFunc != nil {
-		return m.GetPortfolioSummaryFunc(ctx, userID)
+		return m.GetPortfolioSummaryFunc(ctx, userID, startDate, endDate)
 	}
 	return nil, nil
 }
@@ -60,7 +60,7 @@ func TestPortfolioUseCase_GetPortfolio(t *testing.T) {
 
 func TestPortfolioUseCase_GetPortfolioSummary(t *testing.T) {
 	mockGateway := &MockPortfolioGateway{
-		GetPortfolioSummaryFunc: func(ctx context.Context, userID string) (*entity.PortfolioSummary, error) {
+		GetPortfolioSummaryFunc: func(ctx context.Context, userID string, startDate, endDate *string) (*entity.PortfolioSummary, error) {
 			return &entity.PortfolioSummary{
 				TotalValue: 1000.0,
 				Currency:   "USD",
@@ -69,7 +69,7 @@ func TestPortfolioUseCase_GetPortfolioSummary(t *testing.T) {
 	}
 	uc := NewPortfolioUseCase(mockGateway)
 
-	summary, err := uc.GetPortfolioSummary(context.Background(), "user-1")
+	summary, err := uc.GetPortfolioSummary(context.Background(), "user-1", nil, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

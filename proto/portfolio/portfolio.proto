@@ -85,6 +85,30 @@ message PortfolioSummary {
 
   // The percentage change in value over the last day.
   double day_change_percentage = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The capital absolute gain or loss in given time period.
+  double capital_gain_loss = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The capital gain or loss in given time period as a percentage.
+  double capital_gain_loss_percentage = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The currency absolute gain or loss in given time period.
+  double currency_gain_loss = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The currency gain or loss in given time period as a percentage.
+  double currency_gain_loss_percentage = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The dividends received in given time period.
+  double dividends_received = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The dividends received in a give time period as a percentage.
+  double dividends_received_percentage = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The start date when this summary was last calculated.
+  google.protobuf.Timestamp start_date = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The end date when this summary was last calculated.
+  google.protobuf.Timestamp end_date = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // Holding represents a single asset held in the portfolio.
@@ -133,7 +157,7 @@ message Holding {
 
 // GetPortfolioSummaryRequest is the request message for GetPortfolioSummary.
 message GetPortfolioSummaryRequest {
-  // The resource name of the portfolio.
+  // The resource name of the portfolio to retrieve.
   // Format: users/{user}/portfolio
   string name = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -141,6 +165,14 @@ message GetPortfolioSummaryRequest {
       type: "portfolioinsights.googleapis.com/Portfolio"
     }
   ];
+
+  // Optional start date for the summary period (inclusive).
+  // Format: YYYY-MM-DD
+  optional string start_date = 2;
+
+  // Optional end date for the summary period (inclusive).
+  // Format: YYYY-MM-DD
+  optional string end_date = 3;
 }
 
 // GetPortfolioSummaryResponse is the response message for GetPortfolioSummary.

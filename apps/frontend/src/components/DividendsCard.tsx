@@ -2,27 +2,27 @@ import React from 'react';
 import { Coins } from 'lucide-react';
 import StatsCard from './StatsCard';
 
-const DividendsCard: React.FC = () => {
-    // Example values as per requirements. 
-    // In a real implementation, these would likely come from props or a hook.
-    const dividendsAmount = 5808.52;
-    const dividendsGrowth = 1.47;
-    const currency = 'AUD';
+interface DividendsCardProps {
+    value: number;
+    change: number;
+    currency: string;
+}
 
-    const formatCurrency = (value: number) => {
+const DividendsCard: React.FC<DividendsCardProps> = ({ value, change, currency }) => {
+    const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: currency,
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-        }).format(value);
+        }).format(val);
     };
 
     return (
         <StatsCard
             title="Dividends"
-            value={formatCurrency(dividendsAmount)}
-            change={dividendsGrowth}
+            value={formatCurrency(value)}
+            change={change}
             changeLabel="p.a."
             icon={Coins}
             iconColor="var(--color-success)" // Green color for icon

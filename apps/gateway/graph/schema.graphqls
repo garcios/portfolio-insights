@@ -30,7 +30,7 @@ type Portfolio {
   id: ID!
   userId: ID!
   name: String!
-  summary: PortfolioSummary
+  summary(startDate: String, endDate: String): PortfolioSummary
   holdings: [Holding!]!
 }
 
@@ -42,6 +42,14 @@ type PortfolioSummary {
   dayChangePercentage: Float!
   currency: String!
   lastUpdated: String!
+  startDate: String
+  endDate: String
+  capitalGain: Float!
+  capitalGainPercentage: Float!
+  currencyGain: Float!
+  currencyGainPercentage: Float!
+  dividends: Float!
+  dividendsPercentage: Float!
 }
 
 type Holding {

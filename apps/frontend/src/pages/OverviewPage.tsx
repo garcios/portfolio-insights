@@ -14,12 +14,12 @@ import RecentActivityCard from '../components/RecentActivityCard';
 import { PortfolioPerformance } from '../types/portfolio';
 
 const GET_PORTFOLIO = gql`
-  query GetPortfolio {
+  query GetPortfolio($startDate: String, $endDate: String) {
     portfolio {
       id
       userId
       name
-      summary {
+      summary(startDate: $startDate, endDate: $endDate) {
         totalValue
         totalGainLoss
         totalGainLossPercentage
@@ -27,6 +27,12 @@ const GET_PORTFOLIO = gql`
         dayChangePercentage
         currency
         lastUpdated
+        capitalGain
+        capitalGainPercentage
+        currencyGain
+        currencyGainPercentage
+        dividends
+        dividendsPercentage
       }
       holdings {
         symbol
@@ -55,8 +61,45 @@ const GET_PORTFOLIO_PERFORMANCE = gql`
 const OverviewPage = () => {
     const [selectedPeriod, setSelectedPeriod] = useState('1m');
 
+    const getPeriodDates = (period: string) => {
+        const now = new Date();
+        const end = new Date(now);
+        const start = new Date(now);
+
+        switch (period) {
+            case '1d':
+                start.setDate(now.getDate() - 1);
+                break;
+            case '1w':
+                start.setDate(now.getDate() - 7);
+                break;
+            case '1m':
+                start.setMonth(now.getMonth() - 1);
+                break;
+            case '3m':
+                start.setMonth(now.getMonth() - 3);
+                break;
+            case '1y':
+                start.setFullYear(now.getFullYear() - 1);
+                break;
+            case 'all':
+                return { startDate: undefined, endDate: undefined }; // Or specific start date
+            default:
+                start.setMonth(now.getMonth() - 1);
+        }
+        return {
+            startDate: start.toISOString().split('T')[0],
+            endDate: end.toISOString().split('T')[0]
+        };
+    };
+
+    const { startDate, endDate } = getPeriodDates(selectedPeriod);
+    console.log("Period Dates:", startDate, endDate);
+
+
     const { loading, error, data } = useQuery(GET_PORTFOLIO, {
-        pollInterval: 30000, // Refresh every 30 seconds
+        variables: { startDate, endDate },
+        pollInterval: 30000,
     });
 
     const {
@@ -64,7 +107,7 @@ const OverviewPage = () => {
         data: performanceData,
     } = useQuery(GET_PORTFOLIO_PERFORMANCE, {
         variables: { period: selectedPeriod },
-        pollInterval: 60000, // Refresh every 60 seconds
+        pollInterval: 60000,
     });
 
     const handlePeriodChange = (period: string) => {
@@ -123,7 +166,13 @@ const OverviewPage = () => {
         totalGainLossPercentage: 0,
         dayChange: 0,
         dayChangePercentage: 0,
-        currency: 'USD'
+        currency: 'USD',
+        capitalGain: 0,
+        capitalGainPercentage: 0,
+        currencyGain: 0,
+        currencyGainPercentage: 0,
+        dividends: 0,
+        dividendsPercentage: 0
     };
 
     // Transform performance data from API
@@ -165,9 +214,21 @@ const OverviewPage = () => {
                         change={summary.dayChangePercentage}
                         currency={summary.currency}
                     />
-                    <CapitalGainCard />
-                    <DividendsCard />
-                    <CurrencyGainCard />
+                    <CapitalGainCard
+                        value={summary.capitalGain}
+                        change={summary.capitalGainPercentage}
+                        currency={summary.currency}
+                    />
+                    <DividendsCard
+                        value={summary.dividends}
+                        change={summary.dividendsPercentage}
+                        currency={summary.currency}
+                    />
+                    <CurrencyGainCard
+                        value={summary.currencyGain}
+                        change={summary.currencyGainPercentage}
+                        currency={summary.currency}
+                    />
                 </div>
 
                 {/* Chart and Activity Section */}

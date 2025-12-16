@@ -62,6 +62,14 @@ type PortfolioSummary struct {
 	DayChangePercentage     float64 `json:"dayChangePercentage"`
 	Currency                string  `json:"currency"`
 	LastUpdated             string  `json:"lastUpdated"`
+	StartDate               *string `json:"startDate,omitempty"`
+	EndDate                 *string `json:"endDate,omitempty"`
+	CapitalGain             float64 `json:"capitalGain"`
+	CapitalGainPercentage   float64 `json:"capitalGainPercentage"`
+	CurrencyGain            float64 `json:"currencyGain"`
+	CurrencyGainPercentage  float64 `json:"currencyGainPercentage"`
+	Dividends               float64 `json:"dividends"`
+	DividendsPercentage     float64 `json:"dividendsPercentage"`
 }
 
 type Query struct {

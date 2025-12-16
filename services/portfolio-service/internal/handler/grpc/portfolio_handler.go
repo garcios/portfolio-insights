@@ -81,27 +81,58 @@ func (h *PortfolioHandler) GetHoldings(ctx context.Context, req *pb.GetHoldingsR
 // GetPortfolioSummary retrieves the portfolio summary for a user.
 // AIP-131 compliant: uses singleton resource name.
 func (h *PortfolioHandler) GetPortfolioSummary(ctx context.Context, req *pb.GetPortfolioSummaryRequest) (*pb.PortfolioSummary, error) {
-	// Parse portfolio resource name to get user ID
 	userID, err := resourcenames.ParsePortfolioName(req.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid resource name: %v", err)
 	}
 
-	summary, err := h.portfolioUsecase.GetPortfolioSummary(ctx, userID)
+	var startDate, endDate *time.Time
+	if req.StartDate != nil {
+		t, err := time.Parse("2006-01-02", *req.StartDate)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid start_date format: %v", err)
+		}
+		startDate = &t
+	}
+	if req.EndDate != nil {
+		t, err := time.Parse("2006-01-02", *req.EndDate)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid end_date format: %v", err)
+		}
+		// Set end date to end of day? Or just beginning?
+		// Usually inclusive end date means until 23:59:59.
+		// Let's set it to valid time.
+		// If transaction time is exactly at 00:00:00, it's fine.
+		// But usually we want end of day.
+		// Let's rely on the usecase handling, but typical convention is inclusive.
+		// Let's add 23h59m59s to end date if it's 00:00:00?
+		// Or just leave as is. User typically provides date.
+		endDate = &t
+	}
+
+	summary, err := h.portfolioUsecase.GetPortfolioSummary(ctx, userID, startDate, endDate)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get portfolio summary: %v", err)
 	}
 
 	return &pb.PortfolioSummary{
-		Name:                    resourcenames.PortfolioName(userID),
-		UserId:                  summary.UserID,
-		TotalValue:              summary.TotalValue,
-		TotalGainLoss:           summary.GainLoss,
-		TotalGainLossPercentage: summary.GainLossPct,
-		DayChange:               summary.DayChange,
-		DayChangePercentage:     summary.DayChangePct,
-		Currency:                summary.Currency,
-		LastUpdated:             timestamppb.New(time.Now()),
+		Name:                        resourcenames.PortfolioName(userID),
+		UserId:                      summary.UserID,
+		TotalValue:                  summary.TotalValue,
+		TotalGainLoss:               summary.GainLoss,
+		TotalGainLossPercentage:     summary.GainLossPct,
+		DayChange:                   summary.DayChange,
+		DayChangePercentage:         summary.DayChangePct,
+		Currency:                    summary.Currency,
+		LastUpdated:                 timestamppb.New(time.Now()),
+		CapitalGainLoss:             summary.CapitalGain,
+		CapitalGainLossPercentage:   summary.CapitalGainPct,
+		CurrencyGainLoss:            summary.CurrencyGain,
+		CurrencyGainLossPercentage:  summary.CurrencyGainPct,
+		DividendsReceived:           summary.Dividends,
+		DividendsReceivedPercentage: summary.DividendsPct,
+		StartDate:                   timestamppb.New(summary.StartDate),
+		EndDate:                     timestamppb.New(summary.EndDate),
 	}, nil
 }
 

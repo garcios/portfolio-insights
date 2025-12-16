@@ -111,7 +111,7 @@ func (w *SnapshotWorker) createSnapshots() {
 
 func (w *SnapshotWorker) createSnapshotForUser(ctx context.Context, userID string) error {
 	// Get current portfolio summary
-	summary, err := w.portfolioUsecase.GetPortfolioSummary(ctx, userID)
+	summary, err := w.portfolioUsecase.GetPortfolioSummary(ctx, userID, nil, nil)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,22 @@
+I need to update the logic in my portfolio-service to handle new fields defined in my Protocol Buffers.
+
+The Task:
+1. Map the new fields from the updated portfolio.proto (provided below) to the domain models/response.
+2. Implement a calculation logic for the following percentage fields.
+  - capital_gain_loss_percentage
+  - currency_gain_loss_percentage
+  - dividends_received_percentage
+3. Implement a calculation logic for the following value fields.
+  - capital_gain_loss
+  - currency_gain_loss
+  - dividends_received
+
+
+Business Logic:
+
+Percentage fields:
+- If the investment period is less than or equal to 1 year: Calculate simple return: $\frac{CurrentValue - CostBasis}{CostBasis}$
+- If the investment period is greater than 1 year: Calculate the Annualized Return (CAGR) using the formula: $(\frac{CurrentValue}{CostBasis})^{\frac{1}{Years}} - 1$
+
+Value fields:
+- The values should be calculated based on the time period (start_date and end_date)

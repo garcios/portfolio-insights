@@ -107,6 +107,19 @@ func main() {
 		}
 	}()
 
+	// Initialize Transaction Service Client
+	transactionConn, err := grpc.NewClient(cfg.TransactionServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		l.Error("failed to connect to transaction service", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := transactionConn.Close(); err != nil {
+			l.Error("failed to close transaction connection", "error", err)
+		}
+	}()
+	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
+
 	// Initialize MarketData Gateway with cache
 	marketDataGateway, err := infrastructure.NewMarketDataGateway(priceCache, assetCache, cfg)
 	if err != nil {
@@ -121,7 +134,7 @@ func main() {
 
 	// Initialize Usecase
 	var portfolioUsecase usecase.PortfolioUsecase
-	portfolioUsecase = usecase.NewPortfolioUsecase(holdingRepo, historyRepo, marketDataGateway)
+	portfolioUsecase = usecase.NewPortfolioUsecase(holdingRepo, historyRepo, cashBalanceRepo, marketDataGateway, transactionClient)
 
 	if redisClient != nil {
 		wrappedRedis := database.NewRedisClientFromRaw(redisClient)
@@ -131,19 +144,6 @@ func main() {
 
 	// Initialize gRPC Handler
 	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase, historyRepo)
-
-	// Initialize Transaction Service Client
-	transactionConn, err := grpc.NewClient(cfg.TransactionServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		l.Error("failed to connect to transaction service", "error", err)
-		os.Exit(1)
-	}
-	defer func() {
-		if err := transactionConn.Close(); err != nil {
-			l.Error("failed to close transaction connection", "error", err)
-		}
-	}()
-	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
 	// Initialize NATS Subscriber
 	subscriber, err := infrastructure.NewNATSSubscriber(holdingRepo, cashBalanceRepo, marketDataGateway, transactionClient, assetCache, l, cfg)

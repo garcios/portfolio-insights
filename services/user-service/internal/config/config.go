@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -31,10 +32,26 @@ func LoadConfig() Config {
 	viper.SetDefault("log_level", "info")
 
 	// 2. Load Config File
-	viper.SetConfigName("config")
+	appConfigPath := os.Getenv("APP_CONFIG_PATH")
+	log.Printf("***App Config Path: %s\n", appConfigPath)
+
+	appEnv := os.Getenv("APP_ENV")
+	log.Printf("***App Env: %s\n", appEnv)
+
+	if appEnv != "" {
+		viper.SetConfigName(strings.ToLower(appEnv))
+	} else {
+		viper.SetConfigName("config")
+	}
+
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("/etc/app/")
+
+	if appConfigPath != "" {
+		viper.AddConfigPath(appConfigPath)
+	} else {
+		viper.AddConfigPath(".")
+		viper.AddConfigPath("/etc/app/")
+	}
 
 	err := viper.ReadInConfig()
 	if err != nil {
