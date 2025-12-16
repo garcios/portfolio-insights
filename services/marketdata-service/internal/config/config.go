@@ -74,7 +74,9 @@ func LoadConfig() Config {
 		fmt.Printf("Please enter EODHD_API_TOKEN: ")
 		reader := bufio.NewReader(os.Stdin)
 		token, _ := reader.ReadString('\n')
-		os.Setenv("EODHD_API_TOKEN", token)
+		if err := os.Setenv("EODHD_API_TOKEN", token); err != nil {
+			log.Printf("Failed to set EODHD_API_TOKEN: %v", err)
+		}
 
 	}
 
