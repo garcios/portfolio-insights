@@ -144,33 +144,17 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	}
 
 	summary.Dividends = replayResult.Dividends
-	// NetInvested is internal metric, mostly for Total Gain calc
 
 	// 3. Prepare Data for Valuation & Breakdown
 	isCurrent := endDate == nil || calcEndDate.After(time.Now().Add(-12*time.Hour))
 
 	// Collect unique symbols and currencies
-	var valuationHoldings []ValuationHolding
 	uniqueSymbols := make(map[string]bool)
 	uniqueCurrencies := make(map[string]bool)
 
-	holdings, err := uc.GetHoldings(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get holdings: %w", err)
-	}
-
-	for _, holding := range holdings {
-		if holding.Quantity <= 0.000001 {
-			continue
-		}
-		uniqueSymbols[holding.Symbol] = true
-		uniqueCurrencies[holding.Currency] = true
-
-		valuationHoldings = append(valuationHoldings, ValuationHolding{
-			Ticker:        holding.Symbol,
-			Quantity:      holding.Quantity,
-			AssetCurrency: holding.Currency,
-		})
+	for symbol, position := range replayResult.FinalPositions {
+		uniqueSymbols[symbol] = true
+		uniqueCurrencies[position.Currency] = true
 	}
 
 	var symbols []string
@@ -239,8 +223,6 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	}
 
 	// 4. Calculate Total Value (Using Shared Logic)
-	valResult, _ := CalculatePortfolioValue(valuationHoldings, marketQuotes, fxRates, defaultCurrency)
-	// We could log valResult.Warnings here if a logger were available.
 
 	// 5. Calculate Breakdown (Unrealized Gains) using SAME data
 	var totalUnrealizedCapital float64
@@ -289,24 +271,17 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	}
 
 	// 6. Assemble Summary
-	summary.TotalValue = valResult.TotalValue + replayResult.CurrentCash
-	summary.TotalCost = endTotalCost // Usually cost of HOLDINGS. Cash has no cost basis? Or Cost=Value.
-	// If TotalCost excludes cash, then UnrealizedGain should exclude cash.
-	// summary.GainLoss (Total Period Gain) = FinalValue - StartValue - NetInvested.
 
-	// Start Value Calculation
-	var startTotalValue float64
-	if !calcStartDate.IsZero() {
-		// We need historical value at start date.
-		// Use existing method?
-		snap, err := uc.GetHistoricalPortfolioSummary(ctx, userID, calcStartDate)
-		if err == nil {
-			startTotalValue = snap.TotalValue
-		}
+	// Total Value, Total Cost, Gain/Loss from current holdings
+	result, err := uc.getCurrentHoldingsSummary(ctx, userID, time.Now(), defaultCurrency)
+	if err != nil {
+		return nil, err
 	}
 
-	totalGain := (summary.TotalValue - startTotalValue) - replayResult.NetInvested
-	summary.GainLoss = totalGain
+	summary.TotalValue = result.TotalValue
+	summary.TotalCost = result.TotalCost
+	summary.GainLoss = result.GainLoss
+	summary.GainLossPct = result.GainLossPct
 
 	// Capital Gain = Realized Capital + Unrealized Capital
 	summary.CapitalGain = replayResult.RealizedCapitalGain + totalUnrealizedCapital
@@ -318,15 +293,6 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	if summary.TotalCost > 0 {
 		summary.CapitalGainPct = (summary.CapitalGain / summary.TotalCost) * 100
 		summary.CurrencyGainPct = (summary.CurrencyGain / summary.TotalCost) * 100
-	}
-	// For Total Return %, usually (TotalGain / NetInvested) * 100? or (TotalGain / StartValue)?
-	// If NetInvested > 0:
-	divisor := replayResult.NetInvested
-	if divisor == 0 && startTotalValue > 0 {
-		divisor = startTotalValue
-	}
-	if divisor > 0 {
-		summary.GainLossPct = (totalGain / divisor) * 100
 	}
 
 	// Day Change
@@ -556,66 +522,11 @@ func (uc *portfolioUsecase) GetHistoricalPortfolioSummary(ctx context.Context, u
 	}
 
 	// Get holdings (Note: using current holdings as proxy for historical holdings)
-	holdings, err := uc.holdingRepo.ListByUser(userID)
+	summary, err := uc.getCurrentHoldingsSummary(ctx, userID, date, defaultCurrency)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get holdings: %w", err)
+		return nil, err
 	}
 
-	summary := &domain.PortfolioSummary{
-		UserID:      userID,
-		TotalValue:  0,
-		TotalCost:   0,
-		GainLoss:    0,
-		GainLossPct: 0,
-		LastUpdated: date,
-	}
-
-	// Calculate totals with currency conversion
-	for _, holding := range holdings {
-		// Get historical price
-		price, err := uc.marketDataGateway.GetPriceOnDate(ctx, holding.Symbol, date)
-		if err != nil {
-			// Log warning and skip or use 0?
-			// For backfilling, missing price is critical.
-			// But maybe we can skip this asset?
-			// Let's log and continue, effectively treating value as 0 for this asset on that day.
-			fmt.Printf("Warning: Failed to get historical price for %s on %s: %v\n", holding.Symbol, date.Format("2006-01-02"), err)
-			continue
-		}
-
-		// Get exchange rate if currency is not AUD
-		// Now using HISTORICAL exchange rate for the specified date
-		exchangeRate := 1.0
-		if holding.Currency != defaultCurrency {
-			rate, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, holding.Currency, defaultCurrency, date)
-			if err != nil {
-				fmt.Printf("Warning: Failed to get historical exchange rate for %s to %s on %s: %v. Using rate 1.0\n",
-					holding.Currency, defaultCurrency, date.Format("2006-01-02"), err)
-			} else {
-				exchangeRate = rate
-			}
-		}
-
-		// Convert to default currency
-		// Cost basis is historical (average cost), assuming it hasn't changed much or using current.
-		// CurrentValue is Quantity * HistoricalPrice * ExchangeRate
-		costBasis := holding.Quantity * holding.AverageCost * exchangeRate
-		currentValue := holding.Quantity * price * exchangeRate
-
-		summary.TotalCost += costBasis
-		summary.TotalValue += currentValue
-	}
-
-	// Calculate gain/loss
-	summary.GainLoss = summary.TotalValue - summary.TotalCost
-
-	// Calculate percentage (avoid division by zero)
-	if summary.TotalCost > 0 {
-		summary.GainLossPct = (summary.GainLoss / summary.TotalCost) * 100
-	}
-
-	// Set the currency of the summary
-	summary.Currency = defaultCurrency
 	return summary, nil
 }
 
@@ -699,4 +610,69 @@ func (uc *portfolioUsecase) createHistoricalSnapshot(
 	}
 
 	return true, uc.historyRepo.CreateSnapshot(ctx, snapshot)
+}
+
+// getCurrentHoldingsSummary calculates the current portfolio summary for a user
+func (uc *portfolioUsecase) getCurrentHoldingsSummary(ctx context.Context, userID string, date time.Time, defaultCurrency string) (*domain.PortfolioSummary, error) {
+	holdings, err := uc.holdingRepo.ListByUser(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get holdings: %w", err)
+	}
+
+	summary := &domain.PortfolioSummary{
+		UserID:      userID,
+		TotalValue:  0,
+		TotalCost:   0,
+		GainLoss:    0,
+		GainLossPct: 0,
+		LastUpdated: date,
+	}
+
+	// Calculate totals with currency conversion
+	for _, holding := range holdings {
+		// Get historical price
+		price, err := uc.marketDataGateway.GetPriceOnDate(ctx, holding.Symbol, date)
+		if err != nil {
+			// Log warning and skip or use 0?
+			// For backfilling, missing price is critical.
+			// But maybe we can skip this asset?
+			// Let's log and continue, effectively treating value as 0 for this asset on that day.
+			fmt.Printf("Warning: Failed to get historical price for %s on %s: %v\n", holding.Symbol, date.Format("2006-01-02"), err)
+			continue
+		}
+
+		// Get exchange rate if currency is not AUD
+		// Now using HISTORICAL exchange rate for the specified date
+		exchangeRate := 1.0
+		if holding.Currency != defaultCurrency {
+			rate, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, holding.Currency, defaultCurrency, date)
+			if err != nil {
+				fmt.Printf("Warning: Failed to get historical exchange rate for %s to %s on %s: %v. Using rate 1.0\n",
+					holding.Currency, defaultCurrency, date.Format("2006-01-02"), err)
+			} else {
+				exchangeRate = rate
+			}
+		}
+
+		// Convert to default currency
+		// Cost basis is historical (average cost), assuming it hasn't changed much or using current.
+		// CurrentValue is Quantity * HistoricalPrice * ExchangeRate
+		costBasis := holding.Quantity * holding.AverageCost * exchangeRate
+		currentValue := holding.Quantity * price * exchangeRate
+
+		summary.TotalCost += costBasis
+		summary.TotalValue += currentValue
+	}
+
+	// Calculate gain/loss
+	summary.GainLoss = summary.TotalValue - summary.TotalCost
+
+	// Calculate percentage (avoid division by zero)
+	if summary.TotalCost > 0 {
+		summary.GainLossPct = (summary.GainLoss / summary.TotalCost) * 100
+	}
+
+	// Set the currency of the summary
+	summary.Currency = defaultCurrency
+	return summary, nil
 }

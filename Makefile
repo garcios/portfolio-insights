@@ -1,7 +1,10 @@
-.PHONY: run-gateway run-local-user-service run-local-portfolio-service run-local-transaction-service run-local-marketdata-service tidy-all build-postgres
+.PHONY: run-gateway run-local-user-service run-local-portfolio-service run-local-transaction-service run-local-marketdata-service tidy-all build-postgres run-login-consent-provider
 
 run-gateway:
 	cd apps/gateway && HYDRA_PUBLIC_URL=http://localhost:4444 APP_ENV=local APP_CONFIG_PATH=./configs go run cmd/server/main.go
+
+run-login-consent-provider:
+	cd apps/login-consent-provider && APP_ENV=local APP_CONFIG_PATH=./configs go run cmd/server/main.go
 
 run-local-user-service: 
 	cd services/user-service &&  APP_ENV=local APP_CONFIG_PATH=./configs go run cmd/server/main.go

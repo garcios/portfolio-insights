@@ -1,0 +1,5 @@
+port: "3002"
+hydra_admin_url: "http://localhost:4445"
+user_service_addr: "localhost:50051"
+session_secret: "some-secure-dev-secret"
+log_level: "debug"
