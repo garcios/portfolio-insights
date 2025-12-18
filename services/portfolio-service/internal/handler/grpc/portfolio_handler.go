@@ -3,6 +3,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -149,8 +150,20 @@ func (h *PortfolioHandler) GetPortfolioPerformance(ctx context.Context, req *pb.
 		return nil, status.Error(codes.InvalidArgument, "period is required")
 	}
 
+	// Profiling Setup
+	reqID := time.Now().UnixNano()
+	var (
+		countGetHistoryByPeriod int
+	)
+	fmt.Printf("[GetPortfolioPerformance-%d] Starting request for user %s\n", reqID, userID)
+
 	// Query historical snapshots from the database
+	startHistory := time.Now()
 	snapshots, err := h.historyRepo.GetHistoryByPeriod(ctx, userID, req.Period)
+	countGetHistoryByPeriod++
+	fmt.Printf("[GetPortfolioPerformance-%d] Step: GetHistoryByPeriod | Duration: %dms | Call Count: %d\n",
+		reqID, time.Since(startHistory).Milliseconds(), countGetHistoryByPeriod)
+
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get portfolio history: %v", err)
 	}

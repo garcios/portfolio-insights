@@ -80,8 +80,22 @@ func NewPortfolioUsecase(
 
 // GetHoldings retrieves all holdings for a user with current market prices
 func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*domain.Holding, error) {
+	// Profiling Setup
+	reqID := time.Now().UnixNano()
+	var (
+		countListByUser       int
+		countGetCurrentPrices int
+		countGetAssetName     int
+	)
+	fmt.Printf("[GetHoldings-%d] Starting request for user %s\n", reqID, userID)
+
 	// Get holdings from repository
+	startList := time.Now()
 	holdings, err := uc.holdingRepo.ListByUser(userID)
+	countListByUser++
+	fmt.Printf("[GetHoldings-%d] Step: ListByUser | Duration: %dms | Call Count: %d\n",
+		reqID, time.Since(startList).Milliseconds(), countListByUser)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get holdings: %w", err)
 	}
@@ -97,7 +111,12 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 	}
 
 	// Get current prices for all symbols
+	startPrices := time.Now()
 	prices, err := uc.marketDataGateway.GetCurrentPrices(ctx, symbols)
+	countGetCurrentPrices++
+	fmt.Printf("[GetHoldings-%d] Step: GetCurrentPrices | Duration: %dms | Call Count: %d\n",
+		reqID, time.Since(startPrices).Milliseconds(), countGetCurrentPrices)
+
 	if err != nil {
 		// If we can't get prices, return holdings without current prices
 		// In production, you might want to handle this differently
@@ -112,7 +131,12 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 		}
 
 		// Fetch asset name (best effort)
+		startName := time.Now()
 		name, err := uc.marketDataGateway.GetAssetName(ctx, holding.Symbol)
+		countGetAssetName++
+		fmt.Printf("[GetHoldings-%d] Step: GetAssetName | Duration: %dms | Call Count: %d\n",
+			reqID, time.Since(startName).Milliseconds(), countGetAssetName)
+
 		if err == nil {
 			holding.AssetName = name
 		}
@@ -126,6 +150,18 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *time.Time) (*domain.PortfolioSummary, error) {
 	const defaultCurrency = "AUD" // TODO: Retrieve this value from user preferences via user service.
 
+	// Profiling Setup
+	reqID := time.Now().UnixNano()
+	var (
+		countGetLatestSnapshot     int
+		countListTransactions      int
+		countGetCurrentPrices      int
+		countGetPriceOnDate        int // Inside loop or fallback
+		countGetCurrencyRate       int // Inside loop
+		countGetCurrencyRateOnDate int // Inside Replay loop
+	)
+	fmt.Printf("[GetPortfolioSummary-%d] Starting request for user %s\n", reqID, userID)
+
 	// 1. Establish Time Boundaries
 	calcEndDate := time.Now()
 	if endDate != nil {
@@ -133,13 +169,16 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	}
 
 	// 2. Fetch Latest Snapshot (Optimization)
+	startSnapshot := time.Now()
 	snapshot, err := uc.snapshotRepo.GetLatestSnapshot(ctx, userID, calcEndDate)
+	countGetLatestSnapshot++
+	fmt.Printf("[GetPortfolioSummary-%d] Step: GetLatestSnapshot | Duration: %dms | Call Count: %d\n",
+		reqID, time.Since(startSnapshot).Milliseconds(), countGetLatestSnapshot)
+
 	if err != nil {
 		// Log error but proceed without snapshot (Graceful Degradation)
 		fmt.Printf("Warning: failed to fetch snapshot for user %s: %v\n", userID, err)
 	}
-
-	fmt.Printf("Snapshot: %v\n", snapshot)
 
 	// 3. Initialize Replay State
 	var replayStart time.Time        // Default: Beginning of time
@@ -148,7 +187,10 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	if snapshot != nil {
 		// Optimization: Hydrate state from snapshot
 		replayStart = snapshot.Timestamp
+		startHydrate := time.Now()
 		if err := currentState.HydrateFrom(snapshot); err != nil {
+			fmt.Printf("[GetPortfolioSummary-%d] Step: HydrateFrom | Duration: %dms | Call Count: 1 (Error)\n",
+				reqID, time.Since(startHydrate).Milliseconds())
 			fmt.Printf("Error: failed to hydrate snapshot state: %v\n", err)
 			// Fallback: reset to empty if hydration fails
 			replayStart = time.Time{}
@@ -183,7 +225,12 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		// or if we trust the previous plan which used `StartTime`.
 		// Let's implement client-side filtering for safety since I can't see proto.
 
+		startListTx := time.Now()
 		resp, err := uc.transactionClient.ListTransactions(ctx, req)
+		countListTransactions++
+		fmt.Printf("[GetPortfolioSummary-%d] Step: ListTransactions | Duration: %dms | Call Count: %d\n",
+			reqID, time.Since(startListTx).Milliseconds(), countListTransactions)
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to list transactions: %w", err)
 		}
@@ -214,25 +261,30 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 
 	// 5. Replay Transactions (The "Delta")
 	// We need rates for Apply.
-	// Optimization: Batch fetch rates for txn currencies -> defaultCurrency
-	uniqueCurrencies := make(map[string]bool)
-	for _, txn := range allTxns {
-		if txn.PriceCurrency != defaultCurrency {
-			uniqueCurrencies[txn.PriceCurrency] = true
-		}
-	}
+	// Optimization: Batch fetch rates or Memoize within request
+	rateCache := make(map[string]float64)
 
-	// Fetch rates
-	// Simple map for now.
-	// For historical transactions, we need historical rates.
-	// Apply expects a rate.
 	for _, txn := range allTxns {
 		rate := 1.0
 		if txn.PriceCurrency != defaultCurrency {
-			// Fetch rate on execution date
-			r, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, txn.PriceCurrency, defaultCurrency, txn.ExecutedAt.AsTime())
-			if err == nil {
-				rate = r
+			// Check local cache first
+			dateStr := txn.ExecutedAt.AsTime().Format("2006-01-02")
+			cacheKey := fmt.Sprintf("%s:%s:%s", txn.PriceCurrency, defaultCurrency, dateStr)
+
+			if cachedRate, found := rateCache[cacheKey]; found {
+				rate = cachedRate
+			} else {
+				// Fetch rate on execution date
+				startRate := time.Now()
+				r, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, txn.PriceCurrency, defaultCurrency, txn.ExecutedAt.AsTime())
+				countGetCurrencyRateOnDate++
+				fmt.Printf("[GetPortfolioSummary-%d] Step: GetCurrencyRateOnDate | Duration: %dms | Call Count: %d\n",
+					reqID, time.Since(startRate).Milliseconds(), countGetCurrencyRateOnDate)
+
+				if err == nil {
+					rate = r
+					rateCache[cacheKey] = r
+				}
 			}
 		}
 		if err := currentState.Apply(txn, rate, defaultCurrency); err != nil {
@@ -274,7 +326,12 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	}
 
 	// Batch fetch current prices
+	startPrices := time.Now()
 	currentPrices, _ := uc.marketDataGateway.GetCurrentPrices(ctx, symbols)
+	countGetCurrentPrices++
+	fmt.Printf("[GetPortfolioSummary-%d] Step: GetCurrentPrices | Duration: %dms | Call Count: %d\n",
+		reqID, time.Since(startPrices).Milliseconds(), countGetCurrentPrices)
+
 	// Also need FX rates for current value if holding currency != default
 
 	// Map ReplayState to Domain Summary
@@ -291,14 +348,25 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 			price = p.Price
 		} else {
 			// Fallback individual fetch
+			startPrice := time.Now()
 			p, _ := uc.marketDataGateway.GetCurrentPrice(ctx, sym)
+			countGetPriceOnDate++ // Using same counter or maybe new one for GetCurrentPrice? Let's use specific.
+			// Actually let's just use countGetPriceOnDate since it's single price, but technically different method.
+			// Ideally separate counter.
+			fmt.Printf("[GetPortfolioSummary-%d] Step: GetCurrentPrice (Fallback) | Duration: %dms | Call Count: %d\n",
+				reqID, time.Since(startPrice).Milliseconds(), countGetPriceOnDate)
 			price = p
 		}
 
 		// Current FX for Valuation
 		fxRate := 1.0
 		if pos.Currency != defaultCurrency {
+			startFX := time.Now()
 			r, err := uc.marketDataGateway.GetCurrencyRate(ctx, pos.Currency, defaultCurrency)
+			countGetCurrencyRate++
+			fmt.Printf("[GetPortfolioSummary-%d] Step: GetCurrencyRate | Duration: %dms | Call Count: %d\n",
+				reqID, time.Since(startFX).Milliseconds(), countGetCurrencyRate)
+
 			if err == nil {
 				fxRate = r
 			}
@@ -341,7 +409,12 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 		// Convert cash to default currency
 		rate := 1.0
 		if curr != defaultCurrency {
+			startFX := time.Now()
 			r, err := uc.marketDataGateway.GetCurrencyRate(ctx, curr, defaultCurrency)
+			countGetCurrencyRate++
+			fmt.Printf("[GetPortfolioSummary-%d] Step: GetCurrencyRate (Cash) | Duration: %dms | Call Count: %d\n",
+				reqID, time.Since(startFX).Milliseconds(), countGetCurrencyRate)
+
 			if err == nil {
 				rate = r
 			}
@@ -362,7 +435,12 @@ func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID stri
 	for curr, amt := range currentState.RealizedGains {
 		rate := 1.0
 		if curr != defaultCurrency {
+			startFX := time.Now()
 			r, err := uc.marketDataGateway.GetCurrencyRate(ctx, curr, defaultCurrency)
+			countGetCurrencyRate++
+			fmt.Printf("[GetPortfolioSummary-%d] Step: GetCurrencyRate (Realized) | Duration: %dms | Call Count: %d\n",
+				reqID, time.Since(startFX).Milliseconds(), countGetCurrencyRate)
+
 			if err == nil {
 				rate = r
 			}
@@ -693,12 +771,24 @@ func (uc *portfolioUsecase) RefreshSnapshot(ctx context.Context, userID string) 
 	}
 
 	// 4. Replay Transactions
+	rateCache := make(map[string]float64)
+
 	for _, txn := range allTxns {
 		rate := 1.0
 		if txn.PriceCurrency != defaultCurrency {
-			r, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, txn.PriceCurrency, defaultCurrency, txn.ExecutedAt.AsTime())
-			if err == nil {
-				rate = r
+			// Check local cache first
+			dateStr := txn.ExecutedAt.AsTime().Format("2006-01-02")
+			cacheKey := fmt.Sprintf("%s:%s:%s", txn.PriceCurrency, defaultCurrency, dateStr)
+
+			if cachedRate, found := rateCache[cacheKey]; found {
+				rate = cachedRate
+			} else {
+				// Fetch rate on execution date
+				r, err := uc.marketDataGateway.GetCurrencyRateOnDate(ctx, txn.PriceCurrency, defaultCurrency, txn.ExecutedAt.AsTime())
+				if err == nil {
+					rate = r
+					rateCache[cacheKey] = r
+				}
 			}
 		}
 		if err := currentState.Apply(txn, rate, defaultCurrency); err != nil {
