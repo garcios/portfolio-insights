@@ -1,0 +1,11 @@
+I am profiling the GetPortfolioSummary method in the portfolio-service to identify performance bottlenecks.
+
+Please modify the existing code that wraps each internal RPC call and major logic block with duration tracking. I need:
+
+- Individual Latency: Use time.Since() to log the duration of each downstream RPC call.
+
+- Call Counters: A simple way to track how many times each specific RPC is triggered during the lifecycle of a single request.
+
+- Structured Output: Use fmt.Printf to log in a clear format, e.g., [GetPortfolioSummary] Step: {Name} | Duration: {ms} | Call Count: {n}.
+
+- Context: Ensure the logs include a unique request ID or timestamp so I can correlate logs from the same execution flow.

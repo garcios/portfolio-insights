@@ -1,0 +1,18 @@
+Role: Act as a Senior Golang Backend Engineer and Performance Architect.
+
+Context: I have a GetPortfolioSummary method in my portfolio-service (Golang/gRPC) that aggregates data from multiple sources (e.g., database, external stock price APIs, currency conversion services). Currently, the latency is higher than desired.
+
+Task: Review the provided code for GetPortfolioSummary and draft a technical optimization document.
+
+Requirements:
+
+Code Analysis: Identify specific bottlenecks in the current logic (e.g., N+1 queries, synchronous blocking calls, inefficient data structures).
+
+Concurrency: Suggest where errgroup or standard Go concurrency patterns can be applied to parallelize independent data fetches.
+
+Caching Strategy: Recommend a caching layer (e.g., Redis or in-memory Ristretto) for relatively static data like historical prices or currency rates.
+
+Database Tuning: Suggest SQL optimizations (indexing, composite queries) if database interaction is a factor.
+
+Output Format: Present the suggestions as a formal engineering document with a "Current State," "Proposed Optimizations," and "Expected Impact" for each point.
+

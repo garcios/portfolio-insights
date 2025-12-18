@@ -81,6 +81,11 @@ func (m *mockDelegateUsecase) BackfillPortfolioHistory(ctx context.Context, user
 	return BackfillResult{}
 }
 
+func (m *mockDelegateUsecase) RefreshSnapshot(ctx context.Context, userID string) error {
+	m.called = true
+	return m.err
+}
+
 func TestGetPortfolioSummary_CacheHit(t *testing.T) {
 	// Setup
 	mockRedis := newMockRedisClient()

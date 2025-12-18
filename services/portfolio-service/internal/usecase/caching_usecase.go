@@ -123,3 +123,8 @@ func (uc *cachingPortfolioUsecase) BackfillPortfolioHistory(ctx context.Context,
 	// We pass through to delegate.
 	return uc.delegate.BackfillPortfolioHistory(ctx, userIDs, startDate, endDate, dryRun)
 }
+
+func (uc *cachingPortfolioUsecase) RefreshSnapshot(ctx context.Context, userID string) error {
+	// Pass through to delegate - this is a write operation
+	return uc.delegate.RefreshSnapshot(ctx, userID)
+}

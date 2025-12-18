@@ -198,18 +198,12 @@ func (r *postgresMarketDataRepo) GetLatestPrices(symbols []string) (map[string]*
 	}
 
 	query := fmt.Sprintf(`
-		SELECT a.symbol, p.id, p.asset_id, p.price, p.timestamp, p.created_at
+		SELECT DISTINCT ON (a.symbol)
+			a.symbol, p.id, p.asset_id, p.price, p.timestamp, p.created_at
 		FROM marketdata.asset_prices p
 		JOIN marketdata.assets a ON p.asset_id = a.id
 		WHERE a.symbol IN (%s)
-		AND p.id IN (
-			SELECT p2.id
-			FROM marketdata.asset_prices p2
-			JOIN marketdata.assets a2 ON p2.asset_id = a2.id
-			WHERE a2.symbol = a.symbol
-			ORDER BY p2.timestamp DESC
-			LIMIT 1
-		)
+		ORDER BY a.symbol, p.timestamp DESC
 	`, strings.Join(placeholders, ","))
 
 	rows, err := r.db.Query(query, args...)
