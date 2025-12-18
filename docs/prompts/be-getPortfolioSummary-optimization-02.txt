@@ -1,0 +1,16 @@
+Task: Create a detailed technical implementation plan for Incremental Aggregation, as referenced in docs/OPTIMIZATION_PLAN.md (Section 3.4).
+
+Output File: Create a new markdown file at docs/INCREMENTAL_AGGREGATION_PLAN.md.
+
+Requirements:
+
+1. Data Modeling: Define the schema for the new aggregation tables. Include column names, data types, and indexing strategies.
+
+2. Service Logic: Detail the changes required within portfolio-service. Explain the logic for triggering updates (e.g., event-driven vs. scheduled) and how to handle historical data backfills.
+
+3. Consistency & Concurrency: Describe how we will maintain data integrity between the raw transaction tables and the new aggregate tables.
+
+4. Performance Goals: Briefly outline the expected latency improvements for read queries.
+
+Constraint: Do not modify any application code or execute database migrations. This is strictly a documentation task to finalize the design before implementation.
+

@@ -54,7 +54,10 @@ build-minio:
 build-nats:
 	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build nats
 
-build-infra: build-postgres build-redis build-minio build-nats
+build-migrations:
+	podman-compose --env-file deployments/docker-compose-services/.env -f deployments/docker-compose-services/docker-compose.yml up -d --build migrations
+
+build-infra: build-postgres build-redis build-minio build-nats build-migrations
 
 monitoring-up:
 	./deployments/monitoring/start-monitoring.sh	

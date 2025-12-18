@@ -20,10 +20,11 @@ type MarketDataGateway struct {
 	conn       *grpc.ClientConn
 	cache      *PriceCache
 	assetCache *AssetCache
+	history    *HistoricalCache
 }
 
 // NewMarketDataGateway creates a new market data gateway.
-func NewMarketDataGateway(cache *PriceCache, assetCache *AssetCache, cfg config.Config) (*MarketDataGateway, error) {
+func NewMarketDataGateway(cache *PriceCache, assetCache *AssetCache, history *HistoricalCache, cfg config.Config) (*MarketDataGateway, error) {
 	marketDataAddr := cfg.MarketDataServiceAddr
 	if marketDataAddr == "" {
 		marketDataAddr = "localhost:50054"
@@ -44,6 +45,7 @@ func NewMarketDataGateway(cache *PriceCache, assetCache *AssetCache, cfg config.
 		conn:       conn,
 		cache:      cache,
 		assetCache: assetCache,
+		history:    history,
 	}, nil
 }
 
@@ -307,20 +309,25 @@ func (g *MarketDataGateway) GetAssetName(ctx context.Context, symbol string) (st
 	return asset.Name, nil
 }
 
-// GetPriceOnDate fetches the closing price of an asset on a specific date,
-// or attempts to find the price on the previous 6 days if the specific date has no data.
+// GetPriceOnDate fetches the price of an asset on a specific date.
 func (g *MarketDataGateway) GetPriceOnDate(ctx context.Context, symbol string, date time.Time) (float64, error) {
-	// The maximum number of days to check, including the original date.
+	// 1. Check Historical Cache
+	if g.history != nil {
+		if val, found, _ := g.history.GetPrice(ctx, symbol, date); found {
+			return val, nil
+		}
+	}
+
+	// Normalize date to UTC
+	startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	endOfDay := startOfDay.Add(24 * time.Hour).Add(-1 * time.Nanosecond)
+
+	// Attempt to find a price for the date, looking back up to 7 days if weekends/holidays
 	const maxDaysToTry = 7
-
-	currentDate := date.In(time.UTC) // Start with the original date, converting to UTC for consistency
-
+	currentDate := date.In(time.UTC)
 	for i := 0; i < maxDaysToTry; i++ {
-		// Define start and end of the day for the current attempt date
-		// Use UTC to avoid timezone issues, assuming market data is stored/queried in UTC or date-based
-		startOfDay := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, time.UTC)
-		endOfDay := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 23, 59, 59, 999999999, time.UTC)
-
+		// Try to verify if we have coverage for this date in recent fetch?
+		// For now simple lookback loop
 		req := &pb.GetHistoricalPricesRequest{
 			Name:      fmt.Sprintf("assets/%s", symbol),
 			StartTime: timestamppb.New(startOfDay),
@@ -328,46 +335,57 @@ func (g *MarketDataGateway) GetPriceOnDate(ctx context.Context, symbol string, d
 			Interval:  "1d",
 		}
 
+		// ... RPC call ...
 		resp, err := g.client.GetHistoricalPrices(ctx, req)
-		if err != nil {
-			// If the gRPC call fails, return the error immediately
-			return 0, fmt.Errorf("failed to get historical prices for %s on %s: %w", symbol, currentDate.Format("2006-01-02"), err)
+		if err == nil && len(resp.Prices) > 0 {
+			price := resp.Prices[0].Price
+
+			// Cache the result for the ORIGINAL requested date (and maybe the actual date found)
+			if g.history != nil {
+				// We cache it for the requested 'date' so we don't loop again.
+				// NOTE: If we found data for T-2, we map T -> Price(T-2).
+				// This approximates "nearest previous".
+				// To be precise we might want to store specific date, but for "PriceOnDate" semantics
+				// (value of holding ON that date) carrying forward last close is standard.
+				_ = g.history.SetPrice(ctx, symbol, date, price)
+
+				// Also cache for the actual date found if different?
+				actualDate := resp.Prices[0].Timestamp.AsTime()
+				if !actualDate.Equal(date) {
+					_ = g.history.SetPrice(ctx, symbol, actualDate, price)
+				}
+			}
+			return price, nil
 		}
 
-		if len(resp.Prices) > 0 {
-			// **Success:** Price found for the current date attempt
-			return resp.Prices[0].Price, nil
-		}
-
-		// **Failure for this day:** Move to the previous day for the next iteration
-		// Subtract 24 hours to get to the day before
+		// Move back one day
 		currentDate = currentDate.AddDate(0, 0, -1)
+		startOfDay = time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, time.UTC)
+		endOfDay = startOfDay.Add(24 * time.Hour).Add(-1 * time.Nanosecond)
 	}
-
-	// If the loop completes, no price was found within the maximum number of days checked (7 days total).
 	return 0, fmt.Errorf("no price found for %s after checking %d days, starting from %s", symbol, maxDaysToTry, date.Format("2006-01-02"))
 }
 
-// GetCurrencyRateOnDate fetches the currency exchange rate on a specific date,
-// or attempts to find the rate on the previous 6 days if the specific date has no data.
+// GetCurrencyRateOnDate fetches the conversion rate between two currencies on a specific date.
 func (g *MarketDataGateway) GetCurrencyRateOnDate(ctx context.Context, baseCurrency, targetCurrency string, date time.Time) (float64, error) {
-	// If currencies are the same, rate is 1.0 (This logic remains the same)
 	if baseCurrency == targetCurrency {
 		return 1.0, nil
 	}
 
-	// The maximum number of days to check, including the original date.
+	// 1. Check Historical Cache
+	if g.history != nil {
+		if val, found, _ := g.history.GetCurrencyRate(ctx, baseCurrency, targetCurrency, date); found {
+			return val, nil
+		}
+	}
+
+	// Normalize date to UTC
+	startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	endOfDay := startOfDay.Add(24 * time.Hour).Add(-1 * time.Nanosecond)
+
 	const maxDaysToTry = 7
-
-	// Start with the original date, converting to UTC for consistency
 	currentDate := date.In(time.UTC)
-
 	for i := 0; i < maxDaysToTry; i++ {
-		// Define start and end of the day for the current attempt date
-		// Use UTC to avoid timezone issues
-		startOfDay := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, time.UTC)
-		endOfDay := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 23, 59, 59, 999999999, time.UTC)
-
 		req := &pb.GetHistoricalCurrencyRatesRequest{
 			BaseCurrency:   baseCurrency,
 			TargetCurrency: targetCurrency,
@@ -375,23 +393,78 @@ func (g *MarketDataGateway) GetCurrencyRateOnDate(ctx context.Context, baseCurre
 			EndTime:        timestamppb.New(endOfDay),
 		}
 
+		serviceStart := time.Now()
 		resp, err := g.client.GetHistoricalCurrencyRates(ctx, req)
+		duration := time.Since(serviceStart).Seconds()
+
 		if err != nil {
-			// If the gRPC call fails, return the error immediately, but include the failing date
-			return 0, fmt.Errorf("failed to get historical currency rates for %s/%s on %s: %w", baseCurrency, targetCurrency, currentDate.Format("2006-01-02"), err)
+			metrics.RecordMarketDataRequest("get_historical_currency_rates", "error", duration)
+			// Continue loop
+		} else {
+			metrics.RecordMarketDataRequest("get_historical_currency_rates", "success", duration)
+			if len(resp.Rates) > 0 {
+				rate := resp.Rates[0].Rate
+				// Cache result
+				if g.history != nil {
+					_ = g.history.SetCurrencyRate(ctx, baseCurrency, targetCurrency, date, rate)
+				}
+				return rate, nil
+			}
 		}
 
-		if len(resp.Rates) > 0 {
-			// **Success:** Rate found for the current date attempt
-			// Return the first rate found
-			return resp.Rates[0].Rate, nil
-		}
-
-		// **Failure for this day:** Move to the previous day for the next iteration
-		// Subtract 24 hours to get to the day before
+		// Move back one day
 		currentDate = currentDate.AddDate(0, 0, -1)
+		startOfDay = time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, time.UTC)
+		endOfDay = startOfDay.Add(24 * time.Hour).Add(-1 * time.Nanosecond)
 	}
 
 	// If the loop completes, no rate was found within the maximum number of days checked (7 days total).
 	return 0, fmt.Errorf("no currency rate found for %s/%s after checking %d days, starting from %s", baseCurrency, targetCurrency, maxDaysToTry, date.Format("2006-01-02"))
+}
+
+// GetHistoricalCurrencyRates fetches historical currency rates for a date range
+func (g *MarketDataGateway) GetHistoricalCurrencyRates(ctx context.Context, baseCurrency, targetCurrency string, start, end time.Time) (map[time.Time]float64, error) {
+	if baseCurrency == targetCurrency {
+		return map[time.Time]float64{}, nil // No conversion needed
+	}
+
+	req := &pb.GetHistoricalCurrencyRatesRequest{
+		BaseCurrency:   baseCurrency,
+		TargetCurrency: targetCurrency,
+		StartTime:      timestamppb.New(start),
+		EndTime:        timestamppb.New(end),
+	}
+
+	serviceStart := time.Now()
+	resp, err := g.client.GetHistoricalCurrencyRates(ctx, req)
+	duration := time.Since(serviceStart).Seconds()
+
+	if err != nil {
+		metrics.RecordMarketDataRequest("get_historical_currency_rates", "error", duration)
+		return nil, fmt.Errorf("failed to get historical currency rates: %w", err)
+	}
+	metrics.RecordMarketDataRequest("get_historical_currency_rates", "success", duration)
+
+	rates := make(map[time.Time]float64)
+
+	// Prepare for batch cache set
+	// Using a goroutine for non-blocking cache write? Or just do it.
+	// Given immutability and potential size, let's do it synchronously to ensure consistency or async for perf.
+	// Async is better for latency of the main request.
+	go func() {
+		if g.history != nil && len(resp.Rates) > 0 {
+			ctx := context.Background() // new context for async work
+			for _, rate := range resp.Rates {
+				rateDate := rate.RateDate.AsTime()
+				_ = g.history.SetCurrencyRate(ctx, baseCurrency, targetCurrency, rateDate, rate.Rate)
+			}
+		}
+	}()
+
+	for _, rate := range resp.Rates {
+		rateDate := rate.RateDate.AsTime()
+		rates[rateDate] = rate.Rate
+	}
+
+	return rates, nil
 }

@@ -35,6 +35,7 @@ type Config struct {
 	MarketDataServiceAddr   string        `mapstructure:"marketdata_service_addr"`
 	TransactionServiceAddr  string        `mapstructure:"transaction_service_addr"`
 	AssetCacheTTL           int           `mapstructure:"asset_cache_ttl_seconds"`
+	CacheWarmingInterval    string        `mapstructure:"cache_warming_interval"`
 	Caching                 CachingConfig `mapstructure:"caching"`
 }
 
@@ -62,6 +63,7 @@ func LoadConfig() Config {
 	viper.SetDefault("caching.enabled", true)
 	viper.SetDefault("caching.summary_ttl_seconds", 300)
 	viper.SetDefault("caching.history_ttl_seconds", 86400)
+	viper.SetDefault("cache_warming_interval", "6h")
 
 	// 2. Load Config File
 	appConfigPath := os.Getenv("APP_CONFIG_PATH")
@@ -119,6 +121,7 @@ func LoadConfig() Config {
 		"caching.enabled":             "CACHING_ENABLED",
 		"caching.summary_ttl_seconds": "CACHING_SUMMARY_TTL_SECONDS",
 		"caching.history_ttl_seconds": "CACHING_HISTORY_TTL_SECONDS",
+		"cache_warming_interval":      "CACHE_WARMING_INTERVAL",
 	}
 
 	for key, env := range bindKeys {

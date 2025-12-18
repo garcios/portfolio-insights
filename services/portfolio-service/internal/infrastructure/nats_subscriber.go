@@ -73,6 +73,7 @@ type NATSSubscriber struct {
 	subDeleted        *nats.Subscription
 	repo              domain.HoldingRepository
 	cashBalanceRepo   domain.CashBalanceRepository
+	snapshotRepo      domain.DetailedSnapshotRepository // Added
 	marketDataGateway *MarketDataGateway
 	transactionClient transactionpb.TransactionServiceClient
 	assetCache        *AssetCache
@@ -87,6 +88,7 @@ type NATSSubscriber struct {
 func NewNATSSubscriber(
 	repo domain.HoldingRepository,
 	cashBalanceRepo domain.CashBalanceRepository,
+	snapshotRepo domain.DetailedSnapshotRepository, // Added
 	marketDataGateway *MarketDataGateway,
 	transactionClient transactionpb.TransactionServiceClient,
 	assetCache *AssetCache,
@@ -107,6 +109,7 @@ func NewNATSSubscriber(
 		nc:                nc,
 		repo:              repo,
 		cashBalanceRepo:   cashBalanceRepo,
+		snapshotRepo:      snapshotRepo, // Added
 		marketDataGateway: marketDataGateway,
 		transactionClient: transactionClient,
 		assetCache:        assetCache,
@@ -182,6 +185,9 @@ func (s *NATSSubscriber) handleTransactionCreated(msg *nats.Msg) {
 		"user_id", event.UserID,
 		"type", event.Type,
 	)
+
+	// Invalidate Snapshots
+	s.invalidateSnapshots(context.Background(), event.UserID, event.ExecutedAt)
 
 	// Handle based on transaction type
 	switch event.Type {
@@ -401,6 +407,9 @@ func (s *NATSSubscriber) handleTransactionUpdated(msg *nats.Msg) {
 
 	s.logger.Info("Received transaction updated event", "transaction_id", event.TransactionID)
 
+	// Invalidate Snapshots
+	s.invalidateSnapshots(context.Background(), event.UserID, event.ExecutedAt)
+
 	// For equity transactions, recalculate holding
 	if event.AssetSymbol != nil {
 		if err := s.recalculateHolding(context.Background(), event.UserID, *event.AssetSymbol); err != nil {
@@ -428,6 +437,9 @@ func (s *NATSSubscriber) handleTransactionDeleted(msg *nats.Msg) {
 	}
 
 	s.logger.Info("Received transaction deleted event", "transaction_id", event.TransactionID)
+
+	// Invalidate Snapshots
+	s.invalidateSnapshots(context.Background(), event.UserID, time.Time{})
 
 	// For equity transactions, recalculate holding
 	if event.AssetSymbol != nil {
@@ -569,4 +581,15 @@ func (s *NATSSubscriber) recalculateHolding(ctx context.Context, userID, symbol 
 	)
 
 	return nil
+}
+
+// invalidateSnapshots invalidates snapshots after a given time for a user
+func (s *NATSSubscriber) invalidateSnapshots(ctx context.Context, userID string, eventTime time.Time) {
+	if s.snapshotRepo != nil {
+		if err := s.snapshotRepo.InvalidateSnapshots(ctx, userID, eventTime); err != nil {
+			s.logger.Error("failed to invalidate snapshots", "error", err, "user_id", userID, "time", eventTime)
+		} else {
+			s.logger.Info("Invalidated snapshots due to transaction event", "user_id", userID, "time", eventTime)
+		}
+	}
 }

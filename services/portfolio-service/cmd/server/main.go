@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/infrastructure"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/repository"
+	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/snapshotter"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/usecase"
 	pb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -90,6 +92,13 @@ func main() {
 		l.Info("Asset caching enabled")
 	}
 
+	// Initialize Historical Cache
+	var historicalCache *infrastructure.HistoricalCache
+	if redisClient != nil {
+		historicalCache = infrastructure.NewHistoricalCache(redisClient)
+		l.Info("Historical data caching enabled")
+	}
+
 	// Initialize Repositories
 	holdingRepo := repository.NewPostgresHoldingRepository(db)
 	historyRepo := repository.NewPostgresHistoryRepository(db)
@@ -121,7 +130,7 @@ func main() {
 	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
 	// Initialize MarketData Gateway with cache
-	marketDataGateway, err := infrastructure.NewMarketDataGateway(priceCache, assetCache, cfg)
+	marketDataGateway, err := infrastructure.NewMarketDataGateway(priceCache, assetCache, historicalCache, cfg)
 	if err != nil {
 		l.Error("failed to create marketdata gateway", "error", err)
 		os.Exit(1)
@@ -132,9 +141,63 @@ func main() {
 		}
 	}()
 
-	// Initialize Usecase
+	// Initialize Cache Warmer
+	if assetCache != nil && marketDataGateway != nil {
+		cacheWarmer := infrastructure.NewCacheWarmer(marketDataGateway, assetCache, l)
+		warmingInterval, err := time.ParseDuration(cfg.CacheWarmingInterval)
+		if err != nil {
+			l.Warn("Invalid cache warming interval, using default 6h", "error", err)
+			warmingInterval = 6 * time.Hour
+		}
+		cacheWarmer.SchedulePeriodicWarming(warmingInterval)
+		l.Info("Cache warmer initialized", "interval", warmingInterval)
+	}
+
+	// Initialize Detailed Snapshot Repository
+	snapshotRepo := repository.NewPostgresSnapshotRepository(db)
+
+	// Initialize NATS Subscriber
+	natsSubscriber, err := infrastructure.NewNATSSubscriber(
+		holdingRepo,
+		cashBalanceRepo,
+		snapshotRepo, // Added
+		marketDataGateway,
+		transactionClient,
+		assetCache,
+		l,
+		cfg,
+	)
+	if err != nil {
+		l.Error("failed to create NATS subscriber", "error", err)
+		os.Exit(1)
+	}
+
+	if err := natsSubscriber.Start(); err != nil {
+		l.Error("failed to start NATS subscriber", "error", err)
+		os.Exit(1)
+	}
+	defer natsSubscriber.Stop()
+
+	// Initialize Snapshot Manager
+	snapshotConfig := snapshotter.WorkerConfig{
+		PoolSize:   5,
+		MaxRetries: 3,
+		RateLimit:  10.0,
+		Burst:      5,
+	}
+	snapshotManager := snapshotter.NewManager(snapshotConfig)
+
+	// Create Usecase
 	var portfolioUsecase usecase.PortfolioUsecase
-	portfolioUsecase = usecase.NewPortfolioUsecase(holdingRepo, historyRepo, cashBalanceRepo, marketDataGateway, transactionClient)
+	portfolioUsecase = usecase.NewPortfolioUsecase(
+		holdingRepo,
+		historyRepo,
+		snapshotRepo,
+		cashBalanceRepo,
+		marketDataGateway,
+		transactionClient,
+		snapshotManager,
+	)
 
 	if redisClient != nil {
 		wrappedRedis := database.NewRedisClientFromRaw(redisClient)
@@ -145,41 +208,24 @@ func main() {
 	// Initialize gRPC Handler
 	portfolioHandler := portfoliohandler.NewPortfolioHandler(portfolioUsecase, historyRepo)
 
-	// Initialize NATS Subscriber
-	subscriber, err := infrastructure.NewNATSSubscriber(holdingRepo, cashBalanceRepo, marketDataGateway, transactionClient, assetCache, l, cfg)
-	if err != nil {
-		l.Error("failed to create NATS subscriber", "error", err)
-		os.Exit(1)
-	}
-	defer subscriber.Stop()
+	// Start Snapshot Manager
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // This will cancel on main exit, which is fine
 
-	// Start subscribing to events
-	if err := subscriber.Start(); err != nil {
-		l.Error("failed to start NATS subscriber", "error", err)
-		os.Exit(1)
-	}
-
-	// Initialize and start cache warmer
-	if assetCache != nil && marketDataGateway != nil {
-		cacheWarmer := infrastructure.NewCacheWarmer(marketDataGateway, assetCache, l)
-
-		// Schedule periodic cache warming every 6 hours
-		// This keeps the cache fresh as assets don't change frequently
-		warmingInterval := 6 * time.Hour
-		cacheWarmer.SchedulePeriodicWarming(warmingInterval)
-
-		l.Info("Asset cache warmer started", "interval", warmingInterval.String())
-	}
+	snapshotManager.Start(ctx, func(userID string) error {
+		// Logic to repair/refresh snapshot
+		return portfolioUsecase.RefreshSnapshot(context.Background(), userID)
+	})
 
 	// Initialize Snapshot Worker
-	snapshotWorker := infrastructure.NewSnapshotWorker(
+	historyWorker := infrastructure.NewPortfolioHistoryWorker(
 		portfolioUsecase,
 		historyRepo,
 		transactionClient,
 		l,
 	)
-	go snapshotWorker.Start()
-	defer snapshotWorker.Stop()
+	go historyWorker.Start()
+	defer historyWorker.Stop()
 
 	// Start gRPC Server
 	port := cfg.Port

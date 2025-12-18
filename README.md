@@ -2,6 +2,10 @@
 
 **Portfolio Insights** is a modern, microservices-based application for tracking stock portfolios. It leverages a clean architecture approach with Go microservices, a GraphQL API Gateway, and a React frontend.
 
+## Disclaimer
+
+> **Warning**: This software is currently in Alpha. It may contain bugs and is not ready for production use. Use at your own risk.
+
 ## 🏗️ Architecture Overview
 
 The system follows a microservices architecture pattern, utilizing **gRPC** for synchronous inter-service communication and **NATS** for asynchronous, event-driven workflows.

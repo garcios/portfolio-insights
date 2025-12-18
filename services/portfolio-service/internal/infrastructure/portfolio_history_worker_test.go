@@ -142,7 +142,7 @@ func TestSnapshotWorker_CreateSnapshots(t *testing.T) {
 	mockTxClient := &mockTransactionClient{}
 	logger := slog.Default()
 
-	worker := NewSnapshotWorker(uc, repo, mockTxClient, logger)
+	worker := NewPortfolioHistoryWorker(uc, repo, mockTxClient, logger)
 
 	// Execute via TriggerNow which runs in a goroutine
 	worker.TriggerNow()
