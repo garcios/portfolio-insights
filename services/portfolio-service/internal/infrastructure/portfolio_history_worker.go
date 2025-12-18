@@ -12,8 +12,8 @@ import (
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 )
 
-// SnapshotWorker handles periodic portfolio snapshots
-type SnapshotWorker struct {
+// PortfolioHistoryWorker handles periodic portfolio snapshots
+type PortfolioHistoryWorker struct {
 	portfolioUsecase  usecase.PortfolioUsecase
 	historyRepo       domain.PortfolioHistoryRepository
 	transactionClient transactionpb.TransactionServiceClient
@@ -23,13 +23,13 @@ type SnapshotWorker struct {
 	interval          time.Duration
 }
 
-// NewSnapshotWorker creates a new SnapshotWorker
-func NewSnapshotWorker(
+// NewPortfolioHistoryWorker creates a new PortfolioHistoryWorker
+func NewPortfolioHistoryWorker(
 	uc usecase.PortfolioUsecase,
 	repo domain.PortfolioHistoryRepository,
 	txClient transactionpb.TransactionServiceClient,
 	log *slog.Logger,
-) *SnapshotWorker {
+) *PortfolioHistoryWorker {
 	// Default: snapshot every 24 hours
 	// Configurable via SNAPSHOT_INTERVAL env var (e.g., "24h", "1h", "30m")
 	interval := 24 * time.Hour
@@ -41,7 +41,7 @@ func NewSnapshotWorker(
 		}
 	}
 
-	return &SnapshotWorker{
+	return &PortfolioHistoryWorker{
 		portfolioUsecase:  uc,
 		historyRepo:       repo,
 		transactionClient: txClient,
@@ -52,7 +52,7 @@ func NewSnapshotWorker(
 }
 
 // Start the worker
-func (w *SnapshotWorker) Start() {
+func (w *PortfolioHistoryWorker) Start() {
 	w.logger.Info("Snapshot worker started", "interval", w.interval)
 
 	w.ticker = time.NewTicker(w.interval)
@@ -73,14 +73,14 @@ func (w *SnapshotWorker) Start() {
 }
 
 // Stop the worker
-func (w *SnapshotWorker) Stop() {
+func (w *PortfolioHistoryWorker) Stop() {
 	if w.ticker != nil {
 		w.ticker.Stop()
 	}
 	close(w.stopChan)
 }
 
-func (w *SnapshotWorker) createSnapshots() {
+func (w *PortfolioHistoryWorker) createSnapshots() {
 	ctx := context.Background()
 
 	// Get all unique user IDs from holdings
@@ -109,7 +109,7 @@ func (w *SnapshotWorker) createSnapshots() {
 	)
 }
 
-func (w *SnapshotWorker) createSnapshotForUser(ctx context.Context, userID string) error {
+func (w *PortfolioHistoryWorker) createSnapshotForUser(ctx context.Context, userID string) error {
 	// Get current portfolio summary
 	summary, err := w.portfolioUsecase.GetPortfolioSummary(ctx, userID, nil, nil)
 	if err != nil {
@@ -128,16 +128,16 @@ func (w *SnapshotWorker) createSnapshotForUser(ctx context.Context, userID strin
 }
 
 // TriggerNow allows manual triggering (useful for testing)
-func (w *SnapshotWorker) TriggerNow() {
+func (w *PortfolioHistoryWorker) TriggerNow() {
 	go w.createSnapshots()
 }
 
 // TriggerBackfill allows manual triggering of history backfill
-func (w *SnapshotWorker) TriggerBackfill() {
+func (w *PortfolioHistoryWorker) TriggerBackfill() {
 	go w.createBackfillSnapshots(context.Background())
 }
 
-func (w *SnapshotWorker) createBackfillSnapshots(ctx context.Context) {
+func (w *PortfolioHistoryWorker) createBackfillSnapshots(ctx context.Context) {
 	// Get all unique user IDs from holdings
 	userIDs, err := w.historyRepo.GetAllUserIDs(ctx)
 	if err != nil {

@@ -78,6 +78,10 @@ func (m *mockPortfolioUsecase) BackfillPortfolioHistory(
 	return usecase.BackfillResult{}
 }
 
+func (m *mockPortfolioUsecase) RefreshSnapshot(ctx context.Context, userID string) error {
+	return m.err
+}
+
 type mockPortfolioHistoryRepository struct {
 	mu        sync.Mutex
 	snapshots []*domain.PortfolioSnapshot
