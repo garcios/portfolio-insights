@@ -16,4 +16,4 @@ Key Workflows: Step-by-step logic for 'Ingesting Transactions' and 'Calculating 
 
 Scalability & Trade-offs: Considerations for performance and future growth.
 
-Output the result as a single Markdown code block."
+Output the result as a single Markdown code block.
