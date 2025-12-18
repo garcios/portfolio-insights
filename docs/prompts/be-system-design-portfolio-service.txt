@@ -1,0 +1,19 @@
+Act as a Senior Software Architect. Create a comprehensive SYSTEM_DESIGN.md file in services/portfolio-service for a portfolio-service microservice.
+
+The document must include the following sections:
+
+Executive Summary: The purpose and scope of the service.
+
+Architecture Overview: Use Mermaid.js code to generate a C4 Container diagram showing how this service interacts with other services (e.g., User Service, Market Data Service) and the database.
+
+Tech Stack: (Assume Golang/gRPC/PostgreSQL unless specified otherwise).
+
+Data Design: An ERD (Entity Relationship Diagram) using Mermaid.js representing key entities like Portfolios, Holdings, and Transactions.
+
+API Interface: A summary of the gRPC Protobuf definitions or REST endpoints.
+
+Key Workflows: Step-by-step logic for 'Ingesting Transactions' and 'Calculating Real-time Portfolio Value'.
+
+Scalability & Trade-offs: Considerations for performance and future growth.
+
+Output the result as a single Markdown code block."
