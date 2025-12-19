@@ -52,3 +52,22 @@ func (uc *UserUsecase) VerifyUser(email, password string) (*domain.User, error) 
 
 	return user, nil
 }
+
+// UpdateUser updates specific fields of a user.
+func (uc *UserUsecase) UpdateUser(user *domain.User) (*domain.User, error) {
+	// Fetch existing user to ensure they exist
+	existingUser, err := uc.repo.GetByID(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Safety check: ensure ID matches
+	user.ID = existingUser.ID
+
+	err = uc.repo.Update(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}

@@ -16,6 +16,7 @@ import (
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/config"
 	portfoliohandler "github.com/garcios/portfolio-insights/services/portfolio-service/internal/handler/grpc"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/infrastructure"
+	infrastructure_grpc "github.com/garcios/portfolio-insights/services/portfolio-service/internal/infrastructure/grpc"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/metrics"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/repository"
 	"github.com/garcios/portfolio-insights/services/portfolio-service/internal/snapshotter"
@@ -26,6 +27,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
+	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
 )
 
 func main() {
@@ -129,6 +131,20 @@ func main() {
 	}()
 	transactionClient := transactionpb.NewTransactionServiceClient(transactionConn)
 
+	// Initialize User Service Client
+	userConn, err := grpc.NewClient(cfg.UserServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		l.Error("failed to connect to user service", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := userConn.Close(); err != nil {
+			l.Error("failed to close user connection", "error", err)
+		}
+	}()
+	userClient := userpb.NewUserServiceClient(userConn)
+	userGateway := infrastructure_grpc.NewUserGateway(userClient)
+
 	// Initialize MarketData Gateway with cache
 	marketDataGateway, err := infrastructure.NewMarketDataGateway(priceCache, assetCache, historicalCache, cfg)
 	if err != nil {
@@ -195,6 +211,7 @@ func main() {
 		snapshotRepo,
 		cashBalanceRepo,
 		marketDataGateway,
+		userGateway,
 		transactionClient,
 		snapshotManager,
 	)

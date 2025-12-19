@@ -34,6 +34,7 @@ type Config struct {
 	TransactionDeletedTopic string        `mapstructure:"transaction_deleted_topic"`
 	MarketDataServiceAddr   string        `mapstructure:"marketdata_service_addr"`
 	TransactionServiceAddr  string        `mapstructure:"transaction_service_addr"`
+	UserServiceAddr         string        `mapstructure:"user_service_addr"` // New field
 	AssetCacheTTL           int           `mapstructure:"asset_cache_ttl_seconds"`
 	CacheWarmingInterval    string        `mapstructure:"cache_warming_interval"`
 	Caching                 CachingConfig `mapstructure:"caching"`
@@ -59,6 +60,7 @@ func LoadConfig() Config {
 	viper.SetDefault("transaction_deleted_topic", "transaction-service.transaction.deleted")
 	viper.SetDefault("marketdata_service_addr", "localhost:50054")
 	viper.SetDefault("transaction_service_addr", "localhost:50053")
+	viper.SetDefault("user_service_addr", "localhost:50055") // Default for User Service
 	viper.SetDefault("redis_addr", "localhost:6379")
 	viper.SetDefault("caching.enabled", true)
 	viper.SetDefault("caching.summary_ttl_seconds", 300)
@@ -117,6 +119,7 @@ func LoadConfig() Config {
 		"transaction_deleted_topic":   "TRANSACTION_DELETED_TOPIC",
 		"marketdata_service_addr":     "MARKETDATA_SERVICE_ADDR",
 		"transaction_service_addr":    "TRANSACTION_SERVICE_ADDR",
+		"user_service_addr":           "USER_SERVICE_ADDR", // New env var
 		"asset_cache_ttl_seconds":     "ASSET_CACHE_TTL_SECONDS",
 		"caching.enabled":             "CACHING_ENABLED",
 		"caching.summary_ttl_seconds": "CACHING_SUMMARY_TTL_SECONDS",

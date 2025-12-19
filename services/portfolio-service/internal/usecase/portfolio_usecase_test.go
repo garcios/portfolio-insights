@@ -369,6 +369,27 @@ func (m *mockTransactionServiceClient) GetOldestTransactionForUser(ctx context.C
 	return nil, nil
 }
 
+// Mock UserGateway
+type mockUserGateway struct {
+	err         error
+	preferences *domain.UserPreferences
+}
+
+func newMockUserGateway() *mockUserGateway {
+	return &mockUserGateway{
+		preferences: &domain.UserPreferences{
+			DefaultCurrency: "AUD",
+		},
+	}
+}
+
+func (m *mockUserGateway) GetUserPreferences(ctx context.Context, userID string) (*domain.UserPreferences, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.preferences, nil
+}
+
 func TestGetHoldings_Success(t *testing.T) {
 	// Setup
 	repo := newMockHoldingRepository()
@@ -376,7 +397,8 @@ func TestGetHoldings_Success(t *testing.T) {
 	cashBalanceRepo := newMockCashBalanceRepository()
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Add test holdings
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
@@ -440,7 +462,8 @@ func TestGetHoldings_EmptyHoldings(t *testing.T) {
 	cashBalanceRepo := newMockCashBalanceRepository()
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Execute
 	ctx := context.Background()
@@ -464,7 +487,8 @@ func TestGetHoldings_RepositoryError(t *testing.T) {
 	cashBalanceRepo := newMockCashBalanceRepository()
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Execute
 	ctx := context.Background()
@@ -488,7 +512,8 @@ func TestGetHoldings_MarketDataError(t *testing.T) {
 	marketData := newMockMarketDataGateway()
 	marketData.err = errors.New("market data service unavailable")
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Add test holding
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
@@ -534,7 +559,8 @@ func TestGetPortfolioSummary_Success(t *testing.T) {
 		ExecutedAt: timestamppb.Now(),
 	})
 
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Add test holdings
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
@@ -611,7 +637,8 @@ func TestGetPortfolioSummary_EmptyPortfolio(t *testing.T) {
 	cashBalanceRepo := newMockCashBalanceRepository()
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Execute
 	ctx := context.Background()
@@ -646,7 +673,8 @@ func TestGetPortfolioSummary_ZeroCostBasis(t *testing.T) {
 	cashBalanceRepo := newMockCashBalanceRepository()
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Add test holding with zero cost
 	repo.holdings["user-123:FREE"] = &domain.Holding{
@@ -683,7 +711,8 @@ func TestGetPortfolioSummary_RepositoryError(t *testing.T) {
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
 	transactionClient.err = errors.New("database error")
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Execute
 	ctx := context.Background()
@@ -730,7 +759,7 @@ func TestGetPortfolioSummary_DayChange(t *testing.T) {
 		return 0, errors.New("price not found")
 	}
 
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, newMockUserGateway(), transactionClient, nil)
 
 	// Add test holdings
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
@@ -831,7 +860,8 @@ func TestGetPortfolioSummary_DayChange_Timezone(t *testing.T) {
 	}
 
 	latestPriceTime := time.Date(2025, 12, 1, 23, 0, 0, 0, time.UTC)
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Add test holdings via Transaction (Replay Logic Source of Truth)
 	txnDate := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -897,7 +927,8 @@ func TestBackfillPortfolioHistory_Success(t *testing.T) {
 	cashBalanceRepo := newMockCashBalanceRepository()
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// Add test holdings
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
@@ -937,7 +968,8 @@ func TestBackfillPortfolioHistory_DryRun(t *testing.T) {
 	cashBalanceRepo := newMockCashBalanceRepository()
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
 		UserID:      "user-123",
@@ -973,7 +1005,8 @@ func TestBackfillPortfolioHistory_AlreadyExists(t *testing.T) {
 	cashBalanceRepo := newMockCashBalanceRepository()
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	repo.holdings["user-123:AAPL"] = &domain.Holding{
 		UserID:      "user-123",
@@ -1012,7 +1045,8 @@ func TestGetPortfolioSummary_PeriodDelta(t *testing.T) {
 	cashBalanceRepo := newMockCashBalanceRepository()
 	marketData := newMockMarketDataGateway()
 	transactionClient := newMockTransactionServiceClient()
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	userGateway := newMockUserGateway()
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, userGateway, transactionClient, nil)
 
 	// User ID
 	userID := "user-delta"

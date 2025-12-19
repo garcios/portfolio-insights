@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Settings, Bell, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
 const UserMenu = () => {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark mode
     const menuRef = useRef<HTMLDivElement>(null);
@@ -52,7 +54,7 @@ const UserMenu = () => {
     };
 
     const menuItems = [
-        { icon: Settings, label: 'Settings', onClick: () => console.log('Settings') },
+        { icon: Settings, label: 'Settings', onClick: () => navigate('/settings') },
         { icon: Bell, label: 'Notifications', onClick: () => console.log('Notifications') },
         { icon: isDarkMode ? Sun : Moon, label: isDarkMode ? 'Light Mode' : 'Dark Mode', onClick: toggleTheme },
         { icon: LogOut, label: 'Sign Out', onClick: handleLogout, isDanger: true },

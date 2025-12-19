@@ -14,6 +14,7 @@ type Query {
 
 type Mutation {
   createUser(input: NewUser!): User!
+  updateUser(input: UpdateUserInput!): User! @auth
   createTransaction(input: NewTransaction!): Transaction! @auth
   uploadTransactionCSV(file: Upload!): Boolean! @auth
 }
@@ -77,6 +78,14 @@ input NewUser {
   password: String!
   firstName: String!
   lastName: String!
+}
+
+input UpdateUserInput {
+  email: String
+  username: String
+  firstName: String
+  lastName: String
+  preferences: Map
 }
 
 type PortfolioPerformancePoint {

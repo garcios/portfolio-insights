@@ -33,4 +33,5 @@ type UserUsecase interface {
 	GetUser(id string) (*User, error)
 	VerifyUser(email, password string) (*User, error)
 	CreateUser(user *User, password string) (*User, error)
+	UpdateUser(user *User) (*User, error)
 }

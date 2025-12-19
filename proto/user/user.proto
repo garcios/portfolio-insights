@@ -10,6 +10,7 @@ import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 
 // UserService handles user management and authentication verification.
 service UserService {
@@ -39,6 +40,15 @@ service UserService {
       post: "/v1/users:verify"
       body: "*"
     };
+  }
+
+  // UpdateUser updates user details.
+  rpc UpdateUser (UpdateUserRequest) returns (User) {
+    option (google.api.http) = {
+      patch: "/v1/{user.name=users/*}"
+      body: "user"
+    };
+    option (google.api.method_signature) = "user,update_mask";
   }
 }
 
@@ -130,4 +140,15 @@ message VerifyUserResponse {
   // The user resource if credentials are valid.
   // If invalid, this field is not set.
   User user = 2;
+}
+
+// UpdateUserRequest is the request message for UpdateUser.
+message UpdateUserRequest {
+  // The user to update.
+  // The user's name field is used to identify the user to update.
+  // Format: users/{user}
+  User user = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The list of fields to be updated.
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 }

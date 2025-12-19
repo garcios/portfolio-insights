@@ -10,6 +10,7 @@ import (
 	pb "github.com/garcios/portfolio-insights/services/user-service/user"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // UserHandler implements the gRPC user service.
@@ -44,14 +45,22 @@ func (h *UserHandler) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 	}
 
 	// Return user with resource name
+	// Convert preferences map to structpb
+	preferences, err := structpb.NewStruct(u.Preferences)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to convert preferences: %v", err)
+	}
+
+	// Return user with resource name
 	return &pb.User{
-		Name:      resourcenames.UserName(u.ID),
-		Email:     u.Email,
-		Username:  u.Username,
-		UserId:    u.ID,
-		FirstName: u.FirstName,
-		LastName:  u.LastName,
-		Role:      u.Role,
+		Name:        resourcenames.UserName(u.ID),
+		Email:       u.Email,
+		Username:    u.Username,
+		UserId:      u.ID,
+		FirstName:   u.FirstName,
+		LastName:    u.LastName,
+		Role:        u.Role,
+		Preferences: preferences,
 	}, nil
 }
 
@@ -96,15 +105,22 @@ func (h *UserHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	_ = userID // TODO: Support client-specified IDs in usecase
 
 	// Return created user with resource name
+	// Convert preferences map to structpb
+	preferences, err := structpb.NewStruct(createdUser.Preferences)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to convert preferences: %v", err)
+	}
+
+	// Return created user with resource name
 	return &pb.User{
-		Name:      resourcenames.UserName(createdUser.ID),
-		Email:     createdUser.Email,
-		Username:  createdUser.Username,
-		UserId:    createdUser.ID,
-		FirstName: createdUser.FirstName,
-		LastName:  createdUser.LastName,
-		Role:      createdUser.Role,
-		// TODO: Convert Map to Struct for Preferences
+		Name:        resourcenames.UserName(createdUser.ID),
+		Email:       createdUser.Email,
+		Username:    createdUser.Username,
+		UserId:      createdUser.ID,
+		FirstName:   createdUser.FirstName,
+		LastName:    createdUser.LastName,
+		Role:        createdUser.Role,
+		Preferences: preferences,
 	}, nil
 }
 
@@ -124,17 +140,104 @@ func (h *UserHandler) VerifyUser(ctx context.Context, req *pb.VerifyUserRequest)
 	}
 
 	// Return valid response with user information
+	// Convert preferences map to structpb
+	preferences, err := structpb.NewStruct(user.Preferences)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to convert preferences: %v", err)
+	}
+
+	// Return valid response with user information
 	return &pb.VerifyUserResponse{
 		Valid: true,
 		User: &pb.User{
-			Name:      resourcenames.UserName(user.ID),
-			Email:     user.Email,
-			Username:  user.Username,
-			UserId:    user.ID,
-			FirstName: user.FirstName,
-			LastName:  user.LastName,
-			Role:      user.Role,
-			// TODO: Convert Map to Struct for Preferences
+			Name:        resourcenames.UserName(user.ID),
+			Email:       user.Email,
+			Username:    user.Username,
+			UserId:      user.ID,
+			FirstName:   user.FirstName,
+			LastName:    user.LastName,
+			Role:        user.Role,
+			Preferences: preferences,
 		},
+	}, nil
+}
+
+// UpdateUser handles the UpdateUser gRPC request.
+func (h *UserHandler) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
+	// Validate request
+	if req.User == nil {
+		return nil, status.Error(codes.InvalidArgument, "user is required")
+	}
+
+	// Parse resource name to extract user ID
+	userID, err := resourcenames.ParseUserName(req.User.Name)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid resource name: %v", err)
+	}
+
+	// Fetch existing user
+	existingUser, err := h.uc.GetUser(userID)
+	if err != nil {
+		if err == domain.ErrUserNotFound {
+			return nil, status.Errorf(codes.NotFound, "user not found: %s", req.User.Name)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get user: %v", err)
+	}
+
+	// Apply updates based on FieldMask
+	if req.UpdateMask != nil && len(req.UpdateMask.Paths) > 0 {
+		for _, path := range req.UpdateMask.Paths {
+			switch path {
+			case "email":
+				existingUser.Email = req.User.Email
+			case "username":
+				existingUser.Username = req.User.Username
+			case "first_name":
+				existingUser.FirstName = req.User.FirstName
+			case "last_name":
+				existingUser.LastName = req.User.LastName
+			case "preferences":
+				existingUser.Preferences = req.User.Preferences.AsMap()
+			}
+		}
+	} else {
+		// No mask, partial update strategy: update non-empty fields from request
+		if req.User.Email != "" {
+			existingUser.Email = req.User.Email
+		}
+		if req.User.Username != "" {
+			existingUser.Username = req.User.Username
+		}
+		if req.User.FirstName != "" {
+			existingUser.FirstName = req.User.FirstName
+		}
+		if req.User.LastName != "" {
+			existingUser.LastName = req.User.LastName
+		}
+		if req.User.Preferences != nil {
+			existingUser.Preferences = req.User.Preferences.AsMap()
+		}
+	}
+
+	updatedUser, err := h.uc.UpdateUser(existingUser)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to update user: %v", err)
+	}
+
+	// Convert preferences map to structpb
+	preferences, err := structpb.NewStruct(updatedUser.Preferences)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to convert preferences: %v", err)
+	}
+
+	return &pb.User{
+		Name:        resourcenames.UserName(updatedUser.ID),
+		Email:       updatedUser.Email,
+		Username:    updatedUser.Username,
+		UserId:      updatedUser.ID,
+		FirstName:   updatedUser.FirstName,
+		LastName:    updatedUser.LastName,
+		Role:        updatedUser.Role,
+		Preferences: preferences,
 	}, nil
 }

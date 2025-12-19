@@ -13,6 +13,7 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/mapper"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 )
 
 // CreateUser is the resolver for the createUser field.
@@ -21,6 +22,32 @@ func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) 
 	user, err := r.Container.UserUseCase.CreateUser(ctx, input.Email, input.Username, input.Password, input.FirstName, input.LastName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return mapper.UserEntityToGraphQL(user), nil
+}
+
+// UpdateUser is the resolver for the updateUser field.
+func (r *mutationResolver) UpdateUser(ctx context.Context, input model.UpdateUserInput) (*model.User, error) {
+	// Get user ID from context
+	userID, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("authentication required: %w", err)
+	}
+
+	// Map input to entity updates
+	updates := &entity.UserUpdate{
+		Email:       input.Email,
+		Username:    input.Username,
+		FirstName:   input.FirstName,
+		LastName:    input.LastName,
+		Preferences: input.Preferences,
+	}
+
+	// Delegate to use case
+	user, err := r.Container.UserUseCase.UpdateUser(ctx, userID, updates)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 
 	return mapper.UserEntityToGraphQL(user), nil
