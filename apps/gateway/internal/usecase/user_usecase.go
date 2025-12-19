@@ -25,10 +25,10 @@ func (uc *UserUseCase) GetUser(ctx context.Context, id string) (*entity.User, er
 }
 
 // CreateUser creates a new user
-func (uc *UserUseCase) CreateUser(ctx context.Context, email, username, password string) (*entity.User, error) {
+func (uc *UserUseCase) CreateUser(ctx context.Context, email, username, password, firstName, lastName string) (*entity.User, error) {
 	// Here you could add domain validation, business rules, etc.
 	// For now, we delegate directly to the gateway
-	return uc.userGateway.CreateUser(ctx, email, username, password)
+	return uc.userGateway.CreateUser(ctx, email, username, password, firstName, lastName)
 }
 
 // GetCurrentUser retrieves the currently authenticated user

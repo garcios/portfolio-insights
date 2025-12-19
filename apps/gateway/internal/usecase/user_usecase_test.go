@@ -11,7 +11,7 @@ import (
 // MockUserGateway is a manual mock for UserGateway
 type MockUserGateway struct {
 	GetUserFunc    func(ctx context.Context, id string) (*entity.User, error)
-	CreateUserFunc func(ctx context.Context, email, username, password string) (*entity.User, error)
+	CreateUserFunc func(ctx context.Context, email, username, password, firstName, lastName string) (*entity.User, error)
 }
 
 func (m *MockUserGateway) GetUser(ctx context.Context, id string) (*entity.User, error) {
@@ -21,9 +21,9 @@ func (m *MockUserGateway) GetUser(ctx context.Context, id string) (*entity.User,
 	return nil, nil
 }
 
-func (m *MockUserGateway) CreateUser(ctx context.Context, email, username, password string) (*entity.User, error) {
+func (m *MockUserGateway) CreateUser(ctx context.Context, email, username, password, firstName, lastName string) (*entity.User, error) {
 	if m.CreateUserFunc != nil {
-		return m.CreateUserFunc(ctx, email, username, password)
+		return m.CreateUserFunc(ctx, email, username, password, firstName, lastName)
 	}
 	return nil, nil
 }
@@ -60,14 +60,14 @@ func TestUserUseCase_GetUser(t *testing.T) {
 
 func TestUserUseCase_CreateUser(t *testing.T) {
 	mockGateway := &MockUserGateway{
-		CreateUserFunc: func(ctx context.Context, email, username, password string) (*entity.User, error) {
+		CreateUserFunc: func(ctx context.Context, email, username, password, firstName, lastName string) (*entity.User, error) {
 			return entity.NewUser("new-id", username, email), nil
 		},
 	}
 
 	uc := NewUserUseCase(mockGateway)
 
-	user, err := uc.CreateUser(context.Background(), "test@example.com", "testuser", "password")
+	user, err := uc.CreateUser(context.Background(), "test@example.com", "testuser", "password", "Test", "User")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

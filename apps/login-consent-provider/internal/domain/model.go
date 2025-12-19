@@ -7,6 +7,11 @@ type User struct {
 	Email        string
 	PasswordHash string
 	Username     string
+	FirstName    string
+	LastName     string
+	Role         string
+	Preferences  map[string]interface{}
+	LastLoginAt  interface{} // We use interface{} because it comes from gRPC time and goes to JSON
 }
 
 // LoginRequest represents a login request from Hydra.

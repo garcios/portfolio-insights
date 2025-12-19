@@ -45,10 +45,13 @@ func (h *UserHandler) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 
 	// Return user with resource name
 	return &pb.User{
-		Name:     resourcenames.UserName(u.ID),
-		Email:    u.Email,
-		Username: u.Username,
-		UserId:   u.ID,
+		Name:      resourcenames.UserName(u.ID),
+		Email:     u.Email,
+		Username:  u.Username,
+		UserId:    u.ID,
+		FirstName: u.FirstName,
+		LastName:  u.LastName,
+		Role:      u.Role,
 	}, nil
 }
 
@@ -67,7 +70,20 @@ func (h *UserHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 	}
 
 	// Create user via usecase
-	user, err := h.uc.CreateUser(req.User.Email, req.User.Username, req.User.Password)
+	user := &domain.User{
+		Email:       req.User.Email,
+		Username:    req.User.Username,
+		FirstName:   req.User.FirstName,
+		LastName:    req.User.LastName,
+		Role:        req.User.Role,
+		Preferences: req.User.Preferences.AsMap(),
+	}
+
+	if req.User.LastLoginAt != nil {
+		user.LastLoginAt = req.User.LastLoginAt.AsTime()
+	}
+
+	createdUser, err := h.uc.CreateUser(user, req.User.Password)
 	if err != nil {
 		if err == domain.ErrUserAlreadyExists {
 			return nil, status.Errorf(codes.AlreadyExists, "user already exists")
@@ -81,10 +97,14 @@ func (h *UserHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 
 	// Return created user with resource name
 	return &pb.User{
-		Name:     resourcenames.UserName(user.ID),
-		Email:    user.Email,
-		Username: user.Username,
-		UserId:   user.ID,
+		Name:      resourcenames.UserName(createdUser.ID),
+		Email:     createdUser.Email,
+		Username:  createdUser.Username,
+		UserId:    createdUser.ID,
+		FirstName: createdUser.FirstName,
+		LastName:  createdUser.LastName,
+		Role:      createdUser.Role,
+		// TODO: Convert Map to Struct for Preferences
 	}, nil
 }
 
@@ -107,10 +127,14 @@ func (h *UserHandler) VerifyUser(ctx context.Context, req *pb.VerifyUserRequest)
 	return &pb.VerifyUserResponse{
 		Valid: true,
 		User: &pb.User{
-			Name:     resourcenames.UserName(user.ID),
-			Email:    user.Email,
-			Username: user.Username,
-			UserId:   user.ID,
+			Name:      resourcenames.UserName(user.ID),
+			Email:     user.Email,
+			Username:  user.Username,
+			UserId:    user.ID,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Role:      user.Role,
+			// TODO: Convert Map to Struct for Preferences
 		},
 	}, nil
 }

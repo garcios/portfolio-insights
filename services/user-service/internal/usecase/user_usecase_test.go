@@ -128,7 +128,10 @@ func TestUserUsecase_CreateUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := uc.CreateUser(tt.email, "Test User", "password")
+			got, err := uc.CreateUser(&domain.User{
+				Email:    tt.email,
+				Username: "Test User",
+			}, "password")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UserUsecase.CreateUser() error = %v, wantErr %v", err, tt.wantErr)
 				return

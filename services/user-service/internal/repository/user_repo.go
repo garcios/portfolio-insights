@@ -3,6 +3,7 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -28,20 +29,34 @@ func (r *userRepository) GetByID(id string) (*domain.User, error) {
 	}()
 
 	query := `
-		SELECT id, email, username, password_hash, created_at, updated_at
+		SELECT id, email, username, password_hash, first_name, last_name, role, preferences, last_login_at, created_at, updated_at
 		FROM customers.users
 		WHERE id = $1
 	`
 
 	user := &domain.User{}
+	var preferencesJSON []byte
 	err := r.db.QueryRow(query, id).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Username,
 		&user.Password,
+		&user.FirstName,
+		&user.LastName,
+		&user.Role,
+		&preferencesJSON,
+		&user.LastLoginAt,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
+
+	if err == nil {
+		if len(preferencesJSON) > 0 {
+			if jsonErr := json.Unmarshal(preferencesJSON, &user.Preferences); jsonErr != nil {
+				return nil, fmt.Errorf("failed to unmarshal preferences: %w", jsonErr)
+			}
+		}
+	}
 
 	if err == sql.ErrNoRows {
 		return nil, domain.ErrUserNotFound
@@ -57,17 +72,28 @@ func (r *userRepository) GetByID(id string) (*domain.User, error) {
 // Create inserts a new user into the customers.users table
 func (r *userRepository) Create(user *domain.User) error {
 	start := time.Now()
+
+	preferencesJSON, err := json.Marshal(user.Preferences)
+	if err != nil {
+		return fmt.Errorf("failed to marshal preferences: %w", err)
+	}
+
 	query := `
-		INSERT INTO customers.users (email, username, password_hash, created_at, updated_at)
-		VALUES ($1, $2, $3, NOW(), NOW())
+		INSERT INTO customers.users (email, username, password_hash, first_name, last_name, role, preferences, last_login_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 
-	err := r.db.QueryRow(
+	err = r.db.QueryRow(
 		query,
 		user.Email,
 		user.Username,
 		user.Password,
+		user.FirstName,
+		user.LastName,
+		user.Role,
+		preferencesJSON,
+		user.LastLoginAt,
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
@@ -89,20 +115,34 @@ func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 	}()
 
 	query := `
-		SELECT id, email, username, password_hash, created_at, updated_at
+		SELECT id, email, username, password_hash, first_name, last_name, role, preferences, last_login_at, created_at, updated_at
 		FROM customers.users
 		WHERE email = $1
 	`
 
 	user := &domain.User{}
+	var preferencesJSON []byte
 	err := r.db.QueryRow(query, email).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Username,
 		&user.Password,
+		&user.FirstName,
+		&user.LastName,
+		&user.Role,
+		&preferencesJSON,
+		&user.LastLoginAt,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
+
+	if err == nil {
+		if len(preferencesJSON) > 0 {
+			if jsonErr := json.Unmarshal(preferencesJSON, &user.Preferences); jsonErr != nil {
+				return nil, fmt.Errorf("failed to unmarshal preferences: %w", jsonErr)
+			}
+		}
+	}
 
 	if err == sql.ErrNoRows {
 		return nil, domain.ErrUserNotFound
@@ -118,18 +158,29 @@ func (r *userRepository) GetByEmail(email string) (*domain.User, error) {
 // Update updates an existing user in the customers.users table
 func (r *userRepository) Update(user *domain.User) error {
 	start := time.Now()
+
+	preferencesJSON, err := json.Marshal(user.Preferences)
+	if err != nil {
+		return fmt.Errorf("failed to marshal preferences: %w", err)
+	}
+
 	query := `
 		UPDATE customers.users
-		SET email = $1, username = $2, password_hash = $3, updated_at = NOW()
-		WHERE id = $4
+		SET email = $1, username = $2, password_hash = $3, first_name = $4, last_name = $5, role = $6, preferences = $7, last_login_at = $8, updated_at = NOW()
+		WHERE id = $9
 		RETURNING updated_at
 	`
 
-	err := r.db.QueryRow(
+	err = r.db.QueryRow(
 		query,
 		user.Email,
 		user.Username,
 		user.Password,
+		user.FirstName,
+		user.LastName,
+		user.Role,
+		preferencesJSON,
+		user.LastLoginAt,
 		user.ID,
 	).Scan(&user.UpdatedAt)
 

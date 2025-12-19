@@ -8,6 +8,8 @@ import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
 // UserService handles user management and authentication verification.
 service UserService {
@@ -62,6 +64,21 @@ message User {
   // The user's hashed password.
   // This field is never returned in responses.
   string password = 4 [(google.api.field_behavior) = INPUT_ONLY];
+
+  // The user's first name.
+  string first_name = 5;
+
+  // The user's last name.
+  string last_name = 6;
+
+  // The user's role (e.g., USER, ADMIN).
+  string role = 7;
+
+  // The user's preferences.
+  google.protobuf.Struct preferences = 8;
+
+  // The timestamp when the user last logged in.
+  google.protobuf.Timestamp last_login_at = 9;
 
   // Output only. The user ID extracted from the resource name.
   // This is provided for convenience.

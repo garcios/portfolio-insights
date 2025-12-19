@@ -13,7 +13,21 @@ import (
 
 // ProtoToUserEntity converts a protobuf User to a User entity
 func ProtoToUserEntity(user *userpb.User) *entity.User {
-	return entity.NewUser(user.UserId, user.Username, user.Email)
+	u := entity.NewUser(user.UserId, user.Username, user.Email)
+	u.FirstName = user.FirstName
+	u.LastName = user.LastName
+	u.Role = user.Role
+
+	if user.LastLoginAt != nil {
+		t := user.LastLoginAt.AsTime()
+		u.LastLoginAt = &t
+	}
+
+	if user.Preferences != nil {
+		u.Preferences = user.Preferences.AsMap()
+	}
+
+	return u
 }
 
 // ProtoToPortfolioSummaryEntity converts a protobuf PortfolioSummary to a PortfolioSummary entity

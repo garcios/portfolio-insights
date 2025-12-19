@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, gql } from '@apollo/client';
+import { useMutation } from '@apollo/client';
+import { CREATE_USER } from '../graphql/mutations';
 import {
     User,
     Mail,
@@ -13,17 +14,11 @@ import {
 } from 'lucide-react';
 import './RegisterPage.css';
 
-const CREATE_USER = gql`
-    mutation CreateUser($input: NewUser!) {
-        createUser(input: $input) {
-            id
-            username
-            email
-        }
-    }
-`;
+
 
 interface FormData {
+    firstName: string;
+    lastName: string;
     username: string;
     email: string;
     password: string;
@@ -31,6 +26,8 @@ interface FormData {
 }
 
 interface FormErrors {
+    firstName?: string;
+    lastName?: string;
     username?: string;
     email?: string;
     password?: string;
@@ -41,6 +38,8 @@ interface FormErrors {
 const RegisterPage = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState<FormData>({
+        firstName: '',
+        lastName: '',
         username: '',
         email: '',
         password: '',
@@ -63,6 +62,14 @@ const RegisterPage = () => {
 
     const validateForm = (): boolean => {
         const newErrors: FormErrors = {};
+
+        // Name validation
+        if (!formData.firstName.trim()) {
+            newErrors.firstName = 'First name is required';
+        }
+        if (!formData.lastName.trim()) {
+            newErrors.lastName = 'Last name is required';
+        }
 
         // Username validation
         if (!formData.username.trim()) {
@@ -111,6 +118,8 @@ const RegisterPage = () => {
             await createUser({
                 variables: {
                     input: {
+                        firstName: formData.firstName,
+                        lastName: formData.lastName,
                         username: formData.username,
                         email: formData.email,
                         password: formData.password
@@ -183,6 +192,44 @@ const RegisterPage = () => {
                                 <span>{errors.general}</span>
                             </div>
                         )}
+
+                        {/* Name Fields */}
+                        <div className="form-row">
+                            <div className="form-group half">
+                                <label htmlFor="firstName" className="form-label">
+                                    First Name
+                                </label>
+                                <input
+                                    id="firstName"
+                                    type="text"
+                                    className={`form-input ${errors.firstName ? 'error' : ''}`}
+                                    placeholder="John"
+                                    value={formData.firstName}
+                                    onChange={handleChange('firstName')}
+                                    disabled={loading}
+                                />
+                                {errors.firstName && (
+                                    <span className="error-message">{errors.firstName}</span>
+                                )}
+                            </div>
+                            <div className="form-group half">
+                                <label htmlFor="lastName" className="form-label">
+                                    Last Name
+                                </label>
+                                <input
+                                    id="lastName"
+                                    type="text"
+                                    className={`form-input ${errors.lastName ? 'error' : ''}`}
+                                    placeholder="Doe"
+                                    value={formData.lastName}
+                                    onChange={handleChange('lastName')}
+                                    disabled={loading}
+                                />
+                                {errors.lastName && (
+                                    <span className="error-message">{errors.lastName}</span>
+                                )}
+                            </div>
+                        </div>
 
                         {/* Username Field */}
                         <div className="form-group">

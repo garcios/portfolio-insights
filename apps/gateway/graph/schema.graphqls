@@ -24,7 +24,14 @@ type User {
   id: ID!
   username: String!
   email: String!
+  firstName: String!
+  lastName: String!
+  role: String!
+  preferences: Map
+  lastLoginAt: String
 }
+
+scalar Map
 
 type Portfolio {
   id: ID!
@@ -68,6 +75,8 @@ input NewUser {
   username: String!
   email: String!
   password: String!
+  firstName: String!
+  lastName: String!
 }
 
 type PortfolioPerformancePoint {

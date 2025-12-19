@@ -3,6 +3,25 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import UserMenu from '../UserMenu';
 
+// Mock useAuth hook
+const mockLogout = vi.fn();
+const mockUser = {
+    id: '1',
+    email: 'demo@portfolio.com',
+    username: 'Demo User',
+    firstName: 'Demo',
+    lastName: 'User',
+    role: 'user'
+};
+
+vi.mock('../../auth/AuthContext', () => ({
+    useAuth: () => ({
+        user: mockUser,
+        logout: mockLogout,
+        isAuthenticated: true
+    })
+}));
+
 describe('UserMenu', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -56,7 +75,8 @@ describe('UserMenu', () => {
         await user.click(button);
 
         expect(screen.getByText('Demo User')).toBeInTheDocument();
-        expect(screen.getByText('demo@portfolio.com')).toBeInTheDocument();
+        expect(screen.getByText(/user •/)).toBeInTheDocument();
+        expect(screen.getByText(/demo@portfolio.com/)).toBeInTheDocument();
     });
 
     it('displays all menu items', async () => {
@@ -108,7 +128,7 @@ describe('UserMenu', () => {
         const signOutButton = screen.getByText('Sign Out');
         await user.click(signOutButton);
 
-        expect(console.log).toHaveBeenCalledWith('Sign out');
+        expect(mockLogout).toHaveBeenCalled();
     });
 
     it('toggles theme when theme button is clicked', async () => {

@@ -1,0 +1,10 @@
+Steps
+1. make build-infra
+2. make run-local-user-service
+3. make hydra-up
+4. make run-local-marketdata-service
+5. make run-local-transaction-service
+6. make run-local-portfolio-service
+7. make run-gateway
+8. cd apps/frontend && npm run dev
+

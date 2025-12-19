@@ -13,7 +13,7 @@ import (
 // MockUserUsecase is a manual mock for domain.UserUsecase
 type MockUserUsecase struct {
 	GetUserFunc    func(id string) (*domain.User, error)
-	CreateUserFunc func(email, name, password string) (*domain.User, error)
+	CreateUserFunc func(user *domain.User, password string) (*domain.User, error)
 	VerifyUserFunc func(email, password string) (*domain.User, error)
 }
 
@@ -21,8 +21,8 @@ func (m *MockUserUsecase) GetUser(id string) (*domain.User, error) {
 	return m.GetUserFunc(id)
 }
 
-func (m *MockUserUsecase) CreateUser(email, username, password string) (*domain.User, error) {
-	return m.CreateUserFunc(email, username, password)
+func (m *MockUserUsecase) CreateUser(user *domain.User, password string) (*domain.User, error) {
+	return m.CreateUserFunc(user, password)
 }
 
 func (m *MockUserUsecase) VerifyUser(email, password string) (*domain.User, error) {
@@ -98,14 +98,14 @@ func TestUserHandler_CreateUser(t *testing.T) {
 	generatedUserID := "550e8400-e29b-41d4-a716-446655440002"
 
 	mockUC := &MockUserUsecase{
-		CreateUserFunc: func(email, username, password string) (*domain.User, error) {
-			if email == "error@example.com" {
+		CreateUserFunc: func(user *domain.User, password string) (*domain.User, error) {
+			if user.Email == "error@example.com" {
 				return nil, errors.New("creation failed")
 			}
 			return &domain.User{
 				ID:       generatedUserID,
-				Email:    email,
-				Username: username,
+				Email:    user.Email,
+				Username: user.Username,
 			}, nil
 		},
 	}

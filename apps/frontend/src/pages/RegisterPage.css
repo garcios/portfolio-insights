@@ -12,6 +12,15 @@
     overflow: hidden;
 }
 
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.form-group.half {
+    flex: 1;
+}
+
 .register-background {
     position: absolute;
     top: 0;
