@@ -84,7 +84,7 @@ The service exposes a gRPC interface.
 |--------|---------|----------|-------------|
 | `GetUser` | `id` | `User` | Retrieves full user profile. |
 | `UpdateUser` | `id`, `changes` | `User` | Updates editable fields (Name, Preferences). |
-| `ValidateCredentials` | `email`, `password` | `Result` | Used internally by the Login flow to verify passwords. |
+| `VerifyUser` | `email`, `password` | `Result` | Used internally by the Login flow to verify passwords. |
 | `CreateUser` | `RegisterInput` | `User` | Registration logic (Hashing password, creating DB record). |
 
 ## Key Workflows

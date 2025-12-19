@@ -90,7 +90,7 @@ erDiagram
         timestamp created_at
     }
 
-    ASSET ||--o{ ASSET_PRICE : "has history"
+    ASSETS ||--o{ ASSET_PRICES : "has history"
 ```
 
 ## API Interface
