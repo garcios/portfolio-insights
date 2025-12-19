@@ -125,14 +125,20 @@ func (h *HydraClient) AcceptConsent(challenge string, grantScope, grantAudience 
 
 	// Add user info to ID token
 	acceptReq.Session.IDToken = map[string]interface{}{
-		"email":    user.Email,
-		"username": user.Username,
+		"email":      user.Email,
+		"username":   user.Username,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+		"role":       user.Role,
 	}
 
 	// Add user info to access token
 	acceptReq.Session.AccessToken = map[string]interface{}{
-		"email":    user.Email,
-		"username": user.Username,
+		"email":      user.Email,
+		"username":   user.Username,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+		"role":       user.Role,
 	}
 
 	body, err := json.Marshal(acceptReq)

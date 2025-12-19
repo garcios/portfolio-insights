@@ -38,12 +38,14 @@ func (g *UserGRPCGateway) GetUser(ctx context.Context, id string) (*entity.User,
 }
 
 // CreateUser creates a new user using AIP-compliant User object
-func (g *UserGRPCGateway) CreateUser(ctx context.Context, email, username, password string) (*entity.User, error) {
+func (g *UserGRPCGateway) CreateUser(ctx context.Context, email, username, password, firstName, lastName string) (*entity.User, error) {
 	req := &userpb.CreateUserRequest{
 		User: &userpb.User{
-			Email:    email,
-			Username: username,
-			Password: password,
+			Email:     email,
+			Username:  username,
+			Password:  password,
+			FirstName: firstName,
+			LastName:  lastName,
 		},
 	}
 
@@ -52,5 +54,5 @@ func (g *UserGRPCGateway) CreateUser(ctx context.Context, email, username, passw
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	return entity.NewUser(resp.UserId, username, email), nil
+	return mapper.ProtoToUserEntity(resp), nil
 }

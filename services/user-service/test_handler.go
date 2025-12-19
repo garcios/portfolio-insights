@@ -24,11 +24,11 @@ func (m *MockUserUsecase) GetUser(id string) (*domain.User, error) {
 }
 
 // CreateUser creates a new user for testing purposes.
-func (m *MockUserUsecase) CreateUser(email, username, password string) (*domain.User, error) {
+func (m *MockUserUsecase) CreateUser(user *domain.User, password string) (*domain.User, error) {
 	return &domain.User{
 		ID:       "test-uuid-12345",
-		Email:    email,
-		Username: username,
+		Email:    user.Email,
+		Username: user.Username,
 	}, nil
 }
 

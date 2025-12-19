@@ -36,9 +36,11 @@ type NewTransaction struct {
 }
 
 type NewUser struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
 }
 
 type Portfolio struct {
@@ -104,9 +106,14 @@ type TransactionFilterInput struct {
 }
 
 type User struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	ID          string                 `json:"id"`
+	Username    string                 `json:"username"`
+	Email       string                 `json:"email"`
+	FirstName   string                 `json:"firstName"`
+	LastName    string                 `json:"lastName"`
+	Role        string                 `json:"role"`
+	Preferences map[string]interface{} `json:"preferences,omitempty"`
+	LastLoginAt *string                `json:"lastLoginAt,omitempty"`
 }
 
 type TransactionType string

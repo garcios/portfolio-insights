@@ -15,6 +15,9 @@ interface User {
     id: string;
     email: string;
     username?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
 }
 
 interface AuthContextType {
@@ -47,6 +50,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 id: decoded.sub,
                 email: decoded.email,
                 username: decoded.username,
+                firstName: decoded.first_name,
+                lastName: decoded.last_name,
+                role: decoded.role,
             });
         }
     };

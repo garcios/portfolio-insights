@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import MobileMenu from '../MobileMenu';
 
 describe('MobileMenu', () => {
@@ -36,12 +37,14 @@ describe('MobileMenu', () => {
 
     it('renders menu when isOpen is true', () => {
         render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         expect(screen.getByRole('navigation', { name: 'Mobile navigation' })).toBeInTheDocument();
@@ -49,12 +52,14 @@ describe('MobileMenu', () => {
 
     it('renders all navigation links', () => {
         render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         expect(screen.getByText('Overview')).toBeInTheDocument();
@@ -64,12 +69,14 @@ describe('MobileMenu', () => {
 
     it('renders backdrop', () => {
         const { container } = render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         // Backdrop is the first div with aria-hidden
@@ -80,12 +87,14 @@ describe('MobileMenu', () => {
     it('calls onClose when backdrop is clicked', async () => {
         const user = userEvent.setup();
         const { container } = render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         const backdrop = container.querySelector('[aria-hidden="true"]') as HTMLElement;
@@ -97,12 +106,14 @@ describe('MobileMenu', () => {
     it('calls onClose when Escape key is pressed', async () => {
         const user = userEvent.setup();
         render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         await user.keyboard('{Escape}');
@@ -113,12 +124,14 @@ describe('MobileMenu', () => {
     it('does not call onClose when Escape is pressed and menu is closed', async () => {
         const user = userEvent.setup();
         render(
-            <MobileMenu
-                isOpen={false}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={false}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         await user.keyboard('{Escape}');
@@ -128,23 +141,27 @@ describe('MobileMenu', () => {
 
     it('prevents body scroll when menu is open', () => {
         const { rerender } = render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         expect(document.body.style.overflow).toBe('hidden');
 
-        rerender(
-            <MobileMenu
-                isOpen={false}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+        render(
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={false}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         expect(document.body.style.overflow).toBe('unset');
@@ -152,12 +169,14 @@ describe('MobileMenu', () => {
 
     it('highlights active page', () => {
         render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="transactions"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="transactions"
+                />
+            </MemoryRouter>
         );
 
         const transactionsLink = screen.getByText('Transactions');
@@ -167,12 +186,14 @@ describe('MobileMenu', () => {
     it('calls onClose when a nav link is clicked', async () => {
         const user = userEvent.setup();
         render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         const link = screen.getByText('Transactions');
@@ -183,12 +204,14 @@ describe('MobileMenu', () => {
 
     it('displays version information', () => {
         render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         expect(screen.getByText('Portfolio Insights v1.0')).toBeInTheDocument();
@@ -196,12 +219,14 @@ describe('MobileMenu', () => {
 
     it('has correct ARIA attributes', () => {
         render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         const nav = screen.getByRole('navigation', { name: 'Mobile navigation' });
@@ -210,12 +235,14 @@ describe('MobileMenu', () => {
 
     it('cleans up event listeners on unmount', () => {
         const { unmount } = render(
-            <MobileMenu
-                isOpen={true}
-                onClose={mockOnClose}
-                navLinks={mockNavLinks}
-                currentPage="overview"
-            />
+            <MemoryRouter>
+                <MobileMenu
+                    isOpen={true}
+                    onClose={mockOnClose}
+                    navLinks={mockNavLinks}
+                    currentPage="overview"
+                />
+            </MemoryRouter>
         );
 
         unmount();

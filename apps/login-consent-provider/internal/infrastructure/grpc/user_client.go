@@ -76,11 +76,25 @@ func (c *UserServiceClient) VerifyUser(ctx context.Context, email, password stri
 		return nil, err
 	}
 
-	return &domain.User{
-		ID:       resp.User.UserId,
-		Email:    resp.User.Email,
-		Username: resp.User.Username,
-	}, nil
+	u := &domain.User{
+		ID:        resp.User.UserId,
+		Email:     resp.User.Email,
+		Username:  resp.User.Username,
+		FirstName: resp.User.FirstName,
+		LastName:  resp.User.LastName,
+		Role:      resp.User.Role,
+	}
+
+	if resp.User.Preferences != nil {
+		u.Preferences = resp.User.Preferences.AsMap()
+	}
+
+	if resp.User.LastLoginAt != nil {
+		t := resp.User.LastLoginAt.AsTime()
+		u.LastLoginAt = t
+	}
+
+	return u, nil
 }
 
 // GetUser retrieves user by ID via gRPC call
@@ -99,11 +113,25 @@ func (c *UserServiceClient) GetUser(ctx context.Context, userID string) (*domain
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	return &domain.User{
-		ID:       resp.UserId,
-		Email:    resp.Email,
-		Username: resp.Username,
-	}, nil
+	u := &domain.User{
+		ID:        resp.UserId,
+		Email:     resp.Email,
+		Username:  resp.Username,
+		FirstName: resp.FirstName,
+		LastName:  resp.LastName,
+		Role:      resp.Role,
+	}
+
+	if resp.Preferences != nil {
+		u.Preferences = resp.Preferences.AsMap()
+	}
+
+	if resp.LastLoginAt != nil {
+		t := resp.LastLoginAt.AsTime()
+		u.LastLoginAt = t
+	}
+
+	return u, nil
 }
 
 func recordMetrics(method string, start time.Time, err error) {

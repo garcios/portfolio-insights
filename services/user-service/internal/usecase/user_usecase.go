@@ -23,23 +23,20 @@ func (uc *UserUsecase) GetUser(id string) (*domain.User, error) {
 }
 
 // CreateUser creates a new user.
-func (uc *UserUsecase) CreateUser(email, username, password string) (*domain.User, error) {
+func (uc *UserUsecase) CreateUser(user *domain.User, password string) (*domain.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 
 	// Add validation logic here
-	u := &domain.User{
-		Email:    email,
-		Username: username,
-		Password: string(hashedPassword),
-	}
-	err = uc.repo.Create(u)
+	user.Password = string(hashedPassword)
+
+	err = uc.repo.Create(user)
 	if err != nil {
 		return nil, err
 	}
-	return u, nil
+	return user, nil
 }
 
 // VerifyUser verifies a user's credentials.

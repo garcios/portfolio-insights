@@ -125,7 +125,7 @@ const UserMenu = () => {
                                 marginBottom: '4px',
                             }}
                         >
-                            {user?.username || user?.email?.split('@')[0] || 'User'}
+                            {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : (user?.username || user?.email?.split('@')[0] || 'User')}
                         </p>
                         <p
                             style={{
@@ -133,7 +133,7 @@ const UserMenu = () => {
                                 color: 'var(--color-text-tertiary)',
                             }}
                         >
-                            {user?.email || 'user@portfolio.com'}
+                            {user?.role ? `${user.role} • ` : ''}{user?.email || 'user@portfolio.com'}
                         </p>
                     </div>
 

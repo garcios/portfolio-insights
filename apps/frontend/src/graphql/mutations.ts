@@ -21,3 +21,13 @@ export const UPLOAD_TRANSACTION_CSV = gql`
     uploadTransactionCSV(file: $file)
   }
 `;
+
+export const CREATE_USER = gql`
+  mutation CreateUser($input: NewUser!) {
+    createUser(input: $input) {
+      id
+      username
+      email
+    }
+  }
+`;

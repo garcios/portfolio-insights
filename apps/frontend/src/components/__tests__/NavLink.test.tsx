@@ -1,24 +1,37 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import NavLink from '../NavLink';
 
 describe('NavLink', () => {
     it('renders link with children', () => {
-        render(<NavLink href="/test">Test Link</NavLink>);
+        render(
+            <MemoryRouter>
+                <NavLink href="/test">Test Link</NavLink>
+            </MemoryRouter>
+        );
 
         expect(screen.getByText('Test Link')).toBeInTheDocument();
     });
 
     it('applies href attribute', () => {
-        render(<NavLink href="/test">Test Link</NavLink>);
+        render(
+            <MemoryRouter>
+                <NavLink href="/test">Test Link</NavLink>
+            </MemoryRouter>
+        );
 
         const link = screen.getByText('Test Link');
         expect(link).toHaveAttribute('href', '/test');
     });
 
     it('applies active state styling when isActive is true', () => {
-        render(<NavLink href="/test" isActive>Active Link</NavLink>);
+        render(
+            <MemoryRouter>
+                <NavLink href="/test" isActive>Active Link</NavLink>
+            </MemoryRouter>
+        );
 
         const link = screen.getByText('Active Link');
         expect(link).toHaveStyle({
@@ -28,7 +41,11 @@ describe('NavLink', () => {
     });
 
     it('does not apply active state when isActive is false', () => {
-        render(<NavLink href="/test" isActive={false}>Inactive Link</NavLink>);
+        render(
+            <MemoryRouter>
+                <NavLink href="/test" isActive={false}>Inactive Link</NavLink>
+            </MemoryRouter>
+        );
 
         const link = screen.getByText('Inactive Link');
         expect(link).toHaveStyle({
@@ -38,7 +55,11 @@ describe('NavLink', () => {
     });
 
     it('renders active indicator when isActive is true', () => {
-        const { container } = render(<NavLink href="/test" isActive>Active Link</NavLink>);
+        const { container } = render(
+            <MemoryRouter>
+                <NavLink href="/test" isActive>Active Link</NavLink>
+            </MemoryRouter>
+        );
 
         const indicator = container.querySelector('span');
         expect(indicator).toBeInTheDocument();
@@ -49,7 +70,11 @@ describe('NavLink', () => {
     });
 
     it('does not render active indicator when isActive is false', () => {
-        const { container } = render(<NavLink href="/test" isActive={false}>Inactive Link</NavLink>);
+        const { container } = render(
+            <MemoryRouter>
+                <NavLink href="/test" isActive={false}>Inactive Link</NavLink>
+            </MemoryRouter>
+        );
 
         const indicator = container.querySelector('span');
         expect(indicator).not.toBeInTheDocument();
@@ -59,7 +84,11 @@ describe('NavLink', () => {
         const user = userEvent.setup();
         const handleClick = vi.fn();
 
-        render(<NavLink href="/test" onClick={handleClick}>Clickable Link</NavLink>);
+        render(
+            <MemoryRouter>
+                <NavLink href="/test" onClick={handleClick}>Clickable Link</NavLink>
+            </MemoryRouter>
+        );
 
         const link = screen.getByText('Clickable Link');
         await user.click(link);
@@ -70,7 +99,11 @@ describe('NavLink', () => {
     it('prevents default navigation', async () => {
         const user = userEvent.setup();
 
-        render(<NavLink href="/test">Test Link</NavLink>);
+        render(
+            <MemoryRouter>
+                <NavLink href="/test">Test Link</NavLink>
+            </MemoryRouter>
+        );
 
         const link = screen.getByText('Test Link');
         await user.click(link);
@@ -82,7 +115,11 @@ describe('NavLink', () => {
     it('applies hover styles on mouse enter (non-active)', async () => {
         const user = userEvent.setup();
 
-        render(<NavLink href="/test" isActive={false}>Hover Link</NavLink>);
+        render(
+            <MemoryRouter>
+                <NavLink href="/test" isActive={false}>Hover Link</NavLink>
+            </MemoryRouter>
+        );
 
         const link = screen.getByText('Hover Link');
         await user.hover(link);

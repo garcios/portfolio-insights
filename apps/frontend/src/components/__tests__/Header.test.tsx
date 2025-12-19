@@ -1,8 +1,21 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import Header from '../Header';
+
+// Mock useAuth hook
+vi.mock('../../auth/AuthContext', () => ({
+    useAuth: () => ({
+        user: {
+            id: '1',
+            email: 'demo@portfolio.com',
+            username: 'Demo User'
+        },
+        logout: vi.fn(),
+        isAuthenticated: true
+    })
+}));
 
 describe('Header', () => {
     beforeEach(() => {

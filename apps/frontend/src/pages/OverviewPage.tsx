@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useQuery, gql } from '@apollo/client';
+import { useQuery } from '@apollo/client';
+import { GET_PORTFOLIO, GET_PORTFOLIO_PERFORMANCE } from '../graphql/queries';
 import TotalValueCard from '../components/TotalValueCard';
 import DayChangeCard from '../components/DayChangeCard';
 import DividendsCard from '../components/DividendsCard';
@@ -13,50 +14,7 @@ import AssetAllocationCard from '../components/AssetAllocationCard';
 import RecentActivityCard from '../components/RecentActivityCard';
 import { PortfolioPerformance } from '../types/portfolio';
 
-const GET_PORTFOLIO = gql`
-  query GetPortfolio($startDate: String, $endDate: String) {
-    portfolio {
-      id
-      userId
-      name
-      summary(startDate: $startDate, endDate: $endDate) {
-        totalValue
-        totalGainLoss
-        totalGainLossPercentage
-        dayChange
-        dayChangePercentage
-        currency
-        lastUpdated
-        capitalGain
-        capitalGainPercentage
-        currencyGain
-        currencyGainPercentage
-        dividends
-        dividendsPercentage
-      }
-      holdings {
-        symbol
-        quantity
-        averagePrice
-        currentPrice
-        currentValue
-        gainLoss
-        gainLossPercentage
-        currency
-        assetName
-      }
-    }
-  }
-`;
 
-const GET_PORTFOLIO_PERFORMANCE = gql`
-  query GetPortfolioPerformance($period: String!) {
-    portfolioPerformance(period: $period) {
-      timestamp
-      value
-    }
-  }
-`;
 
 const OverviewPage = () => {
     const [selectedPeriod, setSelectedPeriod] = useState('1m');
