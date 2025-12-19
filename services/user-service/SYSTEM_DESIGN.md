@@ -57,11 +57,11 @@ graph TD
 
 ## Data Design
 
-The core entity is the `User`.
+The core entity is the `Users`.
 
 ```mermaid
 erDiagram
-    USER {
+    USERS {
         uuid id PK
         string email UK
         string username UK

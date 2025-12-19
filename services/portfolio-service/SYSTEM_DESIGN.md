@@ -65,11 +65,11 @@ graph TD
 
 ## Data Design
 
-The service maintains a "CQRS-lite" data model. The `holdings` table serves as a read-optimized view of the current state, while `portfolio_snapshots` stores historical checkpoints for performance calculations.
+The service maintains a "CQRS-lite" data model. The `holdings` table serves as a read-optimized view of the current state, while `portfolio_snapshots` stores historical checkpoints for performance calculations. The `portfolio_history` table stores the historical daily snapshots of the portfolio's value over time.
 
 ```mermaid
 erDiagram
-    HOLDING {
+    HOLDINGS {
         uuid id PK
         uuid user_id UK
         string symbol UK
@@ -79,22 +79,24 @@ erDiagram
         timestamp updated_at
     }
 
-    CASH_BALANCE {
+    CASH_BALANCES {
         uuid user_id PK
         string currency PK
-        decimal amount
+        decimal balance
+        timestamp created_at
         timestamp updated_at
+        string notes
     }
 
-    PORTFOLIO_SNAPSHOT {
+    PORTFOLIO_SNAPSHOTS {
         uuid id PK
         uuid user_id UK
-        timestamp timestamp UK
         jsonb holdings_snapshot "Map[Symbol]State"
         jsonb cash_snapshot "Map[Currency]Amount"
         jsonb realized_gains_snapshot
-        decimal net_invested
+        string net_invested
         int transaction_count
+        timestamp created_at
     }
 
     PORTFOLIO_HISTORY {

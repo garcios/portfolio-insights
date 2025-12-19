@@ -57,20 +57,22 @@ graph TD
 
 ## Data Design
 
-The core entity is the `Transaction`. The data model is append-only for auditability (soft deletes or reversals preferred).
+The core entity is the `Transactions`. The data model is append-only for auditability (soft deletes or reversals preferred).
 
 ```mermaid
 erDiagram
-    TRANSACTION {
+    TRANSACTIONS {
         uuid id PK
         uuid user_id UK
         string symbol
         string type "BUY, SELL, DEPOSIT, WITHDRAWAL"
         decimal quantity
         decimal price_per_share
-        decimal total_amount
-        string currency
-        timestamp date
+        decimal amount
+        decimal brokerage
+        string price_currency
+        string brokerage_currency
+        timestamp executed_at
         timestamp created_at
         timestamp updated_at
         string notes
