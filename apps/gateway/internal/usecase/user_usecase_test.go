@@ -12,6 +12,7 @@ import (
 type MockUserGateway struct {
 	GetUserFunc    func(ctx context.Context, id string) (*entity.User, error)
 	CreateUserFunc func(ctx context.Context, email, username, password, firstName, lastName string) (*entity.User, error)
+	UpdateUserFunc func(ctx context.Context, id string, updates *entity.UserUpdate) (*entity.User, error)
 }
 
 func (m *MockUserGateway) GetUser(ctx context.Context, id string) (*entity.User, error) {
@@ -24,6 +25,13 @@ func (m *MockUserGateway) GetUser(ctx context.Context, id string) (*entity.User,
 func (m *MockUserGateway) CreateUser(ctx context.Context, email, username, password, firstName, lastName string) (*entity.User, error) {
 	if m.CreateUserFunc != nil {
 		return m.CreateUserFunc(ctx, email, username, password, firstName, lastName)
+	}
+	return nil, nil
+}
+
+func (m *MockUserGateway) UpdateUser(ctx context.Context, id string, updates *entity.UserUpdate) (*entity.User, error) {
+	if m.UpdateUserFunc != nil {
+		return m.UpdateUserFunc(ctx, id, updates)
 	}
 	return nil, nil
 }
