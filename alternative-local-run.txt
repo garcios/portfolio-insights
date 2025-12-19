@@ -1,4 +1,4 @@
-Steps
+Steps to bring up services
 1. make build-infra
 2. make run-local-user-service
 3. make hydra-up
@@ -7,4 +7,10 @@ Steps
 6. make run-local-portfolio-service
 7. make run-gateway
 8. cd apps/frontend && npm run dev
+
+
+Steps to shut down services
+1. Exit terminal where services, gateway, and  frontend are running
+2. make services-down
+3. make hydra-down
 
