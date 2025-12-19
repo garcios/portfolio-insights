@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
 import { useAuth } from '../auth/AuthContext';
 import { UPDATE_USER } from '../graphql/mutations';
@@ -11,10 +11,10 @@ import Header from '../components/Header';
 const SettingsPage = () => {
     const { user } = useAuth();
     const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        username: '',
-        email: '',
+        firstName: user?.firstName || '',
+        lastName: user?.lastName || '',
+        username: user?.username || '',
+        email: user?.email || '',
         defaultCurrency: 'AUD',
         dateFormat: 'DD/MM/YYYY',
     });
@@ -31,39 +31,27 @@ const SettingsPage = () => {
         },
     });
 
-    const { data: userData } = useQuery(GET_USER, {
+    useQuery(GET_USER, {
         variables: { id: user?.id },
         skip: !user?.id,
         fetchPolicy: 'network-only', // Ensure we get the latest data
+        onCompleted: (data) => {
+            if (data?.user) {
+                const u = data.user;
+                const prefs = u.preferences || {};
+                setFormData({
+                    firstName: u.firstName || '',
+                    lastName: u.lastName || '',
+                    username: u.username || '',
+                    email: u.email || '',
+                    defaultCurrency: prefs.default_currency || 'AUD',
+                    dateFormat: prefs.date_format || 'DD/MM/YYYY',
+                });
+            }
+        },
     });
 
-    // Initialize form data when user is loaded
-    useEffect(() => {
-        if (userData?.user) {
-            const u = userData.user;
-            const prefs = u.preferences || {};
-            setFormData({
-                firstName: u.firstName || '',
-                lastName: u.lastName || '',
-                username: u.username || '',
-                email: u.email || '',
-                defaultCurrency: prefs.default_currency || 'AUD',
-                dateFormat: prefs.date_format || 'DD/MM/YYYY',
-            });
-        } else if (user) {
-            // Fallback to auth context if query hasn't loaded (though skipping usually prevents this, good safety)
-            // Actually, cleaner to just wait for query, but preserving existing behavior for name/email if valid
-            setFormData(prev => ({
-                ...prev,
-                firstName: user.firstName || prev.firstName,
-                lastName: user.lastName || prev.lastName,
-                username: user.username || prev.username,
-                email: user.email || prev.email,
-            }));
-        }
-    }, [userData, user]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
@@ -278,7 +266,7 @@ const SettingsPage = () => {
                                         id="defaultCurrency"
                                         name="defaultCurrency"
                                         value={formData.defaultCurrency}
-                                        onChange={(e) => handleChange(e as any)}
+                                        onChange={handleChange}
                                         style={{
                                             width: '100%',
                                             padding: '10px 12px 10px 36px',
@@ -311,7 +299,7 @@ const SettingsPage = () => {
                                         id="dateFormat"
                                         name="dateFormat"
                                         value={formData.dateFormat}
-                                        onChange={(e) => handleChange(e as any)}
+                                        onChange={handleChange}
                                         style={{
                                             width: '100%',
                                             padding: '10px 12px 10px 36px',

@@ -7,6 +7,7 @@ require (
 	github.com/garcios/portfolio-insights/pkg v0.0.0
 	github.com/garcios/portfolio-insights/services/marketdata-service v0.0.0
 	github.com/garcios/portfolio-insights/services/transaction-service v0.0.0-00010101000000-000000000000
+	github.com/garcios/portfolio-insights/services/user-service v0.0.0-00010101000000-000000000000
 	github.com/google/uuid v1.6.0
 	github.com/nats-io/nats.go v1.47.0
 	github.com/prometheus/client_golang v1.23.2
@@ -53,3 +54,5 @@ replace github.com/garcios/portfolio-insights/pkg => ../../pkg
 replace github.com/garcios/portfolio-insights/services/marketdata-service => ../marketdata-service
 
 replace github.com/garcios/portfolio-insights/services/transaction-service => ../transaction-service
+
+replace github.com/garcios/portfolio-insights/services/user-service => ../user-service
