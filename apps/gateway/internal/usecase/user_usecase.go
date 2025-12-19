@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/gateway"
 )
@@ -32,9 +34,16 @@ func (uc *UserUseCase) CreateUser(ctx context.Context, email, username, password
 }
 
 // GetCurrentUser retrieves the currently authenticated user
-// In production, this would extract user ID from auth context
 func (uc *UserUseCase) GetCurrentUser(ctx context.Context) (*entity.User, error) {
-	// Hardcoded for now - should come from auth context
-	userID := "02b28ee7-9ba2-427a-b918-a3d8e2cc00dc"
+	userID, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user ID from context: %w", err)
+	}
+
 	return uc.GetUser(ctx, userID)
+}
+
+// UpdateUser updates an existing user
+func (uc *UserUseCase) UpdateUser(ctx context.Context, id string, updates *entity.UserUpdate) (*entity.User, error) {
+	return uc.userGateway.UpdateUser(ctx, id, updates)
 }

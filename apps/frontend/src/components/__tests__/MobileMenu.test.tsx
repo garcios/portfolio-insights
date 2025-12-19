@@ -140,7 +140,7 @@ describe('MobileMenu', () => {
     });
 
     it('prevents body scroll when menu is open', () => {
-        const { rerender } = render(
+        render(
             <MemoryRouter>
                 <MobileMenu
                     isOpen={true}

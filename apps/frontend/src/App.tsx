@@ -11,6 +11,7 @@ import AuthPage from './pages/AuthPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import FundamentalsScreenerPage from './pages/FundamentalsScreenerPage';
 import FundamentalsPage from './pages/FundamentalsPage';
+import SettingsPage from './pages/SettingsPage';
 
 function App() {
     return (
@@ -43,6 +44,11 @@ function App() {
                         <Route path="/fundamentals/:ticker" element={
                             <ProtectedRoute>
                                 <FundamentalsPage />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/settings" element={
+                            <ProtectedRoute>
+                                <SettingsPage />
                             </ProtectedRoute>
                         } />
                     </Routes>

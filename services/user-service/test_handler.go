@@ -41,6 +41,11 @@ func (m *MockUserUsecase) VerifyUser(email, password string) (*domain.User, erro
 	}, nil
 }
 
+// UpdateUser updates a user for testing purposes.
+func (m *MockUserUsecase) UpdateUser(user *domain.User) (*domain.User, error) {
+	return user, nil
+}
+
 func main() {
 	fmt.Println("=== Testing User Handler Locally ===")
 

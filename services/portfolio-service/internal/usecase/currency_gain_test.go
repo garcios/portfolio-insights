@@ -90,7 +90,7 @@ func TestGetPortfolioSummary_CurrencyGain(t *testing.T) {
 		return 1.0, nil
 	}
 
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, newMockUserGateway(), transactionClient, nil)
 
 	// Execute
 	ctx := context.Background()
@@ -192,7 +192,7 @@ func TestGetPortfolioSummary_RealizedGainLeak(t *testing.T) {
 		return 1.0, nil
 	}
 
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, newMockUserGateway(), transactionClient, nil)
 
 	// Execute
 	ctx := context.Background()
@@ -280,7 +280,7 @@ func TestGetPortfolioSummary_FXBreakdown(t *testing.T) {
 		LastUpdated: time.Now(),
 	}
 
-	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, transactionClient, nil)
+	uc := NewPortfolioUsecase(repo, historyRepo, newMockDetailedSnapshotRepository(), cashBalanceRepo, marketData, newMockUserGateway(), transactionClient, nil)
 
 	// Execute
 	ctx := context.Background()

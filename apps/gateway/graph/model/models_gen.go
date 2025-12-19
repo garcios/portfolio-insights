@@ -105,6 +105,14 @@ type TransactionFilterInput struct {
 	ToExecutedAt   *string          `json:"toExecutedAt,omitempty"`
 }
 
+type UpdateUserInput struct {
+	Email       *string                `json:"email,omitempty"`
+	Username    *string                `json:"username,omitempty"`
+	FirstName   *string                `json:"firstName,omitempty"`
+	LastName    *string                `json:"lastName,omitempty"`
+	Preferences map[string]interface{} `json:"preferences,omitempty"`
+}
+
 type User struct {
 	ID          string                 `json:"id"`
 	Username    string                 `json:"username"`

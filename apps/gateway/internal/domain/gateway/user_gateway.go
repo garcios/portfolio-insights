@@ -13,4 +13,7 @@ type UserGateway interface {
 
 	// CreateUser creates a new user
 	CreateUser(ctx context.Context, email, username, password, firstName, lastName string) (*entity.User, error)
+
+	// UpdateUser updates an existing user
+	UpdateUser(ctx context.Context, id string, updates *entity.UserUpdate) (*entity.User, error)
 }

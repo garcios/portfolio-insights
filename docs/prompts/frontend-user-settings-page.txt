@@ -1,0 +1,29 @@
+Act as a Senior Frontend Developer.
+
+Task: Implement a new "User Settings" page.
+
+Requirements:
+
+Navigation: Add a "Settings" item to the main navigation menu/sidebar if it does not exist yet. Clicking this should route the user to the new settings page.
+
+UI Layout: Create a clean form layout with the following distinct fields:
+
+Default Currency: A dropdown (select) menu containing standard currency options (e.g., USD, EUR, GBP, AUD, JPY).
+
+Date Format: A dropdown menu with standard date formatting options (e.g., "MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD").
+
+Functionality:
+
+Pre-fill the fields with the user's current settings if they exist.
+
+Include a "Save Changes" button.
+
+Show a loading state while saving and a toast notification upon success or error.
+
+Technical Details:
+
+Use React best practices.
+
+Ensure the form input validation handles empty or invalid states.
+
+Mock the API call for saving settings for now (or integrate with existing updateUser mutation/endpoint).

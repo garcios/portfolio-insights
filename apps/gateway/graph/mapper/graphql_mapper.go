@@ -23,9 +23,12 @@ func parseTimestamp(s string) (time.Time, error) {
 // UserEntityToGraphQL converts a User entity to a GraphQL User model
 func UserEntityToGraphQL(user *entity.User) *model.User {
 	return &model.User{
-		ID:       user.ID,
-		Username: user.Username,
-		Email:    user.Email,
+		ID:          user.ID,
+		Username:    user.Username,
+		Email:       user.Email,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		Preferences: user.Preferences,
 	}
 }
 

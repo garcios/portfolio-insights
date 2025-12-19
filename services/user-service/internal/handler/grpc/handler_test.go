@@ -15,6 +15,7 @@ type MockUserUsecase struct {
 	GetUserFunc    func(id string) (*domain.User, error)
 	CreateUserFunc func(user *domain.User, password string) (*domain.User, error)
 	VerifyUserFunc func(email, password string) (*domain.User, error)
+	UpdateUserFunc func(user *domain.User) (*domain.User, error)
 }
 
 func (m *MockUserUsecase) GetUser(id string) (*domain.User, error) {
@@ -27,6 +28,10 @@ func (m *MockUserUsecase) CreateUser(user *domain.User, password string) (*domai
 
 func (m *MockUserUsecase) VerifyUser(email, password string) (*domain.User, error) {
 	return m.VerifyUserFunc(email, password)
+}
+
+func (m *MockUserUsecase) UpdateUser(user *domain.User) (*domain.User, error) {
+	return m.UpdateUserFunc(user)
 }
 
 func TestUserHandler_GetUser(t *testing.T) {
@@ -233,6 +238,63 @@ func TestUserHandler_VerifyUser(t *testing.T) {
 				}
 				if resp.User.Name != resourcenames.UserName(tt.wantUserID) {
 					t.Errorf("UserHandler.VerifyUser() User.Name = %v, want %v", resp.User.Name, resourcenames.UserName(tt.wantUserID))
+				}
+			}
+		})
+	}
+}
+
+func TestUserHandler_UpdateUser(t *testing.T) {
+	existingUserID := "550e8400-e29b-41d4-a716-446655440004"
+	resName := resourcenames.UserName(existingUserID)
+
+	mockUC := &MockUserUsecase{
+		GetUserFunc: func(id string) (*domain.User, error) {
+			if id == existingUserID {
+				return &domain.User{
+					ID:        existingUserID,
+					Email:     "old@example.com",
+					FirstName: "OldName",
+				}, nil
+			}
+			return nil, errors.New("user not found")
+		},
+		UpdateUserFunc: func(user *domain.User) (*domain.User, error) {
+			return user, nil
+		},
+	}
+
+	h := NewUserHandler(mockUC)
+
+	tests := []struct {
+		name      string
+		req       *pb.UpdateUserRequest
+		wantEmail string
+		wantErr   bool
+	}{
+		{
+			name: "Success_NoMask",
+			req: &pb.UpdateUserRequest{
+				User: &pb.User{
+					Name:  resName,
+					Email: "new@example.com",
+				},
+			},
+			wantEmail: "new@example.com",
+			wantErr:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := h.UpdateUser(context.Background(), tt.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UserHandler.UpdateUser() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				if resp.Email != tt.wantEmail {
+					t.Errorf("UserHandler.UpdateUser() Email = %v, want %v", resp.Email, tt.wantEmail)
 				}
 			}
 		})

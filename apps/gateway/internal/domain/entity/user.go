@@ -22,3 +22,12 @@ func NewUser(id, username, email string) *User {
 		Email:    email,
 	}
 }
+
+// UserUpdate represents fields that can be updated for a user
+type UserUpdate struct {
+	Email       *string
+	Username    *string
+	FirstName   *string
+	LastName    *string
+	Preferences map[string]interface{}
+}

@@ -42,6 +42,7 @@ type portfolioUsecase struct {
 	snapshotRepo      domain.DetailedSnapshotRepository
 	cashBalanceRepo   domain.CashBalanceRepository
 	marketDataGateway MarketDataGateway
+	userGateway       domain.UserGateway
 	transactionClient transactionpb.TransactionServiceClient
 	snapshotManager   *snapshotter.Manager
 }
@@ -64,6 +65,7 @@ func NewPortfolioUsecase(
 	snapshotRepo domain.DetailedSnapshotRepository,
 	cashBalanceRepo domain.CashBalanceRepository,
 	marketDataGateway MarketDataGateway,
+	userGateway domain.UserGateway,
 	transactionClient transactionpb.TransactionServiceClient,
 	snapshotManager *snapshotter.Manager,
 ) PortfolioUsecase {
@@ -73,6 +75,7 @@ func NewPortfolioUsecase(
 		snapshotRepo:      snapshotRepo,
 		cashBalanceRepo:   cashBalanceRepo,
 		marketDataGateway: marketDataGateway,
+		userGateway:       userGateway,
 		transactionClient: transactionClient,
 		snapshotManager:   snapshotManager,
 	}
@@ -148,7 +151,14 @@ func (uc *portfolioUsecase) GetHoldings(ctx context.Context, userID string) ([]*
 // GetPortfolioSummary calculates the portfolio summary for a user
 // All values are converted to AUD (default currency)
 func (uc *portfolioUsecase) GetPortfolioSummary(ctx context.Context, userID string, startDate, endDate *time.Time) (*domain.PortfolioSummary, error) {
-	const defaultCurrency = "AUD" // TODO: Retrieve this value from user preferences via user service.
+	// 0. Fetch User Preferences for Currency
+	defaultCurrency := "AUD" // Default fallback
+	userPrefs, err := uc.userGateway.GetUserPreferences(ctx, userID)
+	if err != nil {
+		fmt.Printf("Warning: failed to fetch user preferences: %v\n", err)
+	} else if userPrefs != nil && userPrefs.DefaultCurrency != "" {
+		defaultCurrency = userPrefs.DefaultCurrency
+	}
 
 	// Profiling Setup
 	reqID := time.Now().UnixNano()
