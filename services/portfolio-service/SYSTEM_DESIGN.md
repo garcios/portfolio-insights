@@ -107,9 +107,6 @@ erDiagram
         timestamp timestamp UK
         timestamp created_at
     }
-
-    HOLDING ||--|| PO_SNAPSHOT : "aggregated in"
-    PORTFOLIO_SNAPSHOT ||--|| PORTFOLIO_HISTORY : "summarizes"
 ```
 
 ## API Interface
