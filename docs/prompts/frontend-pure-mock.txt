@@ -1,0 +1,9 @@
+Set up Mock Service Worker (MSW) for my apps/frontend to allow for a purely offline, no-BE experience.
+
+- Create a handlers.ts file with mock endpoints for GraphQL queries and mutations.
+
+- Configure the service worker to start only when process.env.NODE_ENV === 'mock'.
+
+- Modify the Auth logic so that any login attempt with 'insights-user/password' succeeds and stores a mock user profile in state.
+
+- Provide a folder structure for where to store large mock JSON datasets.

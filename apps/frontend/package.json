@@ -1,45 +1,52 @@
 {
-    "name": "portfolio-insights-frontend",
-    "private": true,
-    "version": "0.0.0",
-    "type": "module",
-    "scripts": {
-        "dev": "vite",
-        "build": "tsc && vite build",
-        "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
-        "preview": "vite preview",
-        "test": "vitest",
-        "test:coverage": "vitest run --coverage"
-    },
-    "dependencies": {
-        "@apollo/client": "^3.9.0",
-        "date-fns": "^4.1.0",
-        "graphql": "^16.8.1",
-        "lucide-react": "^0.554.0",
-        "react": "^18.2.0",
-        "react-day-picker": "^9.11.3",
-        "react-dom": "^18.2.0",
-        "react-router-dom": "^7.9.6",
-        "recharts": "^3.4.1"
-    },
-    "devDependencies": {
-        "@testing-library/jest-dom": "^6.9.1",
-        "@testing-library/react": "^16.3.0",
-        "@testing-library/user-event": "^14.6.1",
-        "@types/react": "^18.2.66",
-        "@types/react-dom": "^18.2.22",
-        "@typescript-eslint/eslint-plugin": "^8.48.1",
-        "@typescript-eslint/parser": "^8.48.1",
-        "@vitejs/plugin-react": "^4.2.1",
-        "@vitest/coverage-v8": "^4.0.14",
-        "eslint": "^9.39.1",
-        "eslint-plugin-react-hooks": "^7.0.1",
-        "eslint-plugin-react-refresh": "^0.4.24",
-        "globals": "^16.5.0",
-        "jsdom": "^27.2.0",
-        "typescript": "^5.2.2",
-        "typescript-eslint": "^8.48.1",
-        "vite": "^5.2.0",
-        "vitest": "^4.0.14"
-    }
+  "name": "portfolio-insights-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:mock": "vite --mode mock",
+    "build": "tsc && vite build",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.9.0",
+    "date-fns": "^4.1.0",
+    "graphql": "^16.8.1",
+    "lucide-react": "^0.554.0",
+    "react": "^18.2.0",
+    "react-day-picker": "^9.11.3",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.9.6",
+    "recharts": "^3.4.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@typescript-eslint/eslint-plugin": "^8.48.1",
+    "@typescript-eslint/parser": "^8.48.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/coverage-v8": "^4.0.14",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "jsdom": "^27.2.0",
+    "msw": "^2.12.4",
+    "typescript": "^5.2.2",
+    "typescript-eslint": "^8.48.1",
+    "vite": "^5.2.0",
+    "vitest": "^4.0.14"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
 }

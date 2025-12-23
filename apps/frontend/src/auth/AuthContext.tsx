@@ -64,6 +64,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     const login = async () => {
+        if (import.meta.env.MODE === 'mock') {
+            const mockUser = {
+                id: '1',
+                email: 'user@insights.com',
+                username: 'insights-user',
+                firstName: 'Insights',
+                lastName: 'User',
+            };
+            const mockTokens = {
+                accessToken: 'mock-access-token',
+                idToken: 'mock-id-token',
+                expiresIn: 3600,
+                expiresAt: Date.now() + 3600 * 1000,
+                tokenType: 'Bearer',
+            };
+
+            setUser(mockUser);
+            setTokens(mockTokens);
+            return;
+        }
+
         const authUrl = await buildAuthorizationURL();
         window.location.href = authUrl;
     };

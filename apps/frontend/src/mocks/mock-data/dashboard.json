@@ -1,0 +1,21 @@
+{
+    "id": "port-1",
+    "userId": "1",
+    "name": "My Portfolio",
+    "summary": {
+        "totalValue": 125000.50,
+        "totalGainLoss": 25000.50,
+        "totalGainLossPercentage": 25.0,
+        "dayChange": 1200.00,
+        "dayChangePercentage": 1.2,
+        "currency": "USD",
+        "lastUpdated": "2024-12-23T10:00:00Z",
+        "capitalGain": 20000.00,
+        "capitalGainPercentage": 20.0,
+        "currencyGain": 5000.50,
+        "currencyGainPercentage": 5.0,
+        "dividends": 1500.00,
+        "dividendsPercentage": 1.5
+    },
+    "holdings": []
+}
