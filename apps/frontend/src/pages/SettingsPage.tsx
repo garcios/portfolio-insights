@@ -4,7 +4,6 @@ import { useAuth } from '../auth/AuthContext';
 import { UPDATE_USER } from '../graphql/mutations';
 import { GET_USER } from '../graphql/queries';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle, Globe } from 'lucide-react';
-import Header from '../components/Header';
 
 
 
@@ -85,7 +84,6 @@ const SettingsPage = () => {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-            <Header />
             <div style={{ maxWidth: '800px', margin: '40px auto', padding: '0 20px' }}>
                 <div style={{ marginBottom: '32px' }}>
                     <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>Settings</h1>

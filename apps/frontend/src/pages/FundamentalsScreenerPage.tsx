@@ -1,7 +1,6 @@
 import { useState, useMemo, CSSProperties } from 'react';
 import { ArrowDown, ArrowUp, Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import Header from '../components/Header';
 import { mockFundamentals } from '../mocks/fundamentals';
 import { CompanyFundamentals } from '../types/fundamentals';
 
@@ -79,7 +78,6 @@ const FundamentalsScreenerPage = () => {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-            <Header />
 
             <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
                 <div style={{ marginBottom: '32px' }}>

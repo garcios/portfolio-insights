@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
 import { Plus, Upload, Search, Filter, Download } from 'lucide-react';
-import Header from '../components/Header';
 import TransactionsTable from '../components/transactions/TransactionsTable';
 import AddTransactionModal from '../components/transactions/AddTransactionModal';
 import DatePicker from '../components/common/DatePicker';
@@ -178,7 +177,6 @@ const TransactionsPage = () => {
     if (loading) {
         return (
             <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-                <Header />
                 <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
                     <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--color-text-secondary)' }}>
                         Loading transactions...
@@ -192,7 +190,6 @@ const TransactionsPage = () => {
     if (error) {
         return (
             <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-                <Header />
                 <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
                     <div style={{ textAlign: 'center', padding: '64px 0' }}>
                         <p style={{ color: 'var(--color-danger)', marginBottom: '16px' }}>Error loading transactions</p>
@@ -205,7 +202,6 @@ const TransactionsPage = () => {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-            <Header />
 
             <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
                 <div style={{

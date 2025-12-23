@@ -9,7 +9,6 @@ import CurrencyGainCard from '../components/CurrencyGainCard';
 import PortfolioChart from '../components/PortfolioChart';
 import HoldingsTable from '../components/HoldingsTable';
 import LoadingSpinner from '../components/LoadingSpinner';
-import Header from '../components/Header';
 import AssetAllocationCard from '../components/AssetAllocationCard';
 import RecentActivityCard from '../components/RecentActivityCard';
 import { PortfolioPerformance } from '../types/portfolio';
@@ -77,7 +76,6 @@ const OverviewPage = () => {
     if (loading && !data) {
         return (
             <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-                <Header />
                 <LoadingSpinner />
             </div>
         );
@@ -86,7 +84,6 @@ const OverviewPage = () => {
     if (error) {
         return (
             <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-                <Header />
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -146,8 +143,6 @@ const OverviewPage = () => {
             minHeight: '100vh',
             background: 'var(--color-bg-primary)',
         }}>
-            {/* Header */}
-            <Header />
 
             {/* Main Content */}
             <main style={{
