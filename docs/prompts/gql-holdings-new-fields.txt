@@ -1,0 +1,13 @@
+I have updated my Holding GraphQL type with two new fields: targetCurrency and currentValueInTargetCurrency.
+
+Task: Please implement the resolvers for these fields.
+
+Context & Requirements:
+
+- targetCurrency: This should be fetched from an external user-service. Assume I have a UserAPI datasource or a gRPC client available in the context.
+
+- currentValueInTargetCurrency: This is calculated by taking the holding's current value (in its base currency) and converting it to the targetCurrency.
+
+- Conversion Logic:  fetch exchange rates from marketdata-service.
+
+Optimization: Since a user might have multiple holdings, please use a DataLoader or similar pattern to avoid N+1 issues when fetching the user's default currency from the user-service.

@@ -1,0 +1,11 @@
+I want to refactor my current UI code to move the top navigation bar to the left side as a fixed sidebar. Please update the layout so that:
+
+- The Navigation Component becomes a vertical sidebar with a width of 250px.
+
+- The Main Content area shifts to the right and fills the remaining viewport width.
+
+- Ensure the sidebar is fixed/sticky on scroll.
+
+- Add a mobile-responsive solution (e.g., the sidebar hides and becomes a 'hamburger' menu on screens smaller than 768px).
+
+- Update the CSS classes to stack the nav items vertically instead of horizontally.

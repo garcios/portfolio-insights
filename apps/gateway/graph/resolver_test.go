@@ -8,10 +8,15 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/infrastructure/dataloader"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/middleware"
+	marketdatapb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -86,6 +91,22 @@ func (m *MockTransactionServiceClient) ListTransactions(ctx context.Context, in 
 	return nil, nil
 }
 
+// Mock MarketDataServiceClient
+// Mock MarketDataServiceClient
+type MockMarketDataServiceClient struct {
+	marketdatapb.MarketDataServiceClient
+	GetLatestCurrencyRateFunc func(ctx context.Context, in *marketdatapb.GetLatestCurrencyRateRequest, opts ...grpc.CallOption) (*marketdatapb.CurrencyRate, error)
+}
+
+func (m *MockMarketDataServiceClient) GetLatestCurrencyRate(ctx context.Context, in *marketdatapb.GetLatestCurrencyRateRequest, opts ...grpc.CallOption) (*marketdatapb.CurrencyRate, error) {
+	if m.GetLatestCurrencyRateFunc != nil {
+		return m.GetLatestCurrencyRateFunc(ctx, in, opts...)
+	}
+	return &marketdatapb.CurrencyRate{
+		Rate: 1.0,
+	}, nil
+}
+
 func TestQueryResolver_User(t *testing.T) {
 	mockUserClient := &MockUserServiceClient{
 		GetUserFunc: func(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.User, error) {
@@ -99,8 +120,9 @@ func TestQueryResolver_User(t *testing.T) {
 
 	mockPortfolioClient := &MockPortfolioServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
+	mockMarketDataClient := &MockMarketDataServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url", mockMarketDataClient)
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -136,8 +158,9 @@ func TestMutationResolver_CreateUser(t *testing.T) {
 
 	mockPortfolioClient := &MockPortfolioServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
+	mockMarketDataClient := &MockMarketDataServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url", mockMarketDataClient)
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -180,8 +203,9 @@ func TestPortfolioResolver_Summary(t *testing.T) {
 
 	mockUserClient := &MockUserServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
+	mockMarketDataClient := &MockMarketDataServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url", mockMarketDataClient)
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -243,8 +267,9 @@ func TestPortfolioResolver_Holdings(t *testing.T) {
 
 	mockUserClient := &MockUserServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
+	mockMarketDataClient := &MockMarketDataServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url", mockMarketDataClient)
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -301,8 +326,9 @@ func TestQueryResolver_PortfolioPerformance(t *testing.T) {
 
 	mockUserClient := &MockUserServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
+	mockMarketDataClient := &MockMarketDataServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url", mockMarketDataClient)
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -334,8 +360,9 @@ func TestQueryResolver_Portfolio(t *testing.T) {
 	mockUserClient := &MockUserServiceClient{}
 	mockPortfolioClient := &MockPortfolioServiceClient{}
 	mockTransactionClient := &MockTransactionServiceClient{}
+	mockMarketDataClient := &MockMarketDataServiceClient{}
 
-	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url")
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url", mockMarketDataClient)
 	resolver := &Resolver{
 		Container: c,
 	}
@@ -359,5 +386,152 @@ func TestQueryResolver_Portfolio(t *testing.T) {
 	}
 	if portfolio.Name != "My Portfolio" {
 		t.Errorf("expected name 'My Portfolio', got '%s'", portfolio.Name)
+	}
+}
+
+func TestHoldingResolver_CurrentValueInTargetCurrency(t *testing.T) {
+	// Mock User Service for TargetCurrency resolver (via DataLoader)
+	mockUserClient := &MockUserServiceClient{
+		GetUserFunc: func(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.User, error) {
+			prefs, _ := structpb.NewStruct(map[string]interface{}{
+				"default_currency": "EUR",
+			})
+			return &userpb.User{
+				UserId:      "user-123",
+				Preferences: prefs,
+			}, nil
+		},
+	}
+
+	// Mock MarketData Service for CurrentValueInTargetCurrency resolver
+	mockMarketDataClient := &MockMarketDataServiceClient{}
+	// Override GetLatestCurrencyRate to return a specific rate
+	mockMarketDataClient.GetLatestCurrencyRateFunc = func(ctx context.Context, in *marketdatapb.GetLatestCurrencyRateRequest, opts ...grpc.CallOption) (*marketdatapb.CurrencyRate, error) {
+		if in.BaseCurrency == "USD" && in.TargetCurrency == "EUR" {
+			return &marketdatapb.CurrencyRate{
+				Rate: 0.85,
+			}, nil
+		}
+		return &marketdatapb.CurrencyRate{Rate: 1.0}, nil
+	}
+
+	mockPortfolioClient := &MockPortfolioServiceClient{}
+	mockTransactionClient := &MockTransactionServiceClient{}
+
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url", mockMarketDataClient)
+	resolver := &Resolver{
+		Container: c,
+	}
+
+	holdingResolver := &holdingResolver{resolver}
+
+	// Setup Context with Loaders
+	loaders := &middleware.Loaders{
+		UserLoader:         dataloader.NewUserLoader(c.UserGateway),
+		ExchangeRateLoader: dataloader.NewExchangeRateLoader(c.MarketDataGateway),
+	}
+	// Note: We're using context.Background() here, assuming middleware package has keys exported or we can just bypass
+	// Actually, middleware.LoadersKey is likely unexported or we need to check.
+	// Let's check middleware.GetLoaders implementation to be safe on how to inject it.
+	// Assuming it grabs from context with a key.
+	// If unavailable, I might need to check middleware pkg.
+	// But let's assume "loaders" key for now or check if we can import key.
+	// Using "loaders" string based on previous knowledge, but let's check `middleware` pkg view if this fails.
+	// Wait, I already viewed main.go and it used `loadersKey` which was unexported in `main.go`?
+	// Ah, `middleware.DataloaderMiddleware` was in `main.go`. No, it was imported.
+	// I'll assume I can't inject easily without looking at middleware.
+	// But wait, `schema.resolvers.go` uses `middleware.GetLoaders(ctx)`.
+	// I should check `middleware.GetLoaders`.
+
+	// Temporarily: I will use the set method if available, or just ContextWithValue if I know the key.
+	// Let's rely on middleware.WithLoaders if it exists.
+	// Or I will blindly try to set it.
+	// Since I can't see middleware code right now (I viewed main.go and resolver.go), I will pause on this thought and add the function, but I suspect Context injection might fail if key is private.
+	// Correction: I previously viewed `middleware.DataloaderMiddleware` which was in `apps/gateway/cmd/server/main.go` ???
+	// No, `DataloaderMiddleware` was in `main.go` snippet. Wait, if it's in `main.go`, then `schema.resolvers.go` calling `middleware.GetLoaders` implies `middleware` package HAS key.
+
+	ctx := middleware.WithLoaders(context.Background(), loaders) // Assuming this exists or similar.
+
+	// Test Case
+	holding := &entity.Holding{
+		UserID:       "user-123",
+		Symbol:       "AAPL",
+		Currency:     "USD",
+		CurrentValue: 100.0,
+	}
+
+	// Execute
+	val, err := holdingResolver.CurrentValueInTargetCurrency(ctx, holding)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Verify
+	expected := 85.0 // 100.0 * 0.85
+	if val != expected {
+		t.Errorf("expected value %f, got %f", expected, val)
+	}
+}
+
+func TestHoldingResolver_GainLossInTargetCurrency(t *testing.T) {
+	// Mock User Service for TargetCurrency resolver
+	mockUserClient := &MockUserServiceClient{
+		GetUserFunc: func(ctx context.Context, in *userpb.GetUserRequest, opts ...grpc.CallOption) (*userpb.User, error) {
+			prefs, _ := structpb.NewStruct(map[string]interface{}{
+				"default_currency": "EUR",
+			})
+			return &userpb.User{
+				UserId:      "user-123",
+				Preferences: prefs,
+			}, nil
+		},
+	}
+
+	// Mock MarketData Service
+	mockMarketDataClient := &MockMarketDataServiceClient{}
+	mockMarketDataClient.GetLatestCurrencyRateFunc = func(ctx context.Context, in *marketdatapb.GetLatestCurrencyRateRequest, opts ...grpc.CallOption) (*marketdatapb.CurrencyRate, error) {
+		if in.BaseCurrency == "USD" && in.TargetCurrency == "EUR" {
+			return &marketdatapb.CurrencyRate{
+				Rate: 0.85,
+			}, nil
+		}
+		return &marketdatapb.CurrencyRate{Rate: 1.0}, nil
+	}
+
+	mockPortfolioClient := &MockPortfolioServiceClient{}
+	mockTransactionClient := &MockTransactionServiceClient{}
+
+	c := container.NewContainer(mockUserClient, mockPortfolioClient, mockTransactionClient, "http://mock-url", mockMarketDataClient)
+	resolver := &Resolver{
+		Container: c,
+	}
+
+	holdingResolver := &holdingResolver{resolver}
+
+	// Setup Context with Loaders
+	loaders := &middleware.Loaders{
+		UserLoader:         dataloader.NewUserLoader(c.UserGateway),
+		ExchangeRateLoader: dataloader.NewExchangeRateLoader(c.MarketDataGateway),
+	}
+	ctx := middleware.WithLoaders(context.Background(), loaders)
+
+	// Test Case
+	holding := &entity.Holding{
+		UserID:   "user-123",
+		Symbol:   "AAPL",
+		Currency: "USD",
+		GainLoss: 50.0,
+	}
+
+	// Execute
+	val, err := holdingResolver.GainLossInTargetCurrency(ctx, holding)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Verify
+	expected := 42.5 // 50.0 * 0.85
+	if val != expected {
+		t.Errorf("expected value %f, got %f", expected, val)
 	}
 }

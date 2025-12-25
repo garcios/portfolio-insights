@@ -17,6 +17,7 @@ type Config struct {
 	UserServiceAddr            string `mapstructure:"user_service_addr"`
 	TransactionServiceAddr     string `mapstructure:"transaction_service_addr"`
 	TransactionServiceHTTPAddr string `mapstructure:"transaction_service_http_addr"`
+	MarketDataServiceAddr      string `mapstructure:"market_data_service_addr"`
 	HydraPublicURL             string `mapstructure:"hydra_public_url"`
 	JWKSURL                    string `mapstructure:"jwks_url"`
 	JWTIssuer                  string `mapstructure:"jwt_issuer"`
@@ -32,6 +33,7 @@ func LoadConfig() Config {
 	viper.SetDefault("user_service_addr", "localhost:50051")
 	viper.SetDefault("transaction_service_addr", "localhost:50053")
 	viper.SetDefault("transaction_service_http_addr", "http://localhost:8081")
+	viper.SetDefault("market_data_service_addr", "localhost:50054")
 	viper.SetDefault("jwt_audience", "portfolio-insights-spa")
 	viper.SetDefault("log_level", "info")
 
@@ -73,6 +75,7 @@ func LoadConfig() Config {
 		"user_service_addr":             "USER_SERVICE_ADDR",
 		"transaction_service_addr":      "TRANSACTION_SERVICE_ADDR",
 		"transaction_service_http_addr": "TRANSACTION_SERVICE_HTTP_ADDR",
+		"market_data_service_addr":      "MARKET_DATA_SERVICE_ADDR",
 		"hydra_public_url":              "HYDRA_PUBLIC_URL",
 		"jwks_url":                      "JWKS_URL",
 		"jwt_issuer":                    "JWT_ISSUER",

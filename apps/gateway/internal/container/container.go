@@ -6,6 +6,7 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/infrastructure/grpc"
 	httpgw "github.com/garcios/portfolio-insights/apps/gateway/internal/infrastructure/http"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/usecase"
+	marketdatapb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
@@ -18,6 +19,7 @@ type Container struct {
 	PortfolioGateway       gateway.PortfolioGateway
 	TransactionGateway     gateway.TransactionGateway
 	TransactionFileGateway gateway.TransactionFileGateway
+	MarketDataGateway      gateway.MarketDataGateway
 
 	// Use Cases
 	UserUseCase        *usecase.UserUseCase
@@ -31,12 +33,14 @@ func NewContainer(
 	portfolioClient portfoliopb.PortfolioServiceClient,
 	transactionClient transactionpb.TransactionServiceClient,
 	transactionServiceURL string,
+	marketDataClient marketdatapb.MarketDataServiceClient,
 ) *Container {
 	// Initialize gateways
 	userGateway := grpc.NewUserGRPCGateway(userClient)
 	portfolioGateway := grpc.NewPortfolioGRPCGateway(portfolioClient)
 	transactionGateway := grpc.NewTransactionGRPCGateway(transactionClient)
 	transactionFileGateway := httpgw.NewTransactionHTTPGateway(transactionServiceURL)
+	marketDataGateway := grpc.NewMarketDataGRPCGateway(marketDataClient)
 
 	// Initialize use cases
 	userUseCase := usecase.NewUserUseCase(userGateway)
@@ -48,6 +52,7 @@ func NewContainer(
 		PortfolioGateway:       portfolioGateway,
 		TransactionGateway:     transactionGateway,
 		TransactionFileGateway: transactionFileGateway,
+		MarketDataGateway:      marketDataGateway,
 		UserUseCase:            userUseCase,
 		PortfolioUseCase:       portfolioUseCase,
 		TransactionUseCase:     transactionUseCase,

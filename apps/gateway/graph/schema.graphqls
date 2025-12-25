@@ -70,6 +70,9 @@ type Holding {
   gainLossPercentage: Float!
   currency: String!
   assetName: String!
+  targetCurrency: String!
+  currentValueInTargetCurrency: Float!
+  gainLossInTargetCurrency: Float!
 }
 
 input NewUser {

@@ -1,6 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, DollarSign, Activity, PieChart, ShieldCheck } from 'lucide-react';
-import Header from '../components/Header';
 import { mockFundamentals } from '../mocks/fundamentals';
 import StatsCard from '../components/StatsCard';
 
@@ -19,7 +18,6 @@ const FundamentalsPage = () => {
     if (!company) {
         return (
             <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-                <Header />
                 <div style={{ padding: '40px', textAlign: 'center' }}>
                     <h2>Company not found</h2>
                     <p>The ticker {ticker} could not be found in our database.</p>
@@ -36,7 +34,6 @@ const FundamentalsPage = () => {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--color-bg-primary)' }}>
-            <Header />
 
             <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px' }}>
                 {/* Breadcrumb */}

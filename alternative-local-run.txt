@@ -1,10 +1,18 @@
-Steps
+Steps to bring up services
 1. make build-infra
 2. make run-local-user-service
 3. make hydra-up
-4. make run-local-marketdata-service
-5. make run-local-transaction-service
-6. make run-local-portfolio-service
-7. make run-gateway
-8. cd apps/frontend && npm run dev
+4. kill login-consent-provider in hydra
+5. make run-login-consent-provider
+5. make run-local-marketdata-service
+6. make run-local-transaction-service
+7. make run-local-portfolio-service
+8. make run-gateway
+9. cd apps/frontend && npm run dev
+
+
+Steps to shut down services
+1. Exit terminal where services, gateway, and  frontend are running
+2. make services-down
+3. make hydra-down
 

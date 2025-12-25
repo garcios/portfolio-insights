@@ -41,6 +41,7 @@ type Holding struct {
 	GainLossPercentage float64
 	Currency           string
 	AssetName          string
+	UserID             string
 }
 
 // PortfolioPerformancePoint represents a single data point in portfolio performance history

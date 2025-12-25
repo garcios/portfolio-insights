@@ -64,7 +64,9 @@ func (g *PortfolioGRPCGateway) GetHoldings(ctx context.Context, userID string) (
 
 	holdings := make([]*entity.Holding, 0, len(resp.Holdings))
 	for _, h := range resp.Holdings {
-		holdings = append(holdings, mapper.ProtoToHoldingEntity(h))
+		holding := mapper.ProtoToHoldingEntity(h)
+		holding.UserID = userID
+		holdings = append(holdings, holding)
 	}
 
 	return holdings, nil

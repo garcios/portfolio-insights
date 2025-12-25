@@ -14,7 +14,89 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/middleware"
 )
+
+// TargetCurrency is the resolver for the targetCurrency field.
+func (r *holdingResolver) TargetCurrency(ctx context.Context, obj *entity.Holding) (string, error) {
+	// Use DataLoader to fetch user preferences efficiently (avoids N+1)
+	loaders := middleware.GetLoaders(ctx)
+	if loaders == nil {
+		return "", fmt.Errorf("dataloaders not found in context")
+	}
+
+	user, err := loaders.UserLoader.Load(ctx, obj.UserID)
+	if err != nil {
+		return "", fmt.Errorf("failed to load user for target currency: %w", err)
+	}
+
+	// Default to USD if not set
+	currency := "USD"
+	if user.Preferences != nil {
+		if val, ok := user.Preferences["default_currency"].(string); ok && val != "" {
+			currency = val
+		}
+	}
+
+	return currency, nil
+}
+
+// CurrentValueInTargetCurrency is the resolver for the currentValueInTargetCurrency field.
+func (r *holdingResolver) CurrentValueInTargetCurrency(ctx context.Context, obj *entity.Holding) (float64, error) {
+	// 1. Get Target Currency (same logic as above, but we need the value here)
+	targetCurrency, err := r.TargetCurrency(ctx, obj)
+	if err != nil {
+		return 0, err
+	}
+
+	// 2. If currencies match, no conversion needed
+	if obj.Currency == targetCurrency {
+		return obj.CurrentValue, nil
+	}
+
+	// 3. Get Exchange Rate using Loader (optimized/deduplicated)
+	// We already fetched loaders in step 1 (implied) or we fetch again
+	loaders := middleware.GetLoaders(ctx)
+	if loaders == nil {
+		return 0, fmt.Errorf("dataloaders not found in context")
+	}
+
+	rate, err := loaders.ExchangeRateLoader.Load(ctx, obj.Currency, targetCurrency)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get exchange rate: %w", err)
+	}
+
+	// 4. Calculate Converted Value
+	return obj.CurrentValue * rate, nil
+}
+
+// GainLossInTargetCurrency is the resolver for the gainLossInTargetCurrency field.
+func (r *holdingResolver) GainLossInTargetCurrency(ctx context.Context, obj *entity.Holding) (float64, error) {
+	// 1. Get Target Currency
+	targetCurrency, err := r.TargetCurrency(ctx, obj)
+	if err != nil {
+		return 0, err
+	}
+
+	// 2. If currencies match, no conversion needed
+	if obj.Currency == targetCurrency {
+		return obj.GainLoss, nil
+	}
+
+	// 3. Get Exchange Rate using Loader
+	loaders := middleware.GetLoaders(ctx)
+	if loaders == nil {
+		return 0, fmt.Errorf("dataloaders not found in context")
+	}
+
+	rate, err := loaders.ExchangeRateLoader.Load(ctx, obj.Currency, targetCurrency)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get exchange rate: %w", err)
+	}
+
+	// 4. Calculate Converted Gain/Loss
+	return obj.GainLoss * rate, nil
+}
 
 // CreateUser is the resolver for the createUser field.
 func (r *mutationResolver) CreateUser(ctx context.Context, input model.NewUser) (*model.User, error) {
@@ -106,14 +188,15 @@ func (r *portfolioResolver) Summary(ctx context.Context, obj *model.Portfolio, s
 }
 
 // Holdings is the resolver for the holdings field.
-func (r *portfolioResolver) Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error) {
+func (r *portfolioResolver) Holdings(ctx context.Context, obj *model.Portfolio) ([]*entity.Holding, error) {
 	// This resolver only executes if the query requests the holdings field
 	holdings, err := r.Container.PortfolioUseCase.GetHoldings(ctx, obj.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get holdings: %w", err)
 	}
 
-	return mapper.HoldingEntitiesToGraphQL(holdings), nil
+	// Return entities directly, gqlgen handles mapping to model/interface if bound
+	return holdings, nil
 }
 
 // Me is the resolver for the me field.
@@ -201,6 +284,9 @@ func (r *queryResolver) ListTransactions(ctx context.Context, pageSize *int, pag
 	return mapper.ListTransactionsResultToGraphQL(result), nil
 }
 
+// Holding returns generated.HoldingResolver implementation.
+func (r *Resolver) Holding() generated.HoldingResolver { return &holdingResolver{r} }
+
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
@@ -210,6 +296,7 @@ func (r *Resolver) Portfolio() generated.PortfolioResolver { return &portfolioRe
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+type holdingResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type portfolioResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

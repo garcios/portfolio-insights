@@ -26,7 +26,7 @@ graph TD
         cron[("Cron Jobs<br/>(Scheduler)")]
     end
     
-    external_api[("External Market API<br/>(e.g. AlphaVantage/Yahoo)")]
+    external_api[("External Market API<br/>(e.g. EODHD)")]
     
     %% Relationships
     portfolio -->|gRPC: GetPrice, GetCurrencyRate| market
@@ -62,33 +62,35 @@ The service manages three core domains: Assets (metadata), Asset Prices (time-se
 
 ```mermaid
 erDiagram
-    ASSET {
-        string symbol PK
+    ASSETS {
+        uuid id PK
+        string symbol UK
         string name
         string type "Equity, Crypto, ETF"
+        string exchange
         string currency
-        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ASSET_PRICES {
+        uuid id PK
+        uuid asset_id FK
+        decimal price
+        timestamp timestamp
         timestamp created_at
     }
 
-    ASSET_PRICE {
+    CURRENCY_RATES {
         uuid id PK
-        string symbol FK
-        decimal price
-        timestamp timestamp
-        string source
+        string base_currency
+        string target_currency
+        decimal rate 
+        timestamp rate_date
+        timestamp created_at
     }
 
-    CURRENCY_RATE {
-        uuid id PK
-        string from_currency
-        string to_currency
-        decimal rate
-        timestamp timestamp
-        timestamp effective_date
-    }
-
-    ASSET ||--o{ ASSET_PRICE : "has history"
+    ASSETS ||--o{ ASSET_PRICES : "has history"
 ```
 
 ## API Interface

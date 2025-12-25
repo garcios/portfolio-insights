@@ -235,6 +235,15 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings }) => {
                                             color: isPositive ? 'var(--color-success)' : 'var(--color-danger)',
                                         }}>
                                             {isPositive ? '+' : ''}{formatCurrency(holding.gainLoss, holding.currency)}
+                                            {holding.targetCurrency && holding.gainLossInTargetCurrency && holding.currency !== holding.targetCurrency && (
+                                                <div style={{
+                                                    fontSize: '0.75rem',
+                                                    color: 'var(--color-text-tertiary)',
+                                                    marginTop: '4px'
+                                                }}>
+                                                    {holding.gainLossInTargetCurrency >= 0 ? '+' : ''}{formatCurrency(holding.gainLossInTargetCurrency, holding.targetCurrency)}
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{
                                             padding: '16px 12px',
@@ -271,6 +280,15 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings }) => {
                                             color: 'var(--color-text-primary)',
                                         }}>
                                             {formatCurrency(holding.currentValue, holding.currency)}
+                                            {holding.targetCurrency && holding.currentValueInTargetCurrency && holding.currency !== holding.targetCurrency && (
+                                                <div style={{
+                                                    fontSize: '0.75rem',
+                                                    color: 'var(--color-text-tertiary)',
+                                                    marginTop: '4px'
+                                                }}>
+                                                    {formatCurrency(holding.currentValueInTargetCurrency, holding.targetCurrency)}
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 );
@@ -305,6 +323,26 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings }) => {
                                             color: isSubtotalPositive ? 'var(--color-success)' : 'var(--color-danger)',
                                         }}>
                                             {isSubtotalPositive ? '+' : ''}{formatCurrency(subtotalGainLoss, currency)}
+                                            {(() => {
+                                                const firstHolding = currencyHoldings[0];
+                                                const targetCurrency = firstHolding?.targetCurrency;
+                                                // Only calculate if target currency exists and differs from group currency
+                                                if (targetCurrency && currency !== targetCurrency) {
+                                                    const subtotalGainLossInTarget = currencyHoldings.reduce((sum, h) => sum + (h.gainLossInTargetCurrency || 0), 0);
+                                                    const isSubtotalTargetPositive = subtotalGainLossInTarget >= 0;
+                                                    return (
+                                                        <div style={{
+                                                            fontSize: '0.75rem',
+                                                            color: 'var(--color-text-tertiary)',
+                                                            marginTop: '4px',
+                                                            fontWeight: '600'
+                                                        }}>
+                                                            {isSubtotalTargetPositive ? '+' : ''}{formatCurrency(subtotalGainLossInTarget, targetCurrency)}
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                         </td>
                                         <td></td>
                                         <td style={{
@@ -315,6 +353,25 @@ const HoldingsTable: React.FC<HoldingsTableProps> = ({ holdings }) => {
                                             color: 'var(--color-text-primary)',
                                         }}>
                                             {formatCurrency(subtotalValue, currency)}
+                                            {(() => {
+                                                const firstHolding = currencyHoldings[0];
+                                                const targetCurrency = firstHolding?.targetCurrency;
+                                                // Only calculate if target currency exists and differs from group currency
+                                                if (targetCurrency && currency !== targetCurrency) {
+                                                    const subtotalValueInTarget = currencyHoldings.reduce((sum, h) => sum + (h.currentValueInTargetCurrency || 0), 0);
+                                                    return (
+                                                        <div style={{
+                                                            fontSize: '0.75rem',
+                                                            color: 'var(--color-text-tertiary)',
+                                                            marginTop: '4px',
+                                                            fontWeight: '600'
+                                                        }}>
+                                                            {formatCurrency(subtotalValueInTarget, targetCurrency)}
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                         </td>
                                     </tr>
                                 );
