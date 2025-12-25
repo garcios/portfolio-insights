@@ -62,6 +62,8 @@ models:
         resolver: true
       summary:
         resolver: true
+      allocations:
+        resolver: true
   Holding:
     model: github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity.Holding
     fields:

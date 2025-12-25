@@ -1,0 +1,28 @@
+Role: Act as a Senior Backend Engineer specializing in GraphQL and Golang.
+
+Task: Implement a resolver for the allocations field within the Portfolio (or parent) type.
+
+Schema Context: The allocations field returns an array of the Allocation type, defined as:
+
+- symbol: String
+
+- assetName: String
+
+- percentage: Float (Calculated as: (individual marketValue / total portfolio value) * 100)
+
+- marketValueInTargetCurrency: Float
+
+
+Technical Requirements:
+
+1. Data Source: Use the existing holdings array associated with the parent object.
+
+2. Logic: * First, iterate through all holdings to calculate the Total Market Value of the entire portfolio.
+
+ - Map through each holding to derive the marketValueInTargetCurrency (mapped from Holding.currentValueInTargetCurrency).
+
+ - Calculate the percentage for each asset relative to the Total Market Value.
+
+3. Edge Case Handling: Ensure the code handles "empty portfolio" scenarios (total value = 0) to avoid division-by-zero errors.
+
+4. Output: Provide the clean, optimized resolver code and any necessary helper functions for the calculation.

@@ -199,6 +199,78 @@ func (r *portfolioResolver) Holdings(ctx context.Context, obj *model.Portfolio) 
 	return holdings, nil
 }
 
+// Allocations is the resolver for the allocations field.
+func (r *portfolioResolver) Allocations(ctx context.Context, obj *model.Portfolio) ([]*model.Allocation, error) {
+	holdings := obj.Holdings
+
+	// 1. Fetch holdings if not present
+	// The parent resolver (Portfolio) usually does not populate Holdings as they are resolved via their own field resolver.
+	// So we need to fetch them here if we want to calculate allocations.
+	if len(holdings) == 0 {
+		var err error
+		holdings, err = r.Container.PortfolioUseCase.GetHoldings(ctx, obj.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch holdings for allocations: %w", err)
+		}
+	}
+
+	if len(holdings) == 0 {
+		return []*model.Allocation{}, nil
+	}
+
+	// 2. Calculate Total Market Value in Target Currency
+	var totalValue float64
+	holdingValues := make(map[string]float64)
+
+	// We need to resolve values using the holding resolver logic to handle currency conversion
+	holdingResolver := r.Holding()
+
+	for _, holding := range holdings {
+		// Use the existing resolver to calculate value in target currency
+		val, err := holdingResolver.CurrentValueInTargetCurrency(ctx, holding)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate value for holding %s: %w", holding.Symbol, err)
+		}
+		holdingValues[holding.Symbol] = val
+		totalValue += val
+	}
+
+	// 3. Create Allocations
+	allocations := make([]*model.Allocation, 0, len(holdings))
+
+	// Avoid division by zero
+	if totalValue == 0 {
+		// If total value is 0, all percentages are 0
+		for _, holding := range holdings {
+			allocations = append(allocations, &model.Allocation{
+				Symbol:                      holding.Symbol,
+				AssetName:                   holding.AssetName,
+				Percentage:                  0,
+				MarketValueInTargetCurrency: nil, // nullable in schema
+			})
+		}
+		return allocations, nil
+	}
+
+	for _, holding := range holdings {
+		val := holdingValues[holding.Symbol]
+		percentage := (val / totalValue) * 100
+
+		// Round to 2 decimal places for cleanliness (optional but good)
+		// percentage = math.Round(percentage*100) / 100
+
+		allocVal := val // create copy for pointer
+		allocations = append(allocations, &model.Allocation{
+			Symbol:                      holding.Symbol,
+			AssetName:                   holding.AssetName,
+			Percentage:                  percentage,
+			MarketValueInTargetCurrency: &allocVal,
+		})
+	}
+
+	return allocations, nil
+}
+
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	user, err := r.Container.UserUseCase.GetCurrentUser(ctx)

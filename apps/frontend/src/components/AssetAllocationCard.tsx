@@ -1,13 +1,44 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { Allocation } from '../types/portfolio';
 
-const AssetAllocationCard = () => {
-    // Hardcoded data as per requirements
-    // GOOGL (60%, Green), AMZN (30%, Blue/Gray), MSFT (10%, Gray)
-    const data = [
-        { name: 'GOOGL', value: 60, color: '#10b981' }, // Green matching portfolio line
-        { name: 'AMZN', value: 30, color: '#3b82f6' }, // Blue
-        { name: 'MSFT', value: 10, color: '#6b7280' },       // Gray
-    ];
+const COLORS = [
+    '#10b981', // Emerald 500
+    '#3b82f6', // Blue 500
+    '#f59e0b', // Amber 500
+    '#ef4444', // Red 500
+    '#8b5cf6', // Violet 500
+    '#ec4899', // Pink 500
+    '#6366f1', // Indigo 500
+    '#14b8a6', // Teal 500
+];
+
+interface AssetAllocationCardProps {
+    allocations?: Allocation[];
+}
+
+const AssetAllocationCard = ({ allocations = [] }: AssetAllocationCardProps) => {
+
+    const data = allocations.map((allocation, index) => ({
+        name: allocation.symbol,
+        value: allocation.percentage,
+        color: COLORS[index % COLORS.length]
+    })).sort((a, b) => b.value - a.value); // Sort by percentage descending
+
+    // Handle empty state
+    if (data.length === 0) {
+        return (
+            <div className="card fade-in" style={{
+                height: '100%',
+                padding: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--color-text-tertiary)'
+            }}>
+                No allocation data available
+            </div>
+        );
+    }
 
     return (
         <div className="card fade-in" style={{
@@ -17,7 +48,7 @@ const AssetAllocationCard = () => {
             flexDirection: 'column'
         }}>
             <h3 style={{
-                fontSize: '1.1rem', // Keeping consistent with StatsCard title size generally
+                fontSize: '1.1rem',
                 fontWeight: '600',
                 color: 'var(--color-text-primary)',
                 marginBottom: '16px'
@@ -51,7 +82,7 @@ const AssetAllocationCard = () => {
                                 color: 'var(--color-text-primary)'
                             }}
                             itemStyle={{ color: 'var(--color-text-primary)' }}
-                            formatter={(value: number) => [`${value}%`, '']}
+                            formatter={(value: number, name: string) => [`${value.toFixed(2)}%`, name]}
                         />
                         <Legend
                             verticalAlign="bottom"
@@ -61,24 +92,6 @@ const AssetAllocationCard = () => {
                         />
                     </PieChart>
                 </ResponsiveContainer>
-
-                {/* Central Text */}
-                <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -60%)', // Adjusted slightly up to center in the donut hole (ignoring legend)
-                    textAlign: 'center',
-                    pointerEvents: 'none'
-                }}>
-                    <div style={{
-                        fontSize: '1.5rem',
-                        fontWeight: '700',
-                        color: 'var(--color-text-primary)'
-                    }}>
-                        60%
-                    </div>
-                </div>
             </div>
         </div>
     );

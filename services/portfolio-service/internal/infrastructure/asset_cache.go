@@ -79,7 +79,7 @@ func (ac *AssetCache) Set(ctx context.Context, asset *pb.Asset) error {
 
 	cached := &CachedAsset{
 		Symbol:   asset.Symbol,
-		Name:     asset.Name,
+		Name:     asset.DisplayName,
 		Type:     asset.Type,
 		Exchange: asset.Exchange,
 		Currency: asset.Currency,
