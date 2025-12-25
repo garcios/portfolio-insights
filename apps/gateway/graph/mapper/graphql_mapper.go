@@ -72,30 +72,6 @@ func PortfolioSummaryEntityToGraphQL(summary *entity.PortfolioSummary) *model.Po
 	return result
 }
 
-// HoldingEntityToGraphQL converts a Holding entity to a GraphQL Holding model
-func HoldingEntityToGraphQL(holding *entity.Holding) *model.Holding {
-	return &model.Holding{
-		Symbol:             holding.Symbol,
-		Quantity:           holding.Quantity,
-		AveragePrice:       holding.AveragePrice,
-		CurrentPrice:       holding.CurrentPrice,
-		CurrentValue:       holding.CurrentValue,
-		GainLoss:           holding.GainLoss,
-		GainLossPercentage: holding.GainLossPercentage,
-		Currency:           holding.Currency,
-		AssetName:          holding.AssetName,
-	}
-}
-
-// HoldingEntitiesToGraphQL converts a slice of Holding entities to GraphQL Holding models
-func HoldingEntitiesToGraphQL(holdings []*entity.Holding) []*model.Holding {
-	result := make([]*model.Holding, 0, len(holdings))
-	for _, h := range holdings {
-		result = append(result, HoldingEntityToGraphQL(h))
-	}
-	return result
-}
-
 // PortfolioPerformancePointEntityToGraphQL converts a PortfolioPerformancePoint entity to a GraphQL model
 func PortfolioPerformancePointEntityToGraphQL(point *entity.PortfolioPerformancePoint) *model.PortfolioPerformancePoint {
 	return &model.PortfolioPerformancePoint{

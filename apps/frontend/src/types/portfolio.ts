@@ -29,6 +29,9 @@ export interface Holding {
     gainLoss: number;
     gainLossPercentage: number;
     currency: string;
+    targetCurrency?: string;
+    currentValueInTargetCurrency?: number;
+    gainLossInTargetCurrency?: number;
     assetName: string;
 }
 

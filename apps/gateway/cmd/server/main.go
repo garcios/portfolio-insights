@@ -16,6 +16,7 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/container"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/middleware"
 	"github.com/garcios/portfolio-insights/pkg/logger"
+	marketdatapb "github.com/garcios/portfolio-insights/services/marketdata-service/marketdata"
 	portfoliopb "github.com/garcios/portfolio-insights/services/portfolio-service/portfolio"
 	transactionpb "github.com/garcios/portfolio-insights/services/transaction-service/transaction"
 	userpb "github.com/garcios/portfolio-insights/services/user-service/user"
@@ -83,8 +84,26 @@ func main() {
 	// Transaction service HTTP URL
 	transactionServiceHTTPAddr := cfg.TransactionServiceHTTPAddr
 
+	// Connect to market data service
+	marketDataServiceAddr := cfg.MarketDataServiceAddr
+	if marketDataServiceAddr == "" {
+		marketDataServiceAddr = "localhost:50054"
+	}
+	marketDataConn, err := grpc.NewClient(marketDataServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		l.Error("Failed to connect to market data service", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := marketDataConn.Close(); err != nil {
+			l.Error("Failed to close market data connection", "error", err)
+		}
+	}()
+
+	marketDataClient := marketdatapb.NewMarketDataServiceClient(marketDataConn)
+
 	// Initialize dependency injection container
-	c := container.NewContainer(userClient, portfolioClient, transactionClient, transactionServiceHTTPAddr)
+	c := container.NewContainer(userClient, portfolioClient, transactionClient, transactionServiceHTTPAddr, marketDataClient)
 
 	// Initialize JWT authentication (optional for development)
 	var authMiddleware func(http.Handler) http.Handler
@@ -153,7 +172,16 @@ func main() {
 	}
 
 	http.Handle("/", corsMiddleware(playground.Handler("GraphQL playground", "/query")))
-	http.Handle("/query", corsMiddleware(authMiddleware(middleware.MetricsMiddleware(srv))))
+	// Chain middlewares
+	// Order: CORS -> Auth -> Dataloader -> Metrics -> GraphQL
+	// Note: Dataloader comes after Auth because it might need user info (though our current loader doesn't check it directly, future ones might)
+	// But crucial: Dataloader is per-request, so it fits here.
+	gqlHandler := middleware.MetricsMiddleware(srv)
+	gqlHandler = middleware.DataloaderMiddleware(c.UserGateway, c.MarketDataGateway)(gqlHandler)
+	gqlHandler = authMiddleware(gqlHandler)
+	gqlHandler = corsMiddleware(gqlHandler)
+
+	http.Handle("/query", gqlHandler)
 	http.Handle("/metrics", promhttp.Handler())
 
 	l.Info("connect to http://localhost:" + port + "/ for GraphQL playground")

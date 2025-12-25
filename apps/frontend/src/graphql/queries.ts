@@ -69,6 +69,9 @@ export const GET_PORTFOLIO = gql`
       gainLossPercentage
       currency
       assetName
+      targetCurrency
+      currentValueInTargetCurrency
+      gainLossInTargetCurrency
     }
   }
 }

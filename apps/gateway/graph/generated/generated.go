@@ -14,6 +14,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/model"
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -38,6 +39,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Holding() HoldingResolver
 	Mutation() MutationResolver
 	Portfolio() PortfolioResolver
 	Query() QueryResolver
@@ -49,15 +51,18 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Holding struct {
-		AssetName          func(childComplexity int) int
-		AveragePrice       func(childComplexity int) int
-		Currency           func(childComplexity int) int
-		CurrentPrice       func(childComplexity int) int
-		CurrentValue       func(childComplexity int) int
-		GainLoss           func(childComplexity int) int
-		GainLossPercentage func(childComplexity int) int
-		Quantity           func(childComplexity int) int
-		Symbol             func(childComplexity int) int
+		AssetName                    func(childComplexity int) int
+		AveragePrice                 func(childComplexity int) int
+		Currency                     func(childComplexity int) int
+		CurrentPrice                 func(childComplexity int) int
+		CurrentValue                 func(childComplexity int) int
+		CurrentValueInTargetCurrency func(childComplexity int) int
+		GainLoss                     func(childComplexity int) int
+		GainLossInTargetCurrency     func(childComplexity int) int
+		GainLossPercentage           func(childComplexity int) int
+		Quantity                     func(childComplexity int) int
+		Symbol                       func(childComplexity int) int
+		TargetCurrency               func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -139,6 +144,11 @@ type ComplexityRoot struct {
 	}
 }
 
+type HoldingResolver interface {
+	TargetCurrency(ctx context.Context, obj *entity.Holding) (string, error)
+	CurrentValueInTargetCurrency(ctx context.Context, obj *entity.Holding) (float64, error)
+	GainLossInTargetCurrency(ctx context.Context, obj *entity.Holding) (float64, error)
+}
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input model.NewUser) (*model.User, error)
 	UpdateUser(ctx context.Context, input model.UpdateUserInput) (*model.User, error)
@@ -147,7 +157,7 @@ type MutationResolver interface {
 }
 type PortfolioResolver interface {
 	Summary(ctx context.Context, obj *model.Portfolio, startDate *string, endDate *string) (*model.PortfolioSummary, error)
-	Holdings(ctx context.Context, obj *model.Portfolio) ([]*model.Holding, error)
+	Holdings(ctx context.Context, obj *model.Portfolio) ([]*entity.Holding, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
@@ -211,12 +221,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Holding.CurrentValue(childComplexity), true
 
+	case "Holding.currentValueInTargetCurrency":
+		if e.complexity.Holding.CurrentValueInTargetCurrency == nil {
+			break
+		}
+
+		return e.complexity.Holding.CurrentValueInTargetCurrency(childComplexity), true
+
 	case "Holding.gainLoss":
 		if e.complexity.Holding.GainLoss == nil {
 			break
 		}
 
 		return e.complexity.Holding.GainLoss(childComplexity), true
+
+	case "Holding.gainLossInTargetCurrency":
+		if e.complexity.Holding.GainLossInTargetCurrency == nil {
+			break
+		}
+
+		return e.complexity.Holding.GainLossInTargetCurrency(childComplexity), true
 
 	case "Holding.gainLossPercentage":
 		if e.complexity.Holding.GainLossPercentage == nil {
@@ -238,6 +262,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Holding.Symbol(childComplexity), true
+
+	case "Holding.targetCurrency":
+		if e.complexity.Holding.TargetCurrency == nil {
+			break
+		}
+
+		return e.complexity.Holding.TargetCurrency(childComplexity), true
 
 	case "Mutation.createTransaction":
 		if e.complexity.Mutation.CreateTransaction == nil {
@@ -838,6 +869,9 @@ type Holding {
   gainLossPercentage: Float!
   currency: String!
   assetName: String!
+  targetCurrency: String!
+  currentValueInTargetCurrency: Float!
+  gainLossInTargetCurrency: Float!
 }
 
 input NewUser {
@@ -1130,7 +1164,7 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Holding_symbol(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+func (ec *executionContext) _Holding_symbol(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_symbol(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1174,7 +1208,7 @@ func (ec *executionContext) fieldContext_Holding_symbol(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Holding_quantity(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+func (ec *executionContext) _Holding_quantity(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_quantity(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1218,7 +1252,7 @@ func (ec *executionContext) fieldContext_Holding_quantity(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Holding_averagePrice(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+func (ec *executionContext) _Holding_averagePrice(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_averagePrice(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1262,7 +1296,7 @@ func (ec *executionContext) fieldContext_Holding_averagePrice(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Holding_currentPrice(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+func (ec *executionContext) _Holding_currentPrice(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_currentPrice(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1306,7 +1340,7 @@ func (ec *executionContext) fieldContext_Holding_currentPrice(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Holding_currentValue(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+func (ec *executionContext) _Holding_currentValue(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_currentValue(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1350,7 +1384,7 @@ func (ec *executionContext) fieldContext_Holding_currentValue(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Holding_gainLoss(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+func (ec *executionContext) _Holding_gainLoss(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_gainLoss(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1394,7 +1428,7 @@ func (ec *executionContext) fieldContext_Holding_gainLoss(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Holding_gainLossPercentage(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+func (ec *executionContext) _Holding_gainLossPercentage(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_gainLossPercentage(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1438,7 +1472,7 @@ func (ec *executionContext) fieldContext_Holding_gainLossPercentage(ctx context.
 	return fc, nil
 }
 
-func (ec *executionContext) _Holding_currency(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+func (ec *executionContext) _Holding_currency(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_currency(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1482,7 +1516,7 @@ func (ec *executionContext) fieldContext_Holding_currency(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Holding_assetName(ctx context.Context, field graphql.CollectedField, obj *model.Holding) (ret graphql.Marshaler) {
+func (ec *executionContext) _Holding_assetName(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_assetName(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1521,6 +1555,138 @@ func (ec *executionContext) fieldContext_Holding_assetName(ctx context.Context, 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Holding_targetCurrency(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Holding_targetCurrency(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Holding().TargetCurrency(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Holding_targetCurrency(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Holding",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Holding_currentValueInTargetCurrency(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Holding_currentValueInTargetCurrency(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Holding().CurrentValueInTargetCurrency(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Holding_currentValueInTargetCurrency(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Holding",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Holding_gainLossInTargetCurrency(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Holding_gainLossInTargetCurrency(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Holding().GainLossInTargetCurrency(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Holding_gainLossInTargetCurrency(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Holding",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2112,9 +2278,9 @@ func (ec *executionContext) _Portfolio_holdings(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Holding)
+	res := resTmp.([]*entity.Holding)
 	fc.Result = res
-	return ec.marshalNHolding2ᚕᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐHoldingᚄ(ctx, field.Selections, res)
+	return ec.marshalNHolding2ᚕᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋinternalᚋdomainᚋentityᚐHoldingᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Portfolio_holdings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2143,6 +2309,12 @@ func (ec *executionContext) fieldContext_Portfolio_holdings(ctx context.Context,
 				return ec.fieldContext_Holding_currency(ctx, field)
 			case "assetName":
 				return ec.fieldContext_Holding_assetName(ctx, field)
+			case "targetCurrency":
+				return ec.fieldContext_Holding_targetCurrency(ctx, field)
+			case "currentValueInTargetCurrency":
+				return ec.fieldContext_Holding_currentValueInTargetCurrency(ctx, field)
+			case "gainLossInTargetCurrency":
+				return ec.fieldContext_Holding_gainLossInTargetCurrency(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Holding", field.Name)
 		},
@@ -6468,7 +6640,7 @@ func (ec *executionContext) unmarshalInputUpdateUserInput(ctx context.Context, o
 
 var holdingImplementors = []string{"Holding"}
 
-func (ec *executionContext) _Holding(ctx context.Context, sel ast.SelectionSet, obj *model.Holding) graphql.Marshaler {
+func (ec *executionContext) _Holding(ctx context.Context, sel ast.SelectionSet, obj *entity.Holding) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, holdingImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6480,48 +6652,156 @@ func (ec *executionContext) _Holding(ctx context.Context, sel ast.SelectionSet, 
 		case "symbol":
 			out.Values[i] = ec._Holding_symbol(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "quantity":
 			out.Values[i] = ec._Holding_quantity(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "averagePrice":
 			out.Values[i] = ec._Holding_averagePrice(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "currentPrice":
 			out.Values[i] = ec._Holding_currentPrice(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "currentValue":
 			out.Values[i] = ec._Holding_currentValue(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "gainLoss":
 			out.Values[i] = ec._Holding_gainLoss(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "gainLossPercentage":
 			out.Values[i] = ec._Holding_gainLossPercentage(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "currency":
 			out.Values[i] = ec._Holding_currency(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "assetName":
 			out.Values[i] = ec._Holding_assetName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "targetCurrency":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Holding_targetCurrency(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "currentValueInTargetCurrency":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Holding_currentValueInTargetCurrency(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "gainLossInTargetCurrency":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Holding_gainLossInTargetCurrency(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7583,7 +7863,7 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 	return graphql.WrapContextMarshaler(ctx, res)
 }
 
-func (ec *executionContext) marshalNHolding2ᚕᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐHoldingᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Holding) graphql.Marshaler {
+func (ec *executionContext) marshalNHolding2ᚕᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋinternalᚋdomainᚋentityᚐHoldingᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.Holding) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -7607,7 +7887,7 @@ func (ec *executionContext) marshalNHolding2ᚕᚖgithubᚗcomᚋgarciosᚋportf
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNHolding2ᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐHolding(ctx, sel, v[i])
+			ret[i] = ec.marshalNHolding2ᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋinternalᚋdomainᚋentityᚐHolding(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7627,7 +7907,7 @@ func (ec *executionContext) marshalNHolding2ᚕᚖgithubᚗcomᚋgarciosᚋportf
 	return ret
 }
 
-func (ec *executionContext) marshalNHolding2ᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐHolding(ctx context.Context, sel ast.SelectionSet, v *model.Holding) graphql.Marshaler {
+func (ec *executionContext) marshalNHolding2ᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋinternalᚋdomainᚋentityᚐHolding(ctx context.Context, sel ast.SelectionSet, v *entity.Holding) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")

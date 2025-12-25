@@ -3,7 +3,7 @@
     "userId": "1",
     "name": "My Portfolio",
     "summary": {
-        "totalValue": 125000.50,
+        "totalValue": 312345.00,
         "totalGainLoss": 25000.50,
         "totalGainLossPercentage": 25.0,
         "dayChange": 1200.00,
@@ -31,7 +31,10 @@
             "gainLoss": 1470.00,
             "gainLossPercentage": 15.39,
             "currentValue": 11020.00,
-            "allocation": 8.8
+            "allocation": 8.8,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 11020.00,
+            "gainLossInTargetCurrency": 1470.00
         },
         {
             "id": "h-2",
@@ -46,7 +49,10 @@
             "gainLoss": 1300.00,
             "gainLossPercentage": 15.48,
             "currentValue": 9700.00,
-            "allocation": 7.7
+            "allocation": 7.7,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 9700.00,
+            "gainLossInTargetCurrency": 1300.00
         },
         {
             "id": "h-3",
@@ -61,7 +67,10 @@
             "gainLoss": 2000.00,
             "gainLossPercentage": 16.00,
             "currentValue": 14500.00,
-            "allocation": 11.6
+            "allocation": 11.6,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 14500.00,
+            "gainLossInTargetCurrency": 2000.00
         },
         {
             "id": "h-4",
@@ -76,7 +85,10 @@
             "gainLoss": 6750.00,
             "gainLossPercentage": 30.00,
             "currentValue": 29250.00,
-            "allocation": 23.4
+            "allocation": 23.4,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 43875.00,
+            "gainLossInTargetCurrency": 10125.00
         },
         {
             "id": "h-5",
@@ -91,7 +103,10 @@
             "gainLoss": 7600.00,
             "gainLossPercentage": 33.93,
             "currentValue": 30000.00,
-            "allocation": 24.0
+            "allocation": 24.0,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 45000.00,
+            "gainLossInTargetCurrency": 11400.00
         },
         {
             "id": "h-6",
@@ -106,7 +121,10 @@
             "gainLoss": 3000.00,
             "gainLossPercentage": 27.27,
             "currentValue": 14000.00,
-            "allocation": 11.2
+            "allocation": 11.2,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 21000.00,
+            "gainLossInTargetCurrency": 4500.00
         },
         {
             "id": "h-7",
@@ -121,7 +139,10 @@
             "gainLoss": 3600.00,
             "gainLossPercentage": 24.00,
             "currentValue": 18600.00,
-            "allocation": 14.8
+            "allocation": 14.8,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 27900.00,
+            "gainLossInTargetCurrency": 5400.00
         },
         {
             "id": "h-8",
@@ -136,7 +157,10 @@
             "gainLoss": 2500.00,
             "gainLossPercentage": 25.00,
             "currentValue": 12500.00,
-            "allocation": 10.0
+            "allocation": 10.0,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 18750.00,
+            "gainLossInTargetCurrency": 3750.00
         },
         {
             "id": "h-9",
@@ -151,7 +175,10 @@
             "gainLoss": 7200.00,
             "gainLossPercentage": 60.00,
             "currentValue": 19200.00,
-            "allocation": 15.3
+            "allocation": 15.3,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 28800.00,
+            "gainLossInTargetCurrency": 10800.00
         },
         {
             "id": "h-10",
@@ -166,7 +193,10 @@
             "gainLoss": 5400.00,
             "gainLossPercentage": 36.00,
             "currentValue": 20400.00,
-            "allocation": 16.3
+            "allocation": 16.3,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 30600.00,
+            "gainLossInTargetCurrency": 8100.00
         },
         {
             "id": "h-11",
@@ -181,7 +211,10 @@
             "gainLoss": 1200.00,
             "gainLossPercentage": 12.50,
             "currentValue": 10800.00,
-            "allocation": 8.6
+            "allocation": 8.6,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 16200.00,
+            "gainLossInTargetCurrency": 1800.00
         },
         {
             "id": "h-12",
@@ -196,7 +229,10 @@
             "gainLoss": 3000.00,
             "gainLossPercentage": 21.43,
             "currentValue": 17000.00,
-            "allocation": 13.6
+            "allocation": 13.6,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 25500.00,
+            "gainLossInTargetCurrency": 4500.00
         },
         {
             "id": "h-13",
@@ -211,7 +247,10 @@
             "gainLoss": 1500.00,
             "gainLossPercentage": 13.04,
             "currentValue": 13000.00,
-            "allocation": 10.4
+            "allocation": 10.4,
+            "targetCurrency": "AUD",
+            "currentValueInTargetCurrency": 19500.00,
+            "gainLossInTargetCurrency": 2250.00
         }
     ]
 }

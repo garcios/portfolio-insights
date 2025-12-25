@@ -62,3 +62,10 @@ models:
         resolver: true
       summary:
         resolver: true
+  Holding:
+    model: github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity.Holding
+    fields:
+      targetCurrency:
+        resolver: true
+      currentValueInTargetCurrency:
+        resolver: true

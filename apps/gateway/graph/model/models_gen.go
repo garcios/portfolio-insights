@@ -6,19 +6,9 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-)
 
-type Holding struct {
-	Symbol             string  `json:"symbol"`
-	Quantity           float64 `json:"quantity"`
-	AveragePrice       float64 `json:"averagePrice"`
-	CurrentPrice       float64 `json:"currentPrice"`
-	CurrentValue       float64 `json:"currentValue"`
-	GainLoss           float64 `json:"gainLoss"`
-	GainLossPercentage float64 `json:"gainLossPercentage"`
-	Currency           string  `json:"currency"`
-	AssetName          string  `json:"assetName"`
-}
+	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
+)
 
 type Mutation struct {
 }
@@ -48,7 +38,7 @@ type Portfolio struct {
 	UserID   string            `json:"userId"`
 	Name     string            `json:"name"`
 	Summary  *PortfolioSummary `json:"summary,omitempty"`
-	Holdings []*Holding        `json:"holdings"`
+	Holdings []*entity.Holding `json:"holdings"`
 }
 
 type PortfolioPerformancePoint struct {

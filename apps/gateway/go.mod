@@ -5,9 +5,11 @@ go 1.24.0
 require (
 	github.com/99designs/gqlgen v0.17.45
 	github.com/garcios/portfolio-insights/pkg v0.0.0
+	github.com/garcios/portfolio-insights/services/marketdata-service v0.0.0
 	github.com/garcios/portfolio-insights/services/portfolio-service v0.0.0-00010101000000-000000000000
 	github.com/garcios/portfolio-insights/services/transaction-service v0.0.0-00010101000000-000000000000
 	github.com/garcios/portfolio-insights/services/user-service v0.0.0-00010101000000-000000000000
+	github.com/graph-gophers/dataloader/v7 v7.1.2
 	github.com/lestrrat-go/jwx/v2 v2.0.21
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/viper v1.21.0
@@ -64,3 +66,5 @@ replace github.com/garcios/portfolio-insights/services/portfolio-service => ../.
 replace github.com/garcios/portfolio-insights/services/transaction-service => ../../services/transaction-service
 
 replace github.com/garcios/portfolio-insights/services/user-service => ../../services/user-service
+
+replace github.com/garcios/portfolio-insights/services/marketdata-service => ../../services/marketdata-service

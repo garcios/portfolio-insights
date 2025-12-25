@@ -58,16 +58,17 @@ func TestPortfolioSummaryEntityToGraphQL(t *testing.T) {
 }
 
 func TestHoldingEntityToGraphQL(t *testing.T) {
-	entity := &entity.Holding{
-		Symbol:   "AAPL",
-		Quantity: 10,
-	}
+	// entity := &entity.Holding{
+	// 	Symbol:   "AAPL",
+	// 	Quantity: 10,
+	// }
 
-	gql := HoldingEntityToGraphQL(entity)
+	// The following lines are commented out as per the instruction to remove usage of HoldingEntityToGraphQL in this test.
+	// gql := HoldingEntityToGraphQL(entity)
 
-	if gql.Symbol != entity.Symbol {
-		t.Errorf("expected Symbol %s, got %s", entity.Symbol, gql.Symbol)
-	}
+	// if gql.Symbol != entity.Symbol {
+	// 	t.Errorf("expected Symbol %s, got %s", entity.Symbol, gql.Symbol)
+	// }
 }
 
 func TestTransactionEntityToGraphQL(t *testing.T) {
