@@ -1,3 +1,4 @@
+// Package dataloader provides data loaders for efficient data fetching.
 package dataloader
 
 import (
@@ -15,6 +16,7 @@ type ExchangeRateLoader struct {
 	loader *dataloader.Loader[string, float64]
 }
 
+// NewExchangeRateLoader creates a new instance of ExchangeRateLoader.
 func NewExchangeRateLoader(marketDataGateway gateway.MarketDataGateway) *ExchangeRateLoader {
 	batchFn := func(ctx context.Context, keys []string) []*dataloader.Result[float64] {
 		results := make([]*dataloader.Result[float64], len(keys))
@@ -58,6 +60,8 @@ func NewExchangeRateLoader(marketDataGateway gateway.MarketDataGateway) *Exchang
 	}
 }
 
+// Load fetches the exchange rate for a given base and target currency pair.
+// It uses the underlying dataloader to batch and cache requests.
 func (l *ExchangeRateLoader) Load(ctx context.Context, baseCurrency, targetCurrency string) (float64, error) {
 	key := fmt.Sprintf("%s:%s", baseCurrency, targetCurrency)
 	return l.loader.Load(ctx, key)()
