@@ -40,6 +40,7 @@ type Portfolio {
   name: String!
   summary(startDate: String, endDate: String): PortfolioSummary
   holdings: [Holding!]!
+  allocations: [Allocation!]!
 }
 
 type PortfolioSummary {
@@ -73,6 +74,13 @@ type Holding {
   targetCurrency: String!
   currentValueInTargetCurrency: Float!
   gainLossInTargetCurrency: Float!
+}
+
+type Allocation {
+  symbol: String!
+  assetName: String!
+  percentage: Float!
+  marketValueInTargetCurrency: Float
 }
 
 input NewUser {

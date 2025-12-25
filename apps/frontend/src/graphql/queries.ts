@@ -73,6 +73,10 @@ export const GET_PORTFOLIO = gql`
       currentValueInTargetCurrency
       gainLossInTargetCurrency
     }
+    allocations{
+        symbol
+        percentage
+      }
   }
 }
 `;

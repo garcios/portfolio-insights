@@ -10,6 +10,13 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 )
 
+type Allocation struct {
+	Symbol                      string   `json:"symbol"`
+	AssetName                   string   `json:"assetName"`
+	Percentage                  float64  `json:"percentage"`
+	MarketValueInTargetCurrency *float64 `json:"marketValueInTargetCurrency,omitempty"`
+}
+
 type Mutation struct {
 }
 
@@ -34,11 +41,12 @@ type NewUser struct {
 }
 
 type Portfolio struct {
-	ID       string            `json:"id"`
-	UserID   string            `json:"userId"`
-	Name     string            `json:"name"`
-	Summary  *PortfolioSummary `json:"summary,omitempty"`
-	Holdings []*entity.Holding `json:"holdings"`
+	ID          string            `json:"id"`
+	UserID      string            `json:"userId"`
+	Name        string            `json:"name"`
+	Summary     *PortfolioSummary `json:"summary,omitempty"`
+	Holdings    []*entity.Holding `json:"holdings"`
+	Allocations []*Allocation     `json:"allocations"`
 }
 
 type PortfolioPerformancePoint struct {

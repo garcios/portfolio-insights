@@ -50,6 +50,13 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Allocation struct {
+		AssetName                   func(childComplexity int) int
+		MarketValueInTargetCurrency func(childComplexity int) int
+		Percentage                  func(childComplexity int) int
+		Symbol                      func(childComplexity int) int
+	}
+
 	Holding struct {
 		AssetName                    func(childComplexity int) int
 		AveragePrice                 func(childComplexity int) int
@@ -73,11 +80,12 @@ type ComplexityRoot struct {
 	}
 
 	Portfolio struct {
-		Holdings func(childComplexity int) int
-		ID       func(childComplexity int) int
-		Name     func(childComplexity int) int
-		Summary  func(childComplexity int, startDate *string, endDate *string) int
-		UserID   func(childComplexity int) int
+		Allocations func(childComplexity int) int
+		Holdings    func(childComplexity int) int
+		ID          func(childComplexity int) int
+		Name        func(childComplexity int) int
+		Summary     func(childComplexity int, startDate *string, endDate *string) int
+		UserID      func(childComplexity int) int
 	}
 
 	PortfolioPerformancePoint struct {
@@ -158,6 +166,7 @@ type MutationResolver interface {
 type PortfolioResolver interface {
 	Summary(ctx context.Context, obj *model.Portfolio, startDate *string, endDate *string) (*model.PortfolioSummary, error)
 	Holdings(ctx context.Context, obj *model.Portfolio) ([]*entity.Holding, error)
+	Allocations(ctx context.Context, obj *model.Portfolio) ([]*model.Allocation, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
@@ -185,6 +194,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Allocation.assetName":
+		if e.complexity.Allocation.AssetName == nil {
+			break
+		}
+
+		return e.complexity.Allocation.AssetName(childComplexity), true
+
+	case "Allocation.marketValueInTargetCurrency":
+		if e.complexity.Allocation.MarketValueInTargetCurrency == nil {
+			break
+		}
+
+		return e.complexity.Allocation.MarketValueInTargetCurrency(childComplexity), true
+
+	case "Allocation.percentage":
+		if e.complexity.Allocation.Percentage == nil {
+			break
+		}
+
+		return e.complexity.Allocation.Percentage(childComplexity), true
+
+	case "Allocation.symbol":
+		if e.complexity.Allocation.Symbol == nil {
+			break
+		}
+
+		return e.complexity.Allocation.Symbol(childComplexity), true
 
 	case "Holding.assetName":
 		if e.complexity.Holding.AssetName == nil {
@@ -317,6 +354,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.UploadTransactionCSV(childComplexity, args["file"].(graphql.Upload)), true
+
+	case "Portfolio.allocations":
+		if e.complexity.Portfolio.Allocations == nil {
+			break
+		}
+
+		return e.complexity.Portfolio.Allocations(childComplexity), true
 
 	case "Portfolio.holdings":
 		if e.complexity.Portfolio.Holdings == nil {
@@ -839,6 +883,7 @@ type Portfolio {
   name: String!
   summary(startDate: String, endDate: String): PortfolioSummary
   holdings: [Holding!]!
+  allocations: [Allocation!]!
 }
 
 type PortfolioSummary {
@@ -872,6 +917,13 @@ type Holding {
   targetCurrency: String!
   currentValueInTargetCurrency: Float!
   gainLossInTargetCurrency: Float!
+}
+
+type Allocation {
+  symbol: String!
+  assetName: String!
+  percentage: Float!
+  marketValueInTargetCurrency: Float
 }
 
 input NewUser {
@@ -1163,6 +1215,179 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Allocation_symbol(ctx context.Context, field graphql.CollectedField, obj *model.Allocation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Allocation_symbol(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Symbol, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Allocation_symbol(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Allocation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Allocation_assetName(ctx context.Context, field graphql.CollectedField, obj *model.Allocation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Allocation_assetName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AssetName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Allocation_assetName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Allocation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Allocation_percentage(ctx context.Context, field graphql.CollectedField, obj *model.Allocation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Allocation_percentage(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Percentage, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Allocation_percentage(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Allocation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Allocation_marketValueInTargetCurrency(ctx context.Context, field graphql.CollectedField, obj *model.Allocation) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Allocation_marketValueInTargetCurrency(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.MarketValueInTargetCurrency, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Allocation_marketValueInTargetCurrency(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Allocation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Holding_symbol(ctx context.Context, field graphql.CollectedField, obj *entity.Holding) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Holding_symbol(ctx, field)
@@ -2322,6 +2547,60 @@ func (ec *executionContext) fieldContext_Portfolio_holdings(ctx context.Context,
 	return fc, nil
 }
 
+func (ec *executionContext) _Portfolio_allocations(ctx context.Context, field graphql.CollectedField, obj *model.Portfolio) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Portfolio_allocations(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Portfolio().Allocations(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Allocation)
+	fc.Result = res
+	return ec.marshalNAllocation2ᚕᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐAllocationᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Portfolio_allocations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Portfolio",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "symbol":
+				return ec.fieldContext_Allocation_symbol(ctx, field)
+			case "assetName":
+				return ec.fieldContext_Allocation_assetName(ctx, field)
+			case "percentage":
+				return ec.fieldContext_Allocation_percentage(ctx, field)
+			case "marketValueInTargetCurrency":
+				return ec.fieldContext_Allocation_marketValueInTargetCurrency(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Allocation", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PortfolioPerformancePoint_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.PortfolioPerformancePoint) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_PortfolioPerformancePoint_timestamp(ctx, field)
 	if err != nil {
@@ -3299,6 +3578,8 @@ func (ec *executionContext) fieldContext_Query_portfolio(ctx context.Context, fi
 				return ec.fieldContext_Portfolio_summary(ctx, field)
 			case "holdings":
 				return ec.fieldContext_Portfolio_holdings(ctx, field)
+			case "allocations":
+				return ec.fieldContext_Portfolio_allocations(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Portfolio", field.Name)
 		},
@@ -6638,6 +6919,57 @@ func (ec *executionContext) unmarshalInputUpdateUserInput(ctx context.Context, o
 
 // region    **************************** object.gotpl ****************************
 
+var allocationImplementors = []string{"Allocation"}
+
+func (ec *executionContext) _Allocation(ctx context.Context, sel ast.SelectionSet, obj *model.Allocation) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, allocationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Allocation")
+		case "symbol":
+			out.Values[i] = ec._Allocation_symbol(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "assetName":
+			out.Values[i] = ec._Allocation_assetName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "percentage":
+			out.Values[i] = ec._Allocation_percentage(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "marketValueInTargetCurrency":
+			out.Values[i] = ec._Allocation_marketValueInTargetCurrency(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var holdingImplementors = []string{"Holding"}
 
 func (ec *executionContext) _Holding(ctx context.Context, sel ast.SelectionSet, obj *entity.Holding) graphql.Marshaler {
@@ -6964,6 +7296,42 @@ func (ec *executionContext) _Portfolio(ctx context.Context, sel ast.SelectionSet
 					}
 				}()
 				res = ec._Portfolio_holdings(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "allocations":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Portfolio_allocations(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -7832,6 +8200,60 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
+
+func (ec *executionContext) marshalNAllocation2ᚕᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐAllocationᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Allocation) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNAllocation2ᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐAllocation(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNAllocation2ᚖgithubᚗcomᚋgarciosᚋportfolioᚑinsightsᚋappsᚋgatewayᚋgraphᚋmodelᚐAllocation(ctx context.Context, sel ast.SelectionSet, v *model.Allocation) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Allocation(ctx, sel, v)
+}
 
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)

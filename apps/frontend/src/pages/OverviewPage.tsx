@@ -277,7 +277,7 @@ const OverviewPage = () => {
                     {/* Side Cards Column */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         <div style={{ flex: 1, minHeight: '300px' }}>
-                            <AssetAllocationCard />
+                            <AssetAllocationCard allocations={portfolio?.allocations} />
                         </div>
                         <div style={{ flex: 1, minHeight: '400px', maxHeight: '500px' }}>
                             <RecentActivityCard />

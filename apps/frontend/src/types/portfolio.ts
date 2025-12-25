@@ -35,12 +35,18 @@ export interface Holding {
     assetName: string;
 }
 
+export interface Allocation {
+    symbol: string;
+    percentage: number;
+}
+
 export interface Portfolio {
     id: string;
     userId: string;
     name: string;
     summary?: PortfolioSummary;
     holdings: Holding[];
+    allocations: Allocation[];
 }
 
 export interface PortfolioPerformance {

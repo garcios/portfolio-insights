@@ -20,11 +20,16 @@ vi.mock('recharts', () => {
 describe('AssetAllocationCard', () => {
     it('renders the title', () => {
         render(<AssetAllocationCard />);
-        expect(screen.getByText('Asset Allocation')).toBeInTheDocument();
+        expect(screen.queryByText('Asset Allocation')).not.toBeInTheDocument(); // It shows "No allocation data available" when empty
+        expect(screen.getByText('No allocation data available')).toBeInTheDocument();
     });
 
-    it('renders the central text', () => {
-        render(<AssetAllocationCard />);
-        expect(screen.getByText('60%')).toBeInTheDocument();
+    it('renders with data', () => {
+        const mockAllocations = [
+            { symbol: 'AAPL', percentage: 40 },
+            { symbol: 'GOOGL', percentage: 60 }
+        ];
+        render(<AssetAllocationCard allocations={mockAllocations} />);
+        expect(screen.getByText('Asset Allocation')).toBeInTheDocument();
     });
 });
