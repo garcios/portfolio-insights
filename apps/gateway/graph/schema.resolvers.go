@@ -7,6 +7,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/garcios/portfolio-insights/apps/gateway/graph/generated"
@@ -15,6 +16,7 @@ import (
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/auth"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/domain/entity"
 	"github.com/garcios/portfolio-insights/apps/gateway/internal/middleware"
+	"golang.org/x/sync/errgroup"
 )
 
 // TargetCurrency is the resolver for the targetCurrency field.
@@ -221,18 +223,32 @@ func (r *portfolioResolver) Allocations(ctx context.Context, obj *model.Portfoli
 	// 2. Calculate Total Market Value in Target Currency
 	var totalValue float64
 	holdingValues := make(map[string]float64)
+	var mu sync.Mutex
 
 	// We need to resolve values using the holding resolver logic to handle currency conversion
 	holdingResolver := r.Holding()
 
+	g, gCtx := errgroup.WithContext(ctx)
+
 	for _, holding := range holdings {
-		// Use the existing resolver to calculate value in target currency
-		val, err := holdingResolver.CurrentValueInTargetCurrency(ctx, holding)
-		if err != nil {
-			return nil, fmt.Errorf("failed to calculate value for holding %s: %w", holding.Symbol, err)
-		}
-		holdingValues[holding.Symbol] = val
-		totalValue += val
+		holding := holding // capture loop var
+		g.Go(func() error {
+			// Use the existing resolver to calculate value in target currency
+			val, err := holdingResolver.CurrentValueInTargetCurrency(gCtx, holding)
+			if err != nil {
+				return fmt.Errorf("failed to calculate value for holding %s: %w", holding.Symbol, err)
+			}
+
+			mu.Lock()
+			holdingValues[holding.Symbol] = val
+			totalValue += val
+			mu.Unlock()
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	// 3. Create Allocations
