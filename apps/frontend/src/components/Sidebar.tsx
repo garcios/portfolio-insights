@@ -133,7 +133,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
                     padding: '16px',
                     borderTop: '1px solid var(--color-border)',
                 }}>
-                    <UserMenu />
+                    <UserMenu placement="top-end" />
                 </div>
             </aside>
         </>

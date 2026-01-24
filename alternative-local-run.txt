@@ -1,5 +1,8 @@
 Steps to bring up services
 1. make build-infra
+   - cd infra/db && make migrate-up
+   - cd tools/asset-prices && make download-prices
+   - cd tools/asset-prices && make download-currency-rates
 2. make run-local-user-service
 3. make hydra-up
 4. kill login-consent-provider in hydra

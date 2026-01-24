@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { User, Settings, Bell, LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
-const UserMenu = () => {
+interface UserMenuProps {
+    placement?: 'bottom-end' | 'top-end';
+}
+
+const UserMenu = ({ placement = 'bottom-end' }: UserMenuProps) => {
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark mode
@@ -99,7 +103,9 @@ const UserMenu = () => {
                     role="menu"
                     style={{
                         position: 'absolute',
-                        top: 'calc(100% + 8px)',
+                        ...(placement === 'bottom-end'
+                            ? { top: 'calc(100% + 8px)' }
+                            : { bottom: 'calc(100% + 8px)', top: 'auto' }),
                         right: 0,
                         width: '220px',
                         background: 'var(--color-bg-card)',

@@ -58,9 +58,50 @@ func (uc *marketDataUsecase) GetHistoricalPrices(symbol string, start, end time.
 }
 
 func (uc *marketDataUsecase) GetLatestCurrencyRate(baseCurrency, targetCurrency string) (*domain.CurrencyRate, error) {
-	return uc.repo.GetLatestCurrencyRate(baseCurrency, targetCurrency)
+	rate, err := uc.repo.GetLatestCurrencyRate(baseCurrency, targetCurrency)
+	if err == nil {
+		return rate, nil
+	}
+
+	// If not found, try inverse
+	inverseRate, err := uc.repo.GetLatestCurrencyRate(targetCurrency, baseCurrency)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.CurrencyRate{
+		ID:             inverseRate.ID,
+		BaseCurrency:   baseCurrency,
+		TargetCurrency: targetCurrency,
+		Rate:           1 / inverseRate.Rate,
+		RateDate:       inverseRate.RateDate,
+		CreatedAt:      inverseRate.CreatedAt,
+	}, nil
 }
 
 func (uc *marketDataUsecase) GetHistoricalCurrencyRates(baseCurrency, targetCurrency string, start, end time.Time) ([]*domain.CurrencyRate, error) {
-	return uc.repo.GetHistoricalCurrencyRates(baseCurrency, targetCurrency, start, end)
+	rates, err := uc.repo.GetHistoricalCurrencyRates(baseCurrency, targetCurrency, start, end)
+	if err == nil && len(rates) > 0 {
+		return rates, nil
+	}
+
+	// If not found, try inverse
+	inverseRates, err := uc.repo.GetHistoricalCurrencyRates(targetCurrency, baseCurrency, start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	var computedRates []*domain.CurrencyRate
+	for _, r := range inverseRates {
+		computedRates = append(computedRates, &domain.CurrencyRate{
+			ID:             r.ID,
+			BaseCurrency:   baseCurrency,
+			TargetCurrency: targetCurrency,
+			Rate:           1 / r.Rate,
+			RateDate:       r.RateDate,
+			CreatedAt:      r.CreatedAt,
+		})
+	}
+
+	return computedRates, nil
 }

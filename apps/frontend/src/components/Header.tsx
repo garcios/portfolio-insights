@@ -117,7 +117,7 @@ const Header = () => {
                 {/* Right Section - User Menu & Mobile Toggle */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {/* User Menu (visible on all screens) */}
-                    <UserMenu />
+                    <UserMenu placement="bottom-end" />
 
                     {/* Mobile Menu Toggle */}
                     <button
